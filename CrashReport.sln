@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.37012.4 d17.14
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrashReport", "CrashReport.csproj", "{F8DC02F1-60D5-4B82-83F5-D6A09F7FE8F9}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F8DC02F1-60D5-4B82-83F5-D6A09F7FE8F9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F8DC02F1-60D5-4B82-83F5-D6A09F7FE8F9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F8DC02F1-60D5-4B82-83F5-D6A09F7FE8F9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F8DC02F1-60D5-4B82-83F5-D6A09F7FE8F9}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {2AB44BF8-A5A7-476E-84E0-5F93D2ECC5CF}
+	EndGlobalSection
+EndGlobal

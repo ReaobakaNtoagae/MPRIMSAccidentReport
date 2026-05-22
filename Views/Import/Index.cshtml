@@ -1,0 +1,133 @@
+﻿@{
+    ViewData["Title"] = "Import Excel Accident Report";
+    var provinces = new[] {
+        new { Code="EC",  Name="Eastern Cape"   },
+        new { Code="FS",  Name="Free State"     },
+        new { Code="GP",  Name="Gauteng"        },
+        new { Code="KZN", Name="KwaZulu-Natal"  },
+        new { Code="LP",  Name="Limpopo"        },
+        new { Code="MP",  Name="Mpumalanga"     },
+        new { Code="NC",  Name="Northern Cape"  },
+        new { Code="NW",  Name="North West"     },
+        new { Code="WC",  Name="Western Cape"   }
+    };
+}
+
+<div style="max-width:620px;">
+
+    @if (TempData["ImportError"] != null)
+    {
+        <div id="errMsg" data-msg="@TempData["ImportError"]"></div>
+    }
+
+    <div style="background:#fff;border-radius:10px;border:1px solid #c8e6c9;
+                box-shadow:0 2px 8px rgba(0,0,0,.06);padding:28px 32px;margin-bottom:20px;">
+
+        <div style="font-size:.78rem;text-transform:uppercase;letter-spacing:.7px;
+                    color:#2e7d32;font-weight:700;margin-bottom:18px;">
+            Upload Accident Report Workbook
+        </div>
+
+        <form method="post" asp-action="Upload" enctype="multipart/form-data" id="uploadForm">
+            @Html.AntiForgeryToken()
+
+            <!-- Province selector -->
+            <div style="margin-bottom:16px;">
+                <div style="font-size:.75rem;color:#555;margin-bottom:6px;font-weight:600;">
+                    Province (applied to all imported records)
+                </div>
+                <div id="provinceSelect"></div>
+                <input type="hidden" id="provinceHidden" name="province" value="MP" />
+            </div>
+
+            <!-- File uploader -->
+            <div style="margin-bottom:20px;">
+                <div style="font-size:.75rem;color:#555;margin-bottom:6px;font-weight:600;">
+                    Excel File (.xlsx)
+                </div>
+                <div id="fileUploader"></div>
+            </div>
+
+            <div id="submitBtn"></div>
+        </form>
+    </div>
+
+    <!-- Format guide -->
+    <div style="background:#f1f8f1;border-radius:10px;border:1px solid #c8e6c9;
+                padding:20px 24px;">
+        <div style="font-size:.78rem;text-transform:uppercase;letter-spacing:.7px;
+                    color:#2e7d32;font-weight:700;margin-bottom:12px;">
+            Expected Workbook Format
+        </div>
+        <div style="font-size:.82rem;color:#444;line-height:1.7;">
+            <div style="display:grid;grid-template-columns:120px 1fr;gap:4px 16px;">
+                <div style="color:#888;font-size:.76rem;">Row 1</div>
+                <div>Report title &amp; period (e.g. ACCIDENT REPORT: 01 – 28 FEBRUARY 2025)</div>
+                <div style="color:#888;font-size:.76rem;">Row 3</div>
+                <div>District name (e.g. EHLANZENI)</div>
+                <div style="color:#888;font-size:.76rem;">Row 6</div>
+                <div>Column headers: SAPS | AR NO | CAS | DATE | DAY | TIME | ROUTE | LOCATION | TYPE | …</div>
+                <div style="color:#888;font-size:.76rem;">Row 7+</div>
+                <div>One accident per row</div>
+                <div style="color:#888;font-size:.76rem;">Cols J–W</div>
+                <div>Fatal / Serious / Slight injury counts (D=Driver, P=Passenger, PD=Pedestrian, C=Cyclist)</div>
+                <div style="color:#888;font-size:.76rem;">Col X</div>
+                <div>Vehicles involved (e.g. SED / TAXI)</div>
+                <div style="color:#888;font-size:.76rem;">Stop row</div>
+                <div>Row starting with TOTAL or GRAND TOTAL — import stops here</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(function () {
+
+            var errMsg = $("#errMsg").data("msg");
+            if (errMsg) DevExpress.ui.notify(errMsg, "error", 5000);
+
+            // ── Province selector ─────────────────────────────────────
+            var provinceItems = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+                            provinces.Select(p => new { text = $"{p.Code} — {p.Name}", value = p.Code })
+                    ));
+
+        $("#provinceSelect").dxSelectBox({
+            items:        provinceItems,
+            displayExpr: "text",
+            valueExpr:   "value",
+            value:        "MP",
+            onValueChanged: function(e) {
+                $("#provinceHidden").val(e.value);
+            }
+        });
+
+            // ── File uploader ─────────────────────────────────────────
+            $("#fileUploader").dxFileUploader({
+                name:                  "file",
+                accept:                ".xlsx,.xls",
+                uploadMode:            "useForm",
+                labelText:             "or drop an Excel workbook here",
+                selectButtonText:      "Select workbook",
+                allowedFileExtensions: [".xlsx", ".xls"],
+                maxFileSize:           10 * 1024 * 1024,
+                onValueChanged: function (e) {
+                    var hasFile = e.value && e.value.length > 0;
+                    $("#submitBtn").dxButton("instance").option("disabled", !hasFile);
+                }
+            });
+
+            // ── Submit button ─────────────────────────────────────────
+            $("#submitBtn").dxButton({
+                text:     "Import Accidents",
+                type:     "default",
+                icon:     "upload",
+                disabled: true,
+                onClick:  function () {
+                    DevExpress.ui.notify("Importing — please wait...", "info", 4000);
+                    document.getElementById("uploadForm").submit();
+                }
+            });
+        });
+    </script>
+}

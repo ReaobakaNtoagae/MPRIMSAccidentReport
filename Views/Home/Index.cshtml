@@ -1,0 +1,279 @@
+﻿@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<!-- Toast notifications -->
+@if (TempData["SuccessMessage"] != null)
+{
+    <div id="successMsg" data-message="@TempData["SuccessMessage"]"></div>
+}
+@if (TempData["ErrorMessage"] != null)
+{
+    <div id="errorMsg" data-message="@TempData["ErrorMessage"]"></div>
+}
+
+<style>
+    .stat-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+        margin-bottom: 20px;
+    }
+
+    .stat-card {
+        border-radius: 12px;
+        padding: 20px 22px;
+        color: #fff;
+        box-shadow: 0 3px 12px rgba(0,0,0,.15);
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        position: relative;
+        overflow: hidden;
+    }
+
+        .stat-card::after {
+            content: "";
+            position: absolute;
+            right: -10px;
+            top: -10px;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: rgba(255,255,255,.1);
+        }
+
+        .stat-card .big-num {
+            font-size: 2.4rem;
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        .stat-card .label {
+            font-size: .8rem;
+            opacity: .88;
+            font-weight: 500;
+        }
+
+        .stat-card .sub {
+            font-size: .72rem;
+            opacity: .65;
+            margin-top: 6px;
+            padding-top: 8px;
+            border-top: 1px solid rgba(255,255,255,.2);
+        }
+
+    .stat-row {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+        margin-bottom: 20px;
+    }
+
+    .injury-card {
+        border-radius: 10px;
+        padding: 16px 18px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        box-shadow: 0 2px 8px rgba(0,0,0,.07);
+        border-left: 5px solid transparent;
+    }
+
+        .injury-card .icon {
+            font-size: 1.6rem;
+            line-height: 1;
+        }
+
+        .injury-card .info .num {
+            font-size: 1.6rem;
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        .injury-card .info .desc {
+            font-size: .75rem;
+            color: #666;
+            margin-top: 2px;
+        }
+</style>
+
+<!-- ── Row 1: Top stat tiles ─────────────────────────────── -->
+<div class="stat-grid">
+    <div class="stat-card" style="background: linear-gradient(135deg,#1b5e20,#2e7d32);">
+        <div class="big-num">@ViewBag.TotalCrashes</div>
+        <div class="label">Total Crash Reports</div>
+        <div class="sub">@ViewBag.ThisMonthCrashes new in @ViewBag.CurrentMonth</div>
+    </div>
+    <div class="stat-card" style="background: linear-gradient(135deg,#1565c0,#1976d2);">
+        <div class="big-num">@ViewBag.TotalPersons</div>
+        <div class="label">Persons on Record</div>
+        <div class="sub">All involved parties</div>
+    </div>
+    <div class="stat-card" style="background: linear-gradient(135deg,#e65100,#f57c00);">
+        <div class="big-num">@ViewBag.TotalVehicles</div>
+        <div class="label">Vehicles on Record</div>
+        <div class="sub">All vehicle records</div>
+    </div>
+</div>
+
+<!-- ── Row 2: Injury severity breakdown ─────────────────── -->
+<div class="stat-row">
+    <div class="injury-card" style="background:#ffebee;border-left-color:#b71c1c;">
+        <div class="icon">💀</div>
+        <div class="info">
+            <div class="num" style="color:#b71c1c;">@ViewBag.FatalCount</div>
+            <div class="desc">Fatal Injuries (all time)</div>
+        </div>
+        <div style="margin-left:auto;text-align:right;">
+            <div style="font-size:.72rem;color:#888;">This month</div>
+            <div style="font-size:1.1rem;font-weight:700;color:#b71c1c;">@ViewBag.ThisMonthFatal</div>
+        </div>
+    </div>
+    <div class="injury-card" style="background:#fff3e0;border-left-color:#e65100;">
+        <div class="icon">🏥</div>
+        <div class="info">
+            <div class="num" style="color:#e65100;">@ViewBag.SeriousCount</div>
+            <div class="desc">Serious Injuries (all time)</div>
+        </div>
+    </div>
+    <div class="injury-card" style="background:#e3f2fd;border-left-color:#0277bd;">
+        <div class="icon">🩹</div>
+        <div class="info">
+            <div class="num" style="color:#0277bd;">@ViewBag.SlightCount</div>
+            <div class="desc">Slight Injuries (all time)</div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Quick actions ─────────────────────────────────────── -->
+<div id="quickActions" style="display:flex;gap:10px;margin-bottom:20px;"></div>
+
+<!-- ── Recent crash history ──────────────────────────────── -->
+<div style="background:#fff;border-radius:10px;border:1px solid #c8e6c9;
+            box-shadow:0 2px 8px rgba(0,0,0,.06);overflow:hidden;">
+    <div style="padding:14px 20px;border-bottom:2px solid #e8f5e9;
+                font-size:.78rem;text-transform:uppercase;letter-spacing:.7px;
+                color:#2e7d32;font-weight:700;">
+        Recent Crash Reports
+    </div>
+    <div id="crashHistoryGrid"></div>
+</div>
+
+<!-- Hidden delete form -->
+<form id="deleteForm" method="post" style="display:none;">
+    @Html.AntiForgeryToken()
+</form>
+
+@section Scripts {
+    <script>
+        $(function () {
+
+            // ── Toast notifications ───────────────────────────────────
+            var successMsg = $("#successMsg").data("message");
+            var errorMsg   = $("#errorMsg").data("message");
+            if (successMsg) DevExpress.ui.notify(successMsg, "success", 4000);
+            if (errorMsg)   DevExpress.ui.notify(errorMsg,   "error",   5000);
+
+            // ── Quick actions ─────────────────────────────────────────
+            [
+                { text: "New CR1 Report",    type: "default", icon: "plus",     url: "/Home/Create"      },
+                { text: "Search Crashes",    type: "normal",  icon: "find",     url: "/Crashes"          },
+                { text: "Monthly Report",    type: "normal",  icon: "chart",    url: "/Report"           },
+                { text: "Import Excel",      type: "normal",  icon: "upload",   url: "/Import"           }
+            ].forEach(function (a) {
+                $("<div>").appendTo("#quickActions").dxButton({
+                    text: a.text, type: a.type, icon: a.icon,
+                    onClick: function () { window.location.href = a.url; }
+                });
+            });
+
+            // ── Recent crashes grid ───────────────────────────────────
+            $("#crashHistoryGrid").dxDataGrid({
+                dataSource: "/Crashes/GetAll",
+                columns: [
+                    { dataField: "CrNo",         caption: "CR No.",   width: 120 },
+                    { dataField: "CasNo",        caption: "CAS No.",  width: 120 },
+                    {
+                        dataField: "CrashDate",  caption: "Date",
+                        dataType:  "date",       format: "dd MMM yyyy", width: 130
+                    },
+                    { dataField: "ProvinceCode", caption: "Province", width: 90  },
+                    { dataField: "Location",     caption: "Location", minWidth: 150 },
+                    { dataField: "VehicleCount", caption: "Vehicles", width: 80, alignment: "center" },
+                    {
+                        caption: "Injuries", width: 200, alignment: "center",
+                        allowSorting: false,
+                        cellTemplate: function (container, options) {
+                            var parts = [];
+                            if (options.data.FatalCount > 0)
+                                parts.push('<span style="background:#b71c1c;color:#fff;' +
+                                    'border-radius:10px;padding:1px 9px;font-size:.72rem;' +
+                                    'font-weight:700;margin-right:3px">' +
+                                    options.data.FatalCount + ' fatal</span>');
+                            if (options.data.SeriousCount > 0)
+                                parts.push('<span style="background:#e65100;color:#fff;' +
+                                    'border-radius:10px;padding:1px 9px;font-size:.72rem;' +
+                                    'margin-right:3px">' +
+                                    options.data.SeriousCount + ' serious</span>');
+                            container.html(parts.length ? parts.join("") :
+                                '<span style="color:#bbb;font-size:.75rem">—</span>');
+                        }
+                    },
+                    {
+                        caption: "Actions", width: 145, alignment: "center",
+                        allowSorting: false, allowFiltering: false,
+                        cellTemplate: function (container, options) {
+                            var id   = options.data.CrashId;
+                            var crNo = options.data.CrNo || ("#" + id);
+                            $("<div>").css({ display:"flex", gap:"5px", justifyContent:"center" })
+                                .appendTo(container)
+                                .append(
+                                    $("<div>").dxButton({
+                                        icon:"find", hint:"View Details",
+                                        type:"default", stylingMode:"outlined",
+                                        onClick: function() { window.location.href="/Crashes/Details/"+id; }
+                                    }),
+                                    $("<div>").dxButton({
+                                        icon:"edit", hint:"Edit",
+                                        type:"normal", stylingMode:"outlined",
+                                        onClick: function() { window.location.href="/Home/Edit/"+id; }
+                                    }),
+                                    $("<div>").dxButton({
+                                        icon:"trash", hint:"Delete",
+                                        type:"danger", stylingMode:"outlined",
+                                        onClick: function() {
+                                            DevExpress.ui.dialog.confirm(
+                                                "Permanently delete crash report <b>" + crNo + "</b>?<br/>" +
+                                                "<small style='color:#888'>All linked records will also be removed.</small>",
+                                                "Confirm Delete"
+                                            ).then(function(confirmed) {
+                                                if (!confirmed) return;
+                                                $("#deleteForm").attr("action", "/Home/Delete/"+id);
+                                                $("#deleteForm").submit();
+                                            });
+                                        }
+                                    })
+                                );
+                        }
+                    }
+                ],
+                paging:               { pageSize: 15 },
+                pager: {
+                    showPageSizeSelector: true,
+                    allowedPageSizes: [10, 15, 25, 50],
+                    showInfo: true,
+                    infoText: "{0}–{1} of {2} reports"
+                },
+                sorting:               { mode: "multiple" },
+                showBorders:           false,
+                rowAlternationEnabled: true,
+                hoverStateEnabled:     true,
+                onRowPrepared: function (e) {
+                    if (e.rowType === "data" && e.data.FatalCount > 0)
+                        e.rowElement.css("border-left", "3px solid #b71c1c");
+                }
+            });
+        });
+    </script>
+}

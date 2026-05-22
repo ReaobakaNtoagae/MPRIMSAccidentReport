@@ -1,0 +1,61 @@
+﻿@{
+    ViewData["Title"] = "Add Witness";
+    var crashId = ViewBag.CrashId;
+}
+
+<form method="post" id="witnessForm">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="CrashId" value="@crashId" />
+    <div id="dxForm"></div>
+    <div id="formButtons" style="margin-top:16px; display:flex; gap:10px;"></div>
+</form>
+
+@section Scripts {
+    <script>
+        var idTypes = ["RSA_ID", "Passport", "Other"];
+
+        var form = $("#dxForm").dxForm({
+            formData: {},
+            colCount: 2,
+            items: [
+                {
+                    itemType: "group", caption: "Witness Details",
+                    colCount: 2, colSpan: 2,
+                    items: [
+                        { dataField: "SurnameInitials", isRequired: true, label: { text: "Surname & Initials" } },
+                        {
+                            dataField: "IdType", label: { text: "ID Type" },
+                            editorType: "dxSelectBox", editorOptions: { items: idTypes, placeholder: "Select..." }
+                        },
+                        { dataField: "IdNumber",        label: { text: "ID Number" } },
+                        { dataField: "CellPhone",       label: { text: "Cell Phone" } },
+                        { dataField: "OtherPhone",      label: { text: "Other Phone" } },
+                        { dataField: "WorkContactAddress", label: { text: "Work / Contact Address" }, colSpan: 2 }
+                    ]
+                }
+            ]
+        }).dxForm("instance");
+
+        function syncFormToPost() {
+            var data = form.option("formData");
+            Object.keys(data).forEach(function (key) {
+                var existing = $("#witnessForm input[name='" + key + "']");
+                if (existing.length) existing.val(data[key]);
+                else $("<input>").attr({ type: "hidden", name: key }).val(data[key]).appendTo("#witnessForm");
+            });
+        }
+
+        var btns = document.getElementById("formButtons");
+        $("<div>").appendTo(btns).dxButton({
+            text: "Save Witness", type: "default", icon: "save",
+            onClick: function () {
+                var result = form.validate();
+                if (result.isValid) { syncFormToPost(); document.getElementById("witnessForm").submit(); }
+            }
+        });
+        $("<div>").appendTo(btns).dxButton({
+            text: "Cancel", type: "normal", stylingMode: "outlined",
+            onClick: function () { window.location.href = "/Crashes/Details/@crashId"; }
+        });
+    </script>
+}

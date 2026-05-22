@@ -1,0 +1,212 @@
+﻿@{
+    ViewData["Title"] = "Monthly Consolidated Report";
+    var months = new[] {
+        "January","February","March","April","May","June",
+        "July","August","September","October","November","December"
+    };
+}
+
+<div style="display:grid;grid-template-columns:320px 1fr;gap:20px;align-items:start;">
+
+    
+    <div>
+        <div style="background:#fff;border-radius:10px;border:1px solid #c8e6c9;
+                    padding:24px;box-shadow:0 2px 8px rgba(0,0,0,.06);margin-bottom:16px;">
+
+            <div style="font-size:.78rem;text-transform:uppercase;letter-spacing:.7px;
+                        color:#2e7d32;font-weight:700;margin-bottom:16px;">
+                Generate Report
+            </div>
+
+            <div id="yearSelect" style="margin-bottom:12px;"></div>
+            <div id="monthSelect" style="margin-bottom:12px;"></div>
+            <div id="districtBox" style="margin-bottom:20px;"></div>
+
+            <div style="display:flex;gap:8px;flex-direction:column;">
+                <div id="btnPreview"></div>
+                <div id="btnDownload"></div>
+            </div>
+        </div>
+
+       
+        @if (ViewBag.Available != null)
+        {
+            var available = (dynamic)ViewBag.Available;
+            <div style="background:#f1f8f1;border-radius:10px;border:1px solid #c8e6c9;padding:16px 20px;">
+                <div style="font-size:.75rem;text-transform:uppercase;letter-spacing:.6px;
+                                color:#2e7d32;font-weight:700;margin-bottom:10px;">
+                    Periods with Data
+                </div>
+                @foreach (var item in available)
+                {
+                    <div style="display:flex;justify-content:space-between;align-items:center;
+                                        padding:5px 0;border-bottom:1px solid #e8f5e9;font-size:.82rem;">
+                        <span>@months[item.Month - 1] @item.Year</span>
+                        <span style="background:#2e7d32;color:#fff;border-radius:10px;
+                                             padding:1px 8px;font-size:.72rem;">@item.Count records</span>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+   
+    <div>
+        <div style="background:#fff;border-radius:10px;border:1px solid #c8e6c9;
+                    box-shadow:0 2px 8px rgba(0,0,0,.06);overflow:hidden;">
+            <div style="padding:14px 20px;border-bottom:2px solid #e8f5e9;
+                        display:flex;align-items:center;justify-content:space-between;">
+                <div style="font-size:.78rem;text-transform:uppercase;letter-spacing:.7px;
+                            color:#2e7d32;font-weight:700;">
+                    Report Preview
+                </div>
+                <div id="previewInfo" style="font-size:.8rem;color:#888;"></div>
+            </div>
+            <div id="previewGrid"></div>
+        </div>
+    </div>
+
+</div>
+
+@section Scripts {
+    <script>
+        $(function () {
+
+            var currentYear  = @ViewBag.CurrentYear;
+            var currentMonth = @ViewBag.CurrentMonth;
+
+            var months = [
+                "January","February","March","April","May","June",
+                "July","August","September","October","November","December"
+            ];
+
+            // Build year range
+            var years = [];
+            for (var y = currentYear; y >= currentYear - 5; y--) years.push(y);
+
+            // ── Controls ──────────────────────────────────────────────
+            var yearInst = $("#yearSelect").dxSelectBox({
+                label: "Year",
+                items: years,
+                value: currentYear,
+                labelMode: "floating"
+            }).dxSelectBox("instance");
+
+            var monthInst = $("#monthSelect").dxSelectBox({
+                label: "Month",
+                items: months.map(function(m, i) { return { text: m, value: i + 1 }; }),
+                displayExpr: "text",
+                valueExpr:   "value",
+                value:       currentMonth,
+                labelMode:   "floating"
+            }).dxSelectBox("instance");
+
+            var districtInst = $("#districtBox").dxTextBox({
+                label: "District",
+                value: "EHLANZENI",
+                labelMode: "floating"
+            }).dxTextBox("instance");
+
+            // ── Preview grid (initially empty) ───────────────────────
+            var gridInst = $("#previewGrid").dxDataGrid({
+                dataSource: [],
+                columns: [
+                    { dataField: "SapsStation", caption: "SAPS",     width: 120 },
+                    { dataField: "ArNo",        caption: "AR No.",    width: 70  },
+                    { dataField: "CasNo",       caption: "CAS",       width: 90  },
+                    { dataField: "Date",        caption: "Date",      width: 70  },
+                    { dataField: "RoadNumber",  caption: "Route",     width: 80  },
+                    { dataField: "Location",    caption: "Location",  minWidth: 140 },
+                    { dataField: "CrashType",   caption: "Type",      width: 120 },
+                    {
+                        dataField: "FatalCount",   caption: "Fatal",
+                        width: 60, alignment: "center",
+                        cellTemplate: function(container, options) {
+                            if (options.value > 0) {
+                                container.html('<span style="background:#b71c1c;color:#fff;' +
+                                    'border-radius:10px;padding:1px 8px;font-size:.75rem;font-weight:700">' +
+                                    options.value + '</span>');
+                            }
+                        }
+                    },
+                    {
+                        dataField: "SeriousCount", caption: "Serious",
+                        width: 70, alignment: "center",
+                        cellTemplate: function(container, options) {
+                            if (options.value > 0) {
+                                container.html('<span style="background:#e65100;color:#fff;' +
+                                    'border-radius:10px;padding:1px 8px;font-size:.75rem">' +
+                                    options.value + '</span>');
+                            }
+                        }
+                    },
+                    { dataField: "SlightCount", caption: "Slight", width: 65, alignment: "center" }
+                ],
+                paging:               { pageSize: 25 },
+                pager:                { showInfo: true, infoText: "{0}–{1} of {2} crashes" },
+                showBorders:          false,
+                rowAlternationEnabled: true,
+                hoverStateEnabled:    true,
+                noDataText:           "Select a year and month then click Preview."
+            }).dxDataGrid("instance");
+
+            // ── Preview button ────────────────────────────────────────
+            $("#btnPreview").dxButton({
+                text: "Preview Report",
+                type: "normal",
+                icon: "find",
+                stylingMode: "outlined",
+                width: "100%",
+                onClick: function () {
+                    var y = yearInst.option("value");
+                    var m = monthInst.option("value");
+                    if (!y || !m) {
+                        DevExpress.ui.notify("Select a year and month.", "warning", 2000);
+                        return;
+                    }
+                    loadPreview(y, m);
+                }
+            });
+
+            // ── Download button ───────────────────────────────────────
+            $("#btnDownload").dxButton({
+                text: "Download Excel",
+                type: "default",
+                icon: "download",
+                width: "100%",
+                onClick: function () {
+                    var y = yearInst.option("value");
+                    var m = monthInst.option("value");
+                    var d = districtInst.option("value") || "EHLANZENI";
+                    if (!y || !m) {
+                        DevExpress.ui.notify("Select a year and month.", "warning", 2000);
+                        return;
+                    }
+                    DevExpress.ui.notify("Generating Excel report...", "info", 3000);
+                    window.location.href = "/Report/Download?year=" + y +
+                                           "&month=" + m +
+                                           "&district=" + encodeURIComponent(d);
+                }
+            });
+
+            // ── Load preview data ─────────────────────────────────────
+            function loadPreview(year, month) {
+                $("#previewInfo").text("Loading...");
+                $.getJSON("/Report/Preview?year=" + year + "&month=" + month, function(data) {
+                    gridInst.option("dataSource", data);
+                    var label = months[month - 1] + " " + year;
+                    $("#previewInfo").text(label + " — " + data.length + " records");
+                    DevExpress.ui.notify(
+                        data.length + " crashes found for " + label,
+                        data.length > 0 ? "success" : "warning", 3000);
+                }).fail(function() {
+                    DevExpress.ui.notify("Failed to load preview data.", "error", 4000);
+                    $("#previewInfo").text("Error loading data.");
+                });
+            }
+
+            // Auto-load current month if it has data
+            loadPreview(currentYear, currentMonth);
+        });
+    </script>
+}

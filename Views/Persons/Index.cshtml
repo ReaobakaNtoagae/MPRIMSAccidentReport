@@ -1,0 +1,54 @@
+﻿@{
+    ViewData["Title"] = "Persons";
+}
+
+<div id="personsGrid"></div>
+
+@section Scripts {
+    <script>
+        $("#personsGrid").dxDataGrid({
+            dataSource: "/Persons/GetAll",
+            columns: [
+                { dataField: "Surname",        caption: "Surname",          width: 150 },
+                { dataField: "FullNames",      caption: "Full Names",       minWidth: 170 },
+                { dataField: "IdNumber",       caption: "ID Number",        width: 150 },
+                { dataField: "Gender",         caption: "Gender",           width: 90  },
+                { dataField: "PopulationGroup",caption: "Population Group", width: 140 },
+                { dataField: "CellPhone",      caption: "Cell Phone",       width: 130 },
+                { dataField: "CrashCount",     caption: "Crashes",          width: 80, alignment: "center" },
+                {
+                    caption: "Actions", width: 130, alignment: "center",
+                    allowSorting: false, allowFiltering: false,
+                    cellTemplate: function (container, options) {
+                        var id = options.data.PersonId;
+                        $("<div>").css({ display: "flex", gap: "5px", justifyContent: "center" })
+                            .appendTo(container)
+                            .append(
+                                $("<div>").dxButton({ icon: "find",  hint: "Details", type: "default", stylingMode: "outlined", onClick: function () { window.location.href = "/Persons/Details/" + id; } }),
+                                $("<div>").dxButton({ icon: "edit",  hint: "Edit",    type: "normal",  stylingMode: "outlined", onClick: function () { window.location.href = "/Persons/Edit/"    + id; } }),
+                                $("<div>").dxButton({ icon: "trash", hint: "Delete",  type: "danger",  stylingMode: "outlined", onClick: function () { window.location.href = "/Persons/Delete/"  + id; } })
+                            );
+                    }
+                }
+            ],
+            toolbar: {
+                items: [
+                    {
+                        widget: "dxButton",
+                        options: { text: "Add Person", type: "default", icon: "plus", onClick: function () { window.location.href = "/Persons/Create"; } },
+                        location: "before"
+                    },
+                    "searchPanel"
+                ]
+            },
+            searchPanel:           { visible: true },
+            headerFilter:          { visible: true },
+            filterRow:             { visible: true },
+            paging:                { pageSize: 20 },
+            pager:                 { showPageSizeSelector: true, allowedPageSizes: [10, 20, 50] },
+            showBorders:           true,
+            rowAlternationEnabled: true,
+            hoverStateEnabled:     true
+        });
+    </script>
+}

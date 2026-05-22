@@ -1,0 +1,565 @@
+﻿@model CrashReport.ViewModels.StandbyReportViewModel
+@{
+    ViewData["Title"] = $"Standby Report {Model.DateFrom:dd MMM} – {Model.DateTo:dd MMM yyyy}";
+
+    bool hasPrior = Model.PriorProvince.Crashes > 0 || Model.PriorProvince.Fatalities > 0;
+    int py = Model.DateFrom.Year - 1;
+    int cy = Model.DateFrom.Year;
+
+    string fullRange =
+        Model.DateFrom.ToString("dd MMMM yyyy").ToUpper() +
+        " TO " +
+        Model.DateTo.ToString("dd MMMM yyyy").ToUpper();
+
+    string qs = $"dateFrom={Model.DateFrom:yyyy-MM-dd}&dateTo={Model.DateTo:yyyy-MM-dd}";
+    if (hasPrior)
+        qs += $"&priorYearFrom={Model.DateFrom.AddYears(-1):yyyy-MM-dd}&priorYearTo={Model.DateTo.AddYears(-1):yyyy-MM-dd}";
+}
+
+<style>
+    .sr-wrap {
+        font-family: "Segoe UI", Arial, sans-serif;
+        font-size: 0.83rem;
+        color: #1a1a1a;
+    }
+
+    .sr-toolbar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+    }
+
+    .sr-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 0 14px;
+        height: 34px;
+        border-radius: 6px;
+        font-size: .8rem;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        border: none;
+        font-family: "Segoe UI",sans-serif;
+        transition: background .15s;
+    }
+
+    .sr-btn-back {
+        background: #f0f0f0;
+        color: #444;
+        border: 1px solid #ddd;
+    }
+
+        .sr-btn-back:hover {
+            background: #e4e4e4;
+        }
+
+    .sr-btn-word {
+        background: #1b5e20;
+        color: #fff;
+    }
+
+        .sr-btn-word:hover {
+            background: #2e7d32;
+        }
+
+    .sr-btn-print {
+        background: #fff;
+        color: #1b5e20;
+        border: 1.5px solid #2e7d32;
+    }
+
+        .sr-btn-print:hover {
+            background: #e8f5e9;
+        }
+
+    .sr-sep {
+        width: 1px;
+        height: 24px;
+        background: #ddd;
+        margin: 0 4px;
+    }
+
+    @@media print {
+        .sr-toolbar {
+            display: none;
+        }
+
+        .sr-report {
+            padding: 20px;
+        }
+    }
+
+    .sr-report {
+        background: #fff;
+        border: 1px solid #dde8dd;
+        border-radius: 10px;
+        padding: 28px 32px;
+        box-shadow: 0 2px 10px rgba(0,0,0,.07);
+    }
+
+    .sr-title {
+        font-size: 1rem;
+        font-weight: 700;
+        text-align: center;
+        color: #1a3c6e;
+        margin-bottom: 2px;
+    }
+
+    .sr-sub {
+        text-align: center;
+        color: #555;
+        margin-bottom: 18px;
+        font-size: .8rem;
+    }
+
+    .sr-hd {
+        font-weight: 700;
+        font-size: .8rem;
+        text-transform: uppercase;
+        letter-spacing: .5px;
+        color: #1b5e20;
+        margin: 16px 0 6px;
+        padding-left: 8px;
+        border-left: 3px solid #43a047;
+    }
+
+    .sr-divider {
+        border: none;
+        border-top: 2px dashed #c8e6c9;
+        margin: 28px 0;
+    }
+
+    .rt {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 14px;
+        font-size: .78rem;
+    }
+
+        .rt th, .rt td {
+            border: 1px solid #c8d4e8;
+            padding: 6px 8px;
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        /* First header row - district names */
+        .rt .hdr-district th {
+            background: #1a3c6e;
+            color: #fff;
+            font-weight: 700;
+            font-size: .75rem;
+            padding: 8px 4px;
+        }
+
+        /* Second header row - years */
+        .rt .hdr-year th {
+            background: #253f6e;
+            color: #bbccff;
+            font-size: .7rem;
+            font-weight: 500;
+            padding: 4px 4px;
+        }
+
+        /* First column (row headers) */
+        .rt td.lbl {
+            text-align: left;
+            font-weight: 600;
+            background: #e8f0fb;
+            color: #1a3c6e;
+        }
+
+        /* Prior year values (gray text) */
+        .rt td.pval {
+            color: #888888;
+        }
+
+        /* Current year values (blue text) */
+        .rt td.cval {
+            font-weight: 700;
+            color: #1a3c6e;
+        }
+
+        /* Zebra striping for data rows */
+        .rt tbody tr:nth-child(odd) td:not(.lbl) {
+            background: #ffffff;
+        }
+
+        .rt tbody tr:nth-child(even) td:not(.lbl) {
+            background: #f5f8ff;
+        }
+
+    .narrative {
+        background: #fffdf0;
+        border: 1px solid #ffe082;
+        border-left: 4px solid #f9a825;
+        border-radius: 0 6px 6px 0;
+        padding: 10px 16px;
+        margin-bottom: 14px;
+        line-height: 1.7;
+    }
+
+        .narrative ul {
+            margin: 6px 0 0 18px;
+        }
+
+        .narrative li {
+            margin-bottom: 3px;
+        }
+
+    .sr-demo {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+        margin-top: 10px;
+    }
+
+    .pedestrian-list {
+        margin-top: 4px;
+        margin-left: 20px;
+    }
+</style>
+
+<div class="sr-wrap">
+
+    <div class="sr-toolbar">
+        <a href="/StandbyReport" class="sr-btn sr-btn-back">← Back</a>
+        <div class="sr-sep"></div>
+        <a href="/StandbyReport/Export?@qs" class="sr-btn sr-btn-word">⬇ Export to Word</a>
+        <button onclick="window.print()" class="sr-btn sr-btn-print">🖨 Print</button>
+    </div>
+
+    <div class="sr-report">
+
+        <div class="sr-title">WEEKLY STATISTICS REPORT: @fullRange</div>
+        <div class="sr-sub">(@Model.DayRange)</div>
+
+        @* ── CRASH SUMMARY TABLE ── *@
+        <table class="rt">
+            <thead>
+                <tr class="hdr-district">
+                    <th style="width:13%"></th>
+                    <th colspan="2">PROVINCE</th>
+                    <th colspan="2">EHLANZENI</th>
+                    <th colspan="2">BOHLABELO</th>
+                    <th colspan="2">GERT SIBANDE</th>
+                    <th colspan="2">NKANGALA</th>
+                </tr>
+                <tr class="hdr-year">
+                    <th></th>
+                    <th>@py</th>
+                    <th>@cy</th>
+                    <th>@py</th>
+                    <th>@cy</th>
+                    <th>@py</th>
+                    <th>@cy</th>
+                    <th>@py</th>
+                    <th>@cy</th>
+                    <th>@py</th>
+                    <th>@cy</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="lbl">CRASHES</td>
+                    <td class="pval">@Model.PriorProvince.Crashes</td>
+                    <td class="cval">@Model.CurrentProvince.Crashes</td>
+                    <td class="pval">@Model.PriorEhlanzeni.Crashes</td>
+                    <td class="cval">@Model.CurrentEhlanzeni.Crashes</td>
+                    <td class="pval">@Model.PriorBohlabelo.Crashes</td>
+                    <td class="cval">@Model.CurrentBohlabelo.Crashes</td>
+                    <td class="pval">@Model.PriorGertSibande.Crashes</td>
+                    <td class="cval">@Model.CurrentGertSibande.Crashes</td>
+                    <td class="pval">@Model.PriorNkangala.Crashes</td>
+                    <td class="cval">@Model.CurrentNkangala.Crashes</td>
+                </tr>
+                <tr>
+                    <td class="lbl">FATALITIES</td>
+                    <td class="pval">@Model.PriorProvince.Fatalities</td>
+                    <td class="cval">@Model.CurrentProvince.Fatalities</td>
+                    <td class="pval">@Model.PriorEhlanzeni.Fatalities</td>
+                    <td class="cval">@Model.CurrentEhlanzeni.Fatalities</td>
+                    <td class="pval">@Model.PriorBohlabelo.Fatalities</td>
+                    <td class="cval">@Model.CurrentBohlabelo.Fatalities</td>
+                    <td class="pval">@Model.PriorGertSibande.Fatalities</td>
+                    <td class="cval">@Model.CurrentGertSibande.Fatalities</td>
+                    <td class="pval">@Model.PriorNkangala.Fatalities</td>
+                    <td class="cval">@Model.CurrentNkangala.Fatalities</td>
+                </tr>
+                <tr>
+                    <td class="lbl">SERIOUS</td>
+                    <td class="pval">@Model.PriorProvince.Serious</td>
+                    <td class="cval">@Model.CurrentProvince.Serious</td>
+                    <td class="pval">@Model.PriorEhlanzeni.Serious</td>
+                    <td class="cval">@Model.CurrentEhlanzeni.Serious</td>
+                    <td class="pval">@Model.PriorBohlabelo.Serious</td>
+                    <td class="cval">@Model.CurrentBohlabelo.Serious</td>
+                    <td class="pval">@Model.PriorGertSibande.Serious</td>
+                    <td class="cval">@Model.CurrentGertSibande.Serious</td>
+                    <td class="pval">@Model.PriorNkangala.Serious</td>
+                    <td class="cval">@Model.CurrentNkangala.Serious</td>
+                </tr>
+                <tr>
+                    <td class="lbl">SLIGHT</td>
+                    <td class="pval">@Model.PriorProvince.Slight</td>
+                    <td class="cval">@Model.CurrentProvince.Slight</td>
+                    <td class="pval">@Model.PriorEhlanzeni.Slight</td>
+                    <td class="cval">@Model.CurrentEhlanzeni.Slight</td>
+                    <td class="pval">@Model.PriorBohlabelo.Slight</td>
+                    <td class="cval">@Model.CurrentBohlabelo.Slight</td>
+                    <td class="pval">@Model.PriorGertSibande.Slight</td>
+                    <td class="cval">@Model.CurrentGertSibande.Slight</td>
+                    <td class="pval">@Model.PriorNkangala.Slight</td>
+                    <td class="cval">@Model.CurrentNkangala.Slight</td>
+                </tr>
+            </tbody>
+        </table>
+
+        @* ── FATALITIES TIME-BAND TABLE ── *@
+        <div class="sr-hd">FATALITIES</div>
+        <table class="rt">
+            <thead>
+                <tr class="hdr-district">
+                    <th style="width:15%">PREVALENT TIME</th>
+                    <th colspan="2">PROVINCE</th>
+                    <th colspan="2">EHLANZENI</th>
+                    <th colspan="2">BOHLABELO</th>
+                    <th colspan="2">GERT SIBANDE</th>
+                    <th colspan="2">NKANGALA</th>
+                </tr>
+                <tr class="hdr-year">
+                    <th></th>
+                    <th>@py</th>
+                    <th>@cy</th>
+                    <th>@py</th>
+                    <th>@cy</th>
+                    <th>@py</th>
+                    <th>@cy</th>
+                    <th>@py</th>
+                    <th>@cy</th>
+                    <th>@py</th>
+                    <th>@cy</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="lbl">06H00 – 14H00</td>
+                    <td class="pval">@Model.PriorProvince.FatalTime1</td>
+                    <td class="cval">@Model.CurrentProvince.FatalTime1</td>
+                    <td class="pval">@Model.PriorEhlanzeni.FatalTime1</td>
+                    <td class="cval">@Model.CurrentEhlanzeni.FatalTime1</td>
+                    <td class="pval">@Model.PriorBohlabelo.FatalTime1</td>
+                    <td class="cval">@Model.CurrentBohlabelo.FatalTime1</td>
+                    <td class="pval">@Model.PriorGertSibande.FatalTime1</td>
+                    <td class="cval">@Model.CurrentGertSibande.FatalTime1</td>
+                    <td class="pval">@Model.PriorNkangala.FatalTime1</td>
+                    <td class="cval">@Model.CurrentNkangala.FatalTime1</td>
+                </tr>
+                <tr>
+                    <td class="lbl">14H00 – 22H00</td>
+                    <td class="pval">@Model.PriorProvince.FatalTime2</td>
+                    <td class="cval">@Model.CurrentProvince.FatalTime2</td>
+                    <td class="pval">@Model.PriorEhlanzeni.FatalTime2</td>
+                    <td class="cval">@Model.CurrentEhlanzeni.FatalTime2</td>
+                    <td class="pval">@Model.PriorBohlabelo.FatalTime2</td>
+                    <td class="cval">@Model.CurrentBohlabelo.FatalTime2</td>
+                    <td class="pval">@Model.PriorGertSibande.FatalTime2</td>
+                    <td class="cval">@Model.CurrentGertSibande.FatalTime2</td>
+                    <td class="pval">@Model.PriorNkangala.FatalTime2</td>
+                    <td class="cval">@Model.CurrentNkangala.FatalTime2</td>
+                </tr>
+                <tr>
+                    <td class="lbl">22H00 – 06H00</td>
+                    <td class="pval">@Model.PriorProvince.FatalTime3</td>
+                    <td class="cval">@Model.CurrentProvince.FatalTime3</td>
+                    <td class="pval">@Model.PriorEhlanzeni.FatalTime3</td>
+                    <td class="cval">@Model.CurrentEhlanzeni.FatalTime3</td>
+                    <td class="pval">@Model.PriorBohlabelo.FatalTime3</td>
+                    <td class="cval">@Model.CurrentBohlabelo.FatalTime3</td>
+                    <td class="pval">@Model.PriorGertSibande.FatalTime3</td>
+                    <td class="cval">@Model.CurrentGertSibande.FatalTime3</td>
+                    <td class="pval">@Model.PriorNkangala.FatalTime3</td>
+                    <td class="cval">@Model.CurrentNkangala.FatalTime3</td>
+                </tr>
+            </tbody>
+        </table>
+
+        @* ── NARRATIVE ── *@
+        <div class="narrative">
+            <strong>FATALITIES OCCURRED BETWEEN</strong>
+            06:00 TO 14:00 (<strong>@Model.CurrentProvince.FatalTime1</strong>)
+            14:00 TO 22:00 (<strong>@Model.CurrentProvince.FatalTime2</strong>)
+            22:00 TO 06:00 (<strong>@Model.CurrentProvince.FatalTime3</strong>)
+
+            @if (Model.CurrentProvince.FatalPedestrians > 0)
+            {
+                <br />
+                <strong>PROVINCE HAD @Model.CurrentProvince.FatalPedestrians FATAL PEDESTRIANS</strong>
+                <div class="pedestrian-list">
+                    @if (Model.CurrentEhlanzeni.FatalPedestrians > 0)
+                    {
+                        <text>@Model.CurrentEhlanzeni.FatalPedestrians (EHLANZENI)</text>
+                        if (Model.CurrentNkangala.FatalPedestrians > 0)
+                        {
+
+                            <text> </text>
+                        }
+                    }
+                    @if (Model.CurrentNkangala.FatalPedestrians > 0)
+                    {
+                        <text>@Model.CurrentNkangala.FatalPedestrians (NKANGALA)</text>
+                    }
+                </div>
+            }
+        </div>
+
+        @* ── PROBLEMATIC ROUTES ── *@
+        @if (Model.ProblematicRoutes.Any())
+        {
+            <div class="sr-hd">PROBLEMATIC ROUTES</div>
+            <div class="narrative">
+                @foreach (var district in Model.ProblematicRoutes.Select(r => r.District).Distinct().OrderBy(d => d))
+                {
+                    <strong>@district DISTRICT</strong>
+                    <ul>
+                        @foreach (var r in Model.ProblematicRoutes.Where(x => x.District == district))
+                        {
+                            <li>
+                                @r.Route – @r.Crashes Crash@(r.Crashes != 1 ? "es" : "")
+                                with @r.Fatalities Fatalit@(r.Fatalities != 1 ? "ies" : "y")
+                                @if (!string.IsNullOrWhiteSpace(r.Locations))
+                                {
+                                    <text>(@r.Locations)</text>
+                                }
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+        }
+
+        @* ── FATAL CRASH DETAIL (if any) ── *@
+        @{
+            var fatalDistricts = new[]
+            {
+                ("EHLANZENI", Model.CurrentEhlanzeni),
+                ("BOHLABELO", Model.CurrentBohlabelo),
+                ("GERT SIBANDE", Model.CurrentGertSibande),
+                ("NKANGALA", Model.CurrentNkangala),
+                }.Where(d => d.Item2.FatalDetails.Any()).ToList();
+        }
+        @if (fatalDistricts.Any())
+        {
+            <div class="sr-hd">FATAL CRASH DETAIL</div>
+            <table class="rt">
+                <thead>
+                    <tr class="hdr-district">
+                        <th style="width:11%">DISTRICT</th>
+                        <th style="width:13%">CR NO</th>
+                        <th style="width:10%">DATE</th>
+                        <th style="width:8%">TIME</th>
+                        <th style="width:15%">ROUTE</th>
+                        <th>LOCATION</th>
+                        <th style="width:9%">FATAL</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var (district, stats) in fatalDistricts)
+                    {
+                        @foreach (var d in stats.FatalDetails)
+                        {
+                            <tr>
+                                <td class="lbl">@district</td>
+                                <td>@d.CrNo</td>
+                                <td>@d.Date</td>
+                                <td>@d.Time</td>
+                                <td>@(d.Route ?? "–")</td>
+                                <td style="text-align:left">@(d.Location ?? "–")</td>
+                                <td class="cval">@d.Count</td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        }
+
+        @* ── SUB-PERIOD (e.g., Valentine's Weekend) ── *@
+        @if (Model.SubPeriod is not null)
+        {
+            var sp = Model.SubPeriod;
+            <hr class="sr-divider" />
+            <div class="sr-title">@sp.Label.ToUpper()</div>
+            <div class="sr-sub">@sp.From.ToString("dd MMMM yyyy").ToUpper() – @sp.To.ToString("dd MMMM yyyy").ToUpper()</div>
+
+            <table class="rt">
+                <thead>
+                    <tr class="hdr-district">
+                        <th style="width:13%"></th>
+                        <th>PROVINCE</th>
+                        <th>EHLANZENI</th>
+                        <th>BOHLABELO</th>
+                        <th>GERT SIBANDE</th>
+                        <th>NKANGALA</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td class="lbl">CRASHES</td><td class="cval">@sp.Province.Crashes</td><td class="cval">@sp.Ehlanzeni.Crashes</td><td class="cval">@sp.Bohlabelo.Crashes</td><td class="cval">@sp.GertSibande.Crashes</td><td class="cval">@sp.Nkangala.Crashes</td></tr>
+                    <tr><td class="lbl">FATALITIES</td><td class="cval">@sp.Province.Fatalities</td><td class="cval">@sp.Ehlanzeni.Fatalities</td><td class="cval">@sp.Bohlabelo.Fatalities</td><td class="cval">@sp.GertSibande.Fatalities</td><td class="cval">@sp.Nkangala.Fatalities</td></tr>
+                    <tr><td class="lbl">SERIOUS</td><td class="cval">@sp.Province.Serious</td><td class="cval">@sp.Ehlanzeni.Serious</td><td class="cval">@sp.Bohlabelo.Serious</td><td class="cval">@sp.GertSibande.Serious</td><td class="cval">@sp.Nkangala.Serious</td></tr>
+                    <tr><td class="lbl">SLIGHT</td><td class="cval">@sp.Province.Slight</td><td class="cval">@sp.Ehlanzeni.Slight</td><td class="cval">@sp.Bohlabelo.Slight</td><td class="cval">@sp.GertSibande.Slight</td><td class="cval">@sp.Nkangala.Slight</td></tr>
+                </tbody>
+            </table>
+
+            <div class="sr-hd">FATALITIES</div>
+            <table class="rt">
+                <thead>
+                    <tr class="hdr-district">
+                        <th style="width:15%">PREVALENT TIME</th>
+                        <th>PROVINCE @cy</th>
+                        <th>EHLANZENI @cy</th>
+                        <th>BOHLABELO @cy</th>
+                        <th>GERT @cy</th>
+                        <th>NKANGALA @cy</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td class="lbl">06H00 – 14H00</td><td class="cval">@sp.Province.FatalTime1</td><td class="cval">@sp.Ehlanzeni.FatalTime1</td><td class="cval">@sp.Bohlabelo.FatalTime1</td><td class="cval">@sp.GertSibande.FatalTime1</td><td class="cval">@sp.Nkangala.FatalTime1</td></tr>
+                    <tr><td class="lbl">14H00 – 22H00</td><td class="cval">@sp.Province.FatalTime2</td><td class="cval">@sp.Ehlanzeni.FatalTime2</td><td class="cval">@sp.Bohlabelo.FatalTime2</td><td class="cval">@sp.GertSibande.FatalTime2</td><td class="cval">@sp.Nkangala.FatalTime2</td></tr>
+                    <tr><td class="lbl">22H00 – 06H00</td><td class="cval">@sp.Province.FatalTime3</td><td class="cval">@sp.Ehlanzeni.FatalTime3</td><td class="cval">@sp.Bohlabelo.FatalTime3</td><td class="cval">@sp.GertSibande.FatalTime3</td><td class="cval">@sp.Nkangala.FatalTime3</td></tr>
+                </tbody>
+            </table>
+
+            <div class="sr-hd">PROVINCE:</div>
+            <div class="sr-demo">
+                <table class="rt" style="width:auto;min-width:340px">
+                    <thead><tr class="hdr-district"><th>TOTAL</th><th>0–7</th><th>8–12</th><th>13–18</th><th>19–35</th><th>36+</th></tr></thead>
+                    <tbody>
+                        <tr>
+                            <td class="cval">@Model.Victims.TotalFatalities</td>
+                            <td>@Model.Victims.Age0to7</td>
+                            <td>@Model.Victims.Age8to12</td>
+                            <td>@Model.Victims.Age13to18</td>
+                            <td>@Model.Victims.Age19to35</td>
+                            <td>@Model.Victims.Age36Plus</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <table class="rt" style="width:auto;min-width:200px">
+                    <thead><tr class="hdr-district"><th>VICTIMS GENDER</th><th>M</th><th>F</th></tr></thead>
+                    <tbody>
+                        <tr><td class="lbl">TOTAL</td><td class="cval">@Model.Victims.MaleTotal</td><td class="cval">@Model.Victims.FemaleTotal</td></tr>
+                        <tr><td class="lbl">DRIVER</td><td>@Model.Victims.MaleDriver</td><td>@Model.Victims.FemaleDriver</td></tr>
+                        <tr><td class="lbl">PASSENGER</td><td>@Model.Victims.MalePassenger</td><td>@Model.Victims.FemalePassenger</td></tr>
+                        <tr><td class="lbl">PEDESTRIANS</td><td>@Model.Victims.MalePedestrian</td><td>@Model.Victims.FemalePedestrian</td></tr>
+                        <tr><td class="lbl">CYCLIST</td><td>@Model.Victims.MaleCyclist</td><td>@Model.Victims.FemaleCyclist</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        }
+
+    </div>
+</div>

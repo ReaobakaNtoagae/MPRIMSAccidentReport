@@ -1,0 +1,221 @@
+﻿@model CrashReport.Models.Crash
+@using System.Text.Json
+@{
+    ViewData["Title"] = $"Crash Report — {Model.CrNo ?? "#" + Model.CrashId}";
+
+    // Pre-escape BriefDescription for safe use inside a JS string literal
+    var descriptionJs = (Model.BriefDescription ?? "—")
+        .Replace("\\", "\\\\")
+        .Replace("\"", "\\\"")
+        .Replace("\r", "")
+        .Replace("\n", "\\n");
+
+    var vehiclesJson = JsonSerializer.Serialize(Model.CrashVehicles.Select(cv => new
+    {
+        cv.VehicleReference,
+        Driver = cv.DriverPerson != null ? cv.DriverPerson.Surname + ", " + cv.DriverPerson.FullNames : "—",
+        Make = cv.Vehicle?.Make ?? "—",
+        VehicleModel = cv.Vehicle?.Model ?? "—",
+        Reg = cv.Vehicle?.LicenceDiscNumber ?? "—",
+        cv.VehicleManoeuvre,
+        cv.AlcoholSuspected,
+        Damages = string.Join(", ", cv.VehicleDamages.Select(d => d.DamagePoint))
+    }));
+
+    var personsJson = JsonSerializer.Serialize(Model.CrashPeople.Select(cp => new
+    {
+        cp.PersonReference,
+        Name = cp.Person != null ? cp.Person.Surname + ", " + cp.Person.FullNames : "—",
+        cp.Role,
+        cp.VehicleReference,
+        cp.SeverityOfInjury,
+        cp.Hospital
+    }));
+
+    var factorsJson = JsonSerializer.Serialize(Model.ContributoryFactors.Select(cf => new
+    {
+        cf.FactorCategory,
+        cf.FactorDescription,
+        cf.IsMajorFactor
+    }));
+
+    var witnessesJson = JsonSerializer.Serialize(Model.Witnesses.Select(w => new
+    {
+        w.SurnameInitials,
+        w.IdNumber,
+        w.CellPhone
+    }));
+
+    // Simple string values safe to embed in JS
+    var crNoJs = (Model.CrNo ?? "").Replace("\"", "\\\"");
+    var casNoJs = (Model.CasNo ?? "").Replace("\"", "\\\"");
+    var provinceJs = (Model.ProvinceCode ?? "").Replace("\"", "\\\"");
+    var roadNumberJs = (Model.RoadNumber ?? "").Replace("\"", "\\\"");
+    var crashDateJs = Model.CrashDate.ToString("dd MMM yyyy");
+    var crashTimeJs = Model.CrashTime?.ToString() ?? "";
+    var speedLimitJs = (Model.SpeedLimitKmh?.ToString() ?? "—") + " km/h";
+}
+
+<!-- Action bar -->
+<div style="display:flex; gap:8px; margin-bottom:16px; align-items:center;">
+    <div id="btnBack"></div>
+    <div id="btnEdit"></div>
+    <div id="btnDelete"></div>
+    <div style="margin-left:auto; display:flex; gap:8px;">
+        <div id="btnAddWitness"></div>
+        <div id="btnAddFactor"></div>
+    </div>
+</div>
+
+<div id="detailTabs"></div>
+
+@section Scripts {
+    <script>
+        // ── Action buttons ────────────────────────────────────────────
+        $("#btnBack")      .dxButton({ icon:"back",  text:"Back",         type:"normal",  stylingMode:"outlined", onClick: function(){ window.location.href="/Crashes"; }});
+        $("#btnEdit")      .dxButton({ icon:"edit",  text:"Edit Report",  type:"default",                         onClick: function(){ window.location.href="/Crashes/Edit/@Model.CrashId"; }});
+        $("#btnDelete")    .dxButton({ icon:"trash", text:"Delete",       type:"danger",  stylingMode:"outlined", onClick: function(){ window.location.href="/Crashes/Delete/@Model.CrashId"; }});
+        $("#btnAddWitness").dxButton({ icon:"plus",  text:"Add Witness",  type:"normal",                          onClick: function(){ window.location.href="/Witnesses/Create?crashId=@Model.CrashId"; }});
+        $("#btnAddFactor") .dxButton({ icon:"plus",  text:"Add Factor",   type:"normal",                          onClick: function(){ window.location.href="/ContributoryFactors/Create?crashId=@Model.CrashId"; }});
+
+        // ── Tab panel ─────────────────────────────────────────────────
+        $("#detailTabs").dxTabPanel({
+            animationEnabled: true,
+            swipeEnabled: false,
+            items: [
+                // Tab 1 — Crash Info
+                {
+                    title: "Crash Info",
+                    template: function (_, container) {
+                        $("<div>").appendTo(container).dxForm({
+                            readOnly: true,
+                            colCount: 4,
+                            formData: {
+                                CrNo:        "@crNoJs",
+                                CasNo:       "@casNoJs",
+                                CrashDate:   "@crashDateJs",
+                                CrashTime:   "@(Model.CrashTime.HasValue? Model.CrashTime.Value.ToString("HH:mm") : "—")",
+                                Province:    "@provinceJs",
+                                SpeedLimit:  "@speedLimitJs",
+                                RoadNumber:  "@roadNumberJs",
+                                Description: "@descriptionJs"
+                            },
+                            items: [
+                                { dataField: "CrNo",       label: { text: "CR No." } },
+                                { dataField: "CasNo",      label: { text: "CAS No." } },
+                                { dataField: "CrashDate",  label: { text: "Date" } },
+                                { dataField: "CrashTime",  label: { text: "Time" } },
+                                { dataField: "Province",   label: { text: "Province" } },
+                                { dataField: "SpeedLimit", label: { text: "Speed Limit" } },
+                                { dataField: "RoadNumber", label: { text: "Road Number" } },
+                                {
+                                    dataField: "Description", label: { text: "Description" }, colSpan: 4,
+                                    editorType: "dxTextArea", editorOptions: { height: 70 }
+                                }
+                            ]
+                        });
+                    }
+                },
+                // Tab 2 — Vehicles
+                {
+                    title: "Vehicles (@Model.CrashVehicles.Count)",
+                    template: function (_, container) {
+                        $("<div>").appendTo(container).dxDataGrid({
+                            dataSource: @Html.Raw(vehiclesJson),
+                            columns: [
+                                { dataField: "VehicleReference", caption: "Ref",           width: 60 },
+                                { dataField: "Driver",           caption: "Driver",         minWidth: 160 },
+                                { dataField: "Make",             caption: "Make",           width: 110 },
+                                { dataField: "VehicleModel",     caption: "Model",          width: 130 },
+                                { dataField: "Reg",              caption: "Reg No.",        width: 120 },
+                                { dataField: "VehicleManoeuvre", caption: "Manoeuvre",      width: 150 },
+                                { dataField: "AlcoholSuspected", caption: "Alcohol",        width: 90  },
+                                { dataField: "Damages",          caption: "Damage Points",  minWidth: 150 }
+                            ],
+                            showBorders: true,
+                            rowAlternationEnabled: true,
+                            paging: { enabled: false }
+                        });
+                    }
+                },
+                // Tab 3 — Persons
+                {
+                    title: "Persons (@Model.CrashPeople.Count)",
+                    template: function (_, container) {
+                        $("<div>").appendTo(container).dxDataGrid({
+                            dataSource: @Html.Raw(personsJson),
+                            columns: [
+                                { dataField: "PersonReference",  caption: "Ref",     width: 60 },
+                                { dataField: "Name",             caption: "Name",    minWidth: 180 },
+                                { dataField: "Role",             caption: "Role",    width: 110 },
+                                { dataField: "VehicleReference", caption: "Vehicle", width: 80  },
+                                {
+                                    dataField: "SeverityOfInjury", caption: "Injury", width: 110,
+                                    cellTemplate: function (container, options) {
+                                        var colourMap = {
+                                            "Fatal":     "#c62828",
+                                            "Serious":   "#e65100",
+                                            "Slight":    "#0277bd",
+                                            "No injury": "#2e7d32"
+                                        };
+                                        var bg = colourMap[options.value] || "#757575";
+                                        container.html(
+                                            '<span style="background:' + bg + ';color:#fff;' +
+                                            'border-radius:10px;padding:2px 10px;font-size:.78rem">' +
+                                            (options.value || "—") + '</span>'
+                                        );
+                                    }
+                                },
+                                { dataField: "Hospital", caption: "Hospital", minWidth: 160 }
+                            ],
+                            showBorders: true,
+                            rowAlternationEnabled: true,
+                            paging: { enabled: false }
+                        });
+                    }
+                },
+                // Tab 4 — Contributory Factors
+                {
+                    title: "Factors (@Model.ContributoryFactors.Count)",
+                    template: function (_, container) {
+                        $("<div>").appendTo(container).dxDataGrid({
+                            dataSource: @Html.Raw(factorsJson),
+                            columns: [
+                                { dataField: "FactorCategory",    caption: "Category", width: 190 },
+                                { dataField: "FactorDescription", caption: "Factor",   minWidth: 220 },
+                                {
+                                    dataField: "IsMajorFactor", caption: "Major", width: 75, alignment: "center",
+                                    cellTemplate: function (container, options) {
+                                        container.html(options.value
+                                            ? '<span style="color:#c62828;font-weight:700">&#9679; YES</span>'
+                                            : '<span style="color:#bbb">—</span>');
+                                    }
+                                }
+                            ],
+                            showBorders: true,
+                            rowAlternationEnabled: true,
+                            paging: { enabled: false }
+                        });
+                    }
+                },
+                // Tab 5 — Witnesses
+                {
+                    title: "Witnesses (@Model.Witnesses.Count)",
+                    template: function (_, container) {
+                        $("<div>").appendTo(container).dxDataGrid({
+                            dataSource: @Html.Raw(witnessesJson),
+                            columns: [
+                                { dataField: "SurnameInitials", caption: "Name",       minWidth: 180 },
+                                { dataField: "IdNumber",        caption: "ID Number",  width: 150 },
+                                { dataField: "CellPhone",       caption: "Cell Phone", width: 140 }
+                            ],
+                            showBorders: true,
+                            rowAlternationEnabled: true,
+                            paging: { enabled: false }
+                        });
+                    }
+                }
+            ]
+        });
+    </script>
+}

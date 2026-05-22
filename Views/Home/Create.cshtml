@@ -1,0 +1,889 @@
+﻿@{
+    ViewData["Title"] = "New CR1 Crash Report";
+}
+
+<form id="wizardForm" method="post" asp-action="Submit">
+    @Html.AntiForgeryToken()
+    <input type="hidden" id="formJsonInput" name="formJson" />
+</form>
+
+<style>
+    .wizard-steps {
+        display: flex;
+        align-items: center;
+        margin-bottom: 28px;
+        background: #fff;
+        border-radius: 10px;
+        padding: 18px 24px;
+        box-shadow: 0 2px 8px rgba(0,0,0,.08);
+        border: 1px solid #c8e6c9;
+        overflow-x: auto;
+    }
+
+    .step-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        flex: 1;
+        position: relative;
+        min-width: 80px;
+    }
+
+        .step-item:not(:last-child)::after {
+            content: "";
+            position: absolute;
+            top: 16px;
+            left: 60%;
+            width: 80%;
+            height: 2px;
+            background: #c8e6c9;
+            z-index: 0;
+        }
+
+        .step-item.completed:not(:last-child)::after {
+            background: #2e7d32;
+        }
+
+    .step-circle {
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        border: 2px solid #c8e6c9;
+        background: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: .82rem;
+        font-weight: 700;
+        color: #aaa;
+        position: relative;
+        z-index: 1;
+        transition: all .25s;
+    }
+
+    .step-item.active .step-circle {
+        background: #2e7d32;
+        border-color: #2e7d32;
+        color: #fff;
+    }
+
+    .step-item.completed .step-circle {
+        background: #43a047;
+        border-color: #43a047;
+        color: #fff;
+    }
+
+    .step-label {
+        margin-top: 6px;
+        font-size: .7rem;
+        color: #aaa;
+        text-align: center;
+        font-weight: 500;
+        white-space: nowrap;
+    }
+
+    .step-item.active .step-label {
+        color: #2e7d32;
+        font-weight: 700;
+    }
+
+    .step-item.completed .step-label {
+        color: #43a047;
+    }
+
+    .step-panel {
+        display: none;
+    }
+
+        .step-panel.active {
+            display: block;
+        }
+
+    .panel-card {
+        background: #fff;
+        border-radius: 10px;
+        padding: 24px 28px 16px;
+        box-shadow: 0 2px 10px rgba(0,0,0,.07);
+        border: 1px solid #c8e6c9;
+        margin-bottom: 16px;
+    }
+
+        .panel-card h6 {
+            font-size: .78rem;
+            text-transform: uppercase;
+            letter-spacing: .7px;
+            color: #2e7d32;
+            font-weight: 700;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #e8f5e9;
+        }
+
+    .wizard-nav {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: #fff;
+        border-radius: 10px;
+        padding: 14px 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,.07);
+        border: 1px solid #c8e6c9;
+    }
+
+    .field-row {
+        display: grid;
+        gap: 12px;
+        margin-bottom: 12px;
+    }
+
+        .field-row.cols-4 {
+            grid-template-columns: repeat(4, 1fr);
+        }
+
+        .field-row.cols-3 {
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+        .field-row.cols-2 {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+    .field-label {
+        font-size: .72rem;
+        color: #555;
+        font-weight: 600;
+        margin-bottom: 4px;
+    }
+
+    .entry-tabs {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 12px;
+        flex-wrap: wrap;
+    }
+
+    .entry-tab {
+        padding: 6px 14px;
+        border-radius: 20px;
+        border: 1px solid #a5d6a7;
+        background: #f1f8f1;
+        color: #2e7d32;
+        font-size: .8rem;
+        cursor: pointer;
+        font-weight: 600;
+    }
+
+        .entry-tab.active {
+            background: #2e7d32;
+            color: #fff;
+            border-color: #2e7d32;
+        }
+
+    .entry-form {
+        display: none;
+    }
+
+        .entry-form.active {
+            display: block;
+        }
+
+    .review-section {
+        margin-bottom: 14px;
+    }
+
+        .review-section h6 {
+            font-size: .75rem;
+            text-transform: uppercase;
+            letter-spacing: .6px;
+            color: #2e7d32;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+    .review-grid {
+        display: grid;
+        grid-template-columns: repeat(3,1fr);
+        gap: 8px;
+    }
+
+    .review-item {
+        background: #f1f8f1;
+        border-radius: 6px;
+        padding: 8px 12px;
+        font-size: .8rem;
+    }
+
+        .review-item .r-label {
+            color: #666;
+            margin-bottom: 2px;
+            font-size: .72rem;
+        }
+
+        .review-item .r-value {
+            color: #1b5e20;
+            font-weight: 600;
+        }
+</style>
+
+<!-- Step bar -->
+<div class="wizard-steps" id="stepBar"></div>
+
+<!-- STEP 1: Crash Info -->
+<div class="step-panel active" id="panel-1">
+    <div class="panel-card">
+        <h6>Reference Numbers</h6>
+        <div class="field-row cols-4">
+            <div><div class="field-label">SAPS Station</div><div id="sapsSelect"></div></div>
+            <div><div class="field-label">AR Number</div><div id="arNoBox"></div></div>
+            <div><div class="field-label">CAS Number</div><div id="casNoBox"></div></div>
+            <div><div class="field-label">Capturing Number</div><div id="capturingBox"></div></div>
+        </div>
+    </div>
+    <div class="panel-card">
+        <h6>Date, Time &amp; Road</h6>
+        <div class="field-row cols-4">
+            <div><div class="field-label">Crash Date *</div><div id="crashDateBox"></div></div>
+            <div><div class="field-label">Time (24h)</div><div id="crashTimeBox"></div></div>
+            <div><div class="field-label">Province</div><div id="provinceBox"></div></div>
+            <div><div class="field-label">Speed Limit (km/h)</div><div id="speedBox"></div></div>
+            <div><div class="field-label">Route / Road</div><div id="routeSelect"></div></div>
+            <div><div class="field-label">Km Marker</div><div id="kmMarkerBox"></div></div>
+            <div><div class="field-label">No. of Vehicles</div><div id="vehicleCountBox"></div></div>
+            <div><div class="field-label">No. of Appendices</div><div id="appendicesBox"></div></div>
+        </div>
+    </div>
+    <div class="panel-card">
+        <h6>Brief Description</h6>
+        <div id="descBox"></div>
+    </div>
+</div>
+
+<!-- STEP 2: Location -->
+<div class="step-panel" id="panel-2">
+    <div class="panel-card">
+        <h6>Crash Location</h6>
+        <div class="field-row cols-3">
+            <div style="grid-column:span 2"><div class="field-label">Street / Road Name</div><div id="locationSelect"></div></div>
+            <div><div class="field-label">Area Type</div><div id="areaTypeBox"></div></div>
+            <div><div class="field-label">Suburb</div><div id="suburbBox"></div></div>
+            <div><div class="field-label">City / Town</div><div id="cityTownBox"></div></div>
+            <div><div class="field-label">At Intersection With</div><div id="intersectionBox"></div></div>
+            <div><div class="field-label">GPS X</div><div id="gpsXBox"></div></div>
+            <div><div class="field-label">GPS Y</div><div id="gpsYBox"></div></div>
+        </div>
+    </div>
+    <div class="panel-card">
+        <h6>Road Classification</h6>
+        <div class="field-row cols-3">
+            <div><div class="field-label">Road Classification</div><div id="roadClassBox"></div></div>
+            <div><div class="field-label">Junction Type</div><div id="junctionBox"></div></div>
+            <div><div class="field-label">Road Layout</div><div id="roadLayoutBox"></div></div>
+            <div><div class="field-label">Surface Type</div><div id="surfaceTypeBox"></div></div>
+            <div><div class="field-label">Surface Condition</div><div id="surfaceCondBox"></div></div>
+        </div>
+    </div>
+</div>
+
+<!-- STEP 3: Conditions -->
+<div class="step-panel" id="panel-3">
+    <div class="panel-card">
+        <h6>Environmental Conditions</h6>
+        <div class="field-row cols-3">
+            <div><div class="field-label">Light Condition</div><div id="lightBox"></div></div>
+            <div><div class="field-label">Traffic Control</div><div id="trafficCtrlBox"></div></div>
+            <div><div class="field-label">Obstruction</div><div id="obstructionBox"></div></div>
+            <div><div class="field-label">Road Grade</div><div id="roadGradeBox"></div></div>
+            <div><div class="field-label">Road Signs</div><div id="roadSignsBox"></div></div>
+            <div><div class="field-label">Road Markings</div><div id="roadMarkingsBox"></div></div>
+        </div>
+    </div>
+    <div class="panel-card">
+        <h6>Weather (select all that apply)</h6>
+        <div id="weatherCheckboxes" style="display:flex;flex-wrap:wrap;gap:10px;"></div>
+    </div>
+    <div class="panel-card">
+        <h6>Crash Classification</h6>
+        <div class="field-row cols-2">
+            <div><div class="field-label">Crash Type</div><div id="crashTypeSelect"></div></div>
+            <div><div class="field-label">Hit and Run</div><div id="hitRunBox"></div></div>
+        </div>
+    </div>
+</div>
+
+<!-- STEP 4: Vehicles -->
+<div class="step-panel" id="panel-4">
+    <div class="panel-card">
+        <h6>Vehicles Involved</h6>
+        <div class="entry-tabs" id="vehicleTabs"></div>
+        <div id="vehicleForms"></div>
+        <div style="margin-top:12px;"><div id="btnAddVehicle"></div></div>
+    </div>
+</div>
+
+<!-- STEP 5: Persons -->
+<div class="step-panel" id="panel-5">
+    <div class="panel-card">
+        <h6>Persons Involved (excluding drivers already captured)</h6>
+        <div class="entry-tabs" id="personTabs"></div>
+        <div id="personForms"></div>
+        <div style="margin-top:12px;"><div id="btnAddPerson"></div></div>
+    </div>
+</div>
+
+<!-- STEP 6: Factors -->
+<div class="step-panel" id="panel-6">
+    <div class="panel-card">
+        <h6>Contributory Factors</h6>
+        <div id="factorsGrid"></div>
+        <div style="margin-top:12px;"><div id="btnAddFactor"></div></div>
+    </div>
+</div>
+
+<!-- STEP 7: Review -->
+<div class="step-panel" id="panel-7">
+    <div class="panel-card">
+        <h6>Review Your Report</h6>
+        <div id="reviewContent"></div>
+    </div>
+</div>
+
+<!-- Nav -->
+<div class="wizard-nav" style="margin-top:16px;">
+    <div id="btnBack"></div>
+    <span id="stepCounter" style="font-size:.82rem;color:#666;font-weight:500;"></span>
+    <div id="btnNext"></div>
+</div>
+
+@section Scripts {
+    <script>
+        $(function () {
+
+            // ══════════════════════════════════════════════════════════
+            // STATE
+            // ══════════════════════════════════════════════════════════
+            var currentStep = 1;
+            var totalSteps  = 7;
+            var stepLabels  = ["Crash Info","Location","Conditions","Vehicles","Persons","Factors","Review"];
+
+            var formData = {
+                CrashInfo:  { NoOfVehiclesInvolved: 1, NoOfAppendices: 0 },
+                Location:   {},
+                Conditions: { WeatherConditions: [] },
+                Vehicles:   [],
+                Persons:    [],
+                Factors:    []
+            };
+
+            var vehicleCount = 1;
+            var personCount  = 0;
+            var factorRows   = [];
+
+            // ── Static option lists ───────────────────────────────────
+            var provinces      = ["EC","FS","GP","KZN","LP","MP","NC","NW","WC"];
+            var vehicleRefs    = ["A","B","C","D","E"];
+            var manoeuvres     = ["Travelling straight","Turning right","Turning left","U-turn",
+                                  "Entering traffic flow","Merging","Diverging","Reversing",
+                                  "Sudden start","Sudden stop","Swerving","Slowing down",
+                                  "Avoiding object","Stationary","Overtaking - pass right",
+                                  "Overtaking - pass left","Other"];
+            var seatbeltOpts   = ["SB available used","SB available not used","SB not available","H used","H not used"];
+            var yesNoUnk       = ["Yes","No","Unknown"];
+            var testResults    = ["Test given","Test not given","Test refused"];
+            var injuries       = ["Fatal","Serious","Slight","No injury"];
+            var roles          = ["Passenger","Pedestrian","Bicyclist"];
+            var seatPositions  = ["Front","Rear","Other","Unknown"];
+            var licenceCodes   = ["A1","A","B","EB","C1","C","EC1","EC"];
+            var vehicleCategories = ["Passenger","Goods","Motorcycle","Other"];
+            var specialFuncs   = ["None","Taxi","Bus","Police","Military","EMS","Unknown","Other"];
+            var areaTypes      = ["Town/City","Freeway","Rural"];
+            var roadLayouts    = ["Straight","Slight Bend","Sharp Bend"];
+            var surfaceTypes   = ["Tarmac","Concrete","Gravel/Dirt","Block pave","Other"];
+            var surfaceConds   = ["Dry","Wet","Damp","Ice","Snow","Frost","Slippery","Flooding","Loose gravel"];
+            var junctionTypes  = ["Cross roads","T-Junction","Staggered junction","Y-junction",
+                                  "Circle","Level Crossing","Not a junction","On/Off-ramp","Pedestrian Crossing","Other"];
+            var roadClasses    = ["Freeway/Motorway","On/Off ramp","Dual carriageway","Single carriageway",
+                                  "On-road parking/rank","Off-road parking/rank","Urban 1-way","Urban 2-way",
+                                  "Urban build-up area","Restricted road","Unknown","Other"];
+            var trafficCtrl    = ["Traffic signal","Stop sign","Officer","Yield/Give Way","Uncontrolled",
+                                  "Boom","Pedestrian Crossing","Barrier line","Flashing TS","All TS out of order","Other"];
+            var lightConds     = ["Daylight","Night + Street lights","Night + No street lights","Sunset","Sunrise","Unknown"];
+            var weatherOpts    = ["Clear","Mist/Fog","Rain","Overcast","Sleet/Hail","Snow","Dust","Smog/Smoke","Unknown"];
+            var humanFactors   = ["Cell phone holding/usage","Disregard for red traffic lights","Disregard for stop sign",
+                                  "Disregard for yield sign","Fatigue: driver falling asleep","Followed vehicle too closely",
+                                  "Hit and run","Jay-walking pedestrian","Overtook in face of oncoming traffic",
+                                  "Overtook across barrier line","Speed too high for circumstances",
+                                  "Turned in front of oncoming traffic","U-turn","Intoxicated driver",
+                                  "Intoxicated bicyclist","Intoxicated pedestrian","Other"];
+            var vehicleFactors = ["Bicycle no rear reflectors","Bicycle no head lamp","Brakes faulty",
+                                  "Brakes: lights dirty","Headlights blinding","Headlights faulty",
+                                  "Headlights not switched on","Overload cargo","Overload: passengers",
+                                  "Steering: faulty","Tyres: burst prior to accident","Tyres: smooth","Other"];
+            var roadFactors    = ["Animal: stray/wild","Blind corner","Blind rise","Lighting: poor",
+                                  "Road markings poor/inadequate/none","Road traffic lane narrow",
+                                  "Road signs poor/inadequate/none","Road surface poor","Road surface wet/slippery",
+                                  "Road works","Sharp bend","Traffic lights defective","Visibility poor",
+                                  "Visibility: smoke/fog/rain/etc.","Other"];
+            var factorMap      = { "Human": humanFactors, "Vehicle": vehicleFactors, "Road & Environmental": roadFactors };
+
+            // ══════════════════════════════════════════════════════════
+            // STEP BAR
+            // ══════════════════════════════════════════════════════════
+            function buildStepBar() {
+                var bar = $("#stepBar").empty();
+                stepLabels.forEach(function(label, i) {
+                    var n   = i + 1;
+                    var cls = n < currentStep ? "step-item completed" : n === currentStep ? "step-item active" : "step-item";
+                    bar.append('<div class="' + cls + '"><div class="step-circle">' +
+                        (n < currentStep ? "✓" : n) + '</div><div class="step-label">' + label + '</div></div>');
+                });
+                $("#stepCounter").text("Step " + currentStep + " of " + totalSteps);
+            }
+
+            // ══════════════════════════════════════════════════════════
+            // HELPER: dxSelectBox backed by lookup API
+            // ══════════════════════════════════════════════════════════
+            function lookupSelect(container, endpoint, placeholder, onChange) {
+                return $(container).dxSelectBox({
+                    dataSource: new DevExpress.data.CustomStore({
+                        key: "text",
+                        load: function() { return $.getJSON("/api/lookup/" + endpoint); },
+                        byKey: function(k) {
+                            return $.getJSON("/api/lookup/" + endpoint + "?q=" + encodeURIComponent(k))
+                                .then(function(items) { return items.find(function(i){ return i.text===k; }) || {text:k}; });
+                        }
+                    }),
+                    displayExpr:       "text",
+                    valueExpr:         "text",
+                    searchEnabled:     true,
+                    acceptCustomValue: true,
+                    showClearButton:   true,
+                    placeholder:       placeholder || "Select or type to add...",
+                    itemTemplate: function(data) {
+                        var lbl = data.text || "";
+                        if (data.description) lbl += " — " + data.description;
+                        if (data.district)    lbl += " (" + data.district + ")";
+                        return $("<div>").text(lbl);
+                    },
+                    customItemCreating: function(args) {
+                        var val = (args.text || "").trim();
+                        if (!val) { args.customItem = null; return; }
+                        var def = $.Deferred();
+                        args.customItem = def.promise();
+                        $.ajax({
+                            url: "/api/lookup/" + endpoint, method: "POST",
+                            contentType: "application/json", data: JSON.stringify({ text: val }),
+                            success: function(r) {
+                                DevExpress.ui.notify('"' + r.text + '" added.', "success", 2000);
+                                def.resolve(r);
+                            },
+                            error: function() { def.resolve({ text: val }); }
+                        });
+                    },
+                    onValueChanged: function(e) { if (onChange) onChange(e.value); }
+                }).dxSelectBox("instance");
+            }
+
+            // ── Helper: plain static dxSelectBox ─────────────────────
+            function staticSelect(container, items, placeholder, onChange) {
+                return $(container).dxSelectBox({
+                    items: items, searchEnabled: true, showClearButton: true,
+                    placeholder: placeholder || "Select...",
+                    onValueChanged: function(e) { if (onChange) onChange(e.value); }
+                }).dxSelectBox("instance");
+            }
+
+            function textBox(container, placeholder, onChange) {
+                return $(container).dxTextBox({
+                    placeholder: placeholder, showClearButton: true,
+                    onValueChanged: function(e) { if (onChange) onChange(e.value); }
+                }).dxTextBox("instance");
+            }
+
+            function numberBox(container, val, min, onChange) {
+                return $(container).dxNumberBox({
+                    value: val || 0, min: min || 0,
+                    onValueChanged: function(e) { if (onChange) onChange(e.value); }
+                }).dxNumberBox("instance");
+            }
+
+            // ══════════════════════════════════════════════════════════
+            // STEP 1 FIELDS
+            // ══════════════════════════════════════════════════════════
+            lookupSelect("#sapsSelect", "stations", "Search SAPS station...", function(v) {
+                formData.CrashInfo.SapsStation = v;
+                var ar = formData.CrashInfo.ArNo || "";
+                formData.CrashInfo.CrNo = v ? (v + (ar ? "-" + ar : "")) : ar;
+            });
+            textBox("#arNoBox", "AR Number", function(v) {
+                formData.CrashInfo.ArNo  = v;
+                var saps = formData.CrashInfo.SapsStation || "";
+                formData.CrashInfo.CrNo  = saps ? (saps + (v ? "-" + v : "")) : v;
+            });
+            textBox("#casNoBox",     "CAS Number",       function(v) { formData.CrashInfo.CasNo            = v; });
+            textBox("#capturingBox", "Capturing Number", function(v) { formData.CrashInfo.CapturingNumber  = v; });
+
+            $("#crashDateBox").dxDateBox({
+                type: "date", displayFormat: "dd/MM/yyyy", value: new Date(),
+                onValueChanged: function(e) {
+                    var d = e.value;
+                    formData.CrashInfo.CrashDate = d ? d.toISOString().split("T")[0] : null;
+                }
+            });
+            $("#crashTimeBox").dxDateBox({
+                type: "time",
+                displayFormat: "HH:mm",
+                pickerType: "list",
+                interval: 5,        // 5-minute increments in picker
+                useMaskBehavior: true,
+                placeholder: "HH:mm",
+                onValueChanged: function(e) {
+                    var d = e.value;
+                    if (d) {
+                        // Store full HH:mm:ss (seconds always 00 from manual entry)
+                        formData.CrashInfo.CrashTime =
+                            d.getHours().toString().padStart(2,"0") + ":" +
+                            d.getMinutes().toString().padStart(2,"0") + ":00";
+                    }
+                }
+            });
+            staticSelect("#provinceBox",  provinces,  "Province",       function(v) { formData.CrashInfo.ProvinceCode  = v; });
+            numberBox("#speedBox",        null, 0, function(v)          { formData.CrashInfo.SpeedLimitKmh             = v; });
+            lookupSelect("#routeSelect",  "routes",   "e.g. N4, R40...",function(v) { formData.CrashInfo.RoadNumber    = v; });
+            textBox("#kmMarkerBox",       "Km Marker",                    function(v) { formData.CrashInfo.KmMarker     = v; });
+            numberBox("#vehicleCountBox", 1, 1, function(v) { formData.CrashInfo.NoOfVehiclesInvolved = v; });
+            numberBox("#appendicesBox",   0, 0, function(v) { formData.CrashInfo.NoOfAppendices       = v; });
+            $("#descBox").dxTextArea({
+                height: 80, placeholder: "It is alleged that...",
+                onValueChanged: function(e) { formData.CrashInfo.BriefDescription = e.value; }
+            });
+
+            // ══════════════════════════════════════════════════════════
+            // STEP 2 FIELDS
+            // ══════════════════════════════════════════════════════════
+            lookupSelect("#locationSelect","locations","Street / road name...",function(v){ formData.Location.StreetRoadName = v; });
+            staticSelect("#areaTypeBox",   areaTypes,  "Select...",            function(v){ formData.Location.AreaType = v; });
+            textBox("#suburbBox",          "Suburb",                            function(v){ formData.Location.Suburb = v; });
+            textBox("#cityTownBox",        "City / Town",                       function(v){ formData.Location.CityTown = v; });
+            textBox("#intersectionBox",    "Intersection street / road",        function(v){ formData.Location.IntersectionStreet = v; });
+            numberBox("#gpsXBox", null, null, function(v){ formData.Location.GpsXCoordinate = v; });
+            numberBox("#gpsYBox", null, null, function(v){ formData.Location.GpsYCoordinate = v; });
+            staticSelect("#roadClassBox",  roadClasses,  "Select...",           function(v){ formData.Location.RoadFunctionalClassification = v; });
+            staticSelect("#junctionBox",   junctionTypes,"Select...",           function(v){ formData.Location.JunctionType = v; });
+            staticSelect("#roadLayoutBox", roadLayouts,  "Select...",           function(v){ formData.Location.RoadLayout = v; });
+            staticSelect("#surfaceTypeBox",surfaceTypes, "Select...",           function(v){ formData.Location.RoadSurfaceType = v; });
+            staticSelect("#surfaceCondBox",surfaceConds, "Select...",           function(v){ formData.Location.RoadSurfaceCondition = v; });
+
+            // ══════════════════════════════════════════════════════════
+            // STEP 3 FIELDS
+            // ══════════════════════════════════════════════════════════
+            staticSelect("#lightBox",      lightConds,  "Light condition...",  function(v){ formData.Conditions.LightCondition = v; });
+            staticSelect("#trafficCtrlBox",trafficCtrl, "Traffic control...",  function(v){ formData.Conditions.TrafficControlType = v; });
+            staticSelect("#obstructionBox",["Crash site","Roadworks","Roadblock","None","Other"],"Obstruction...",function(v){ formData.Conditions.ObstructionType = v; });
+            staticSelect("#roadGradeBox",  ["Flat","Uphill","Downhill","Steep uphill","Steep downhill"],"Grade...",function(v){ formData.Conditions.RoadSegmentGrade = v; });
+            staticSelect("#roadSignsBox",  ["Visible","Not visible","Damaged","Missing","N/A"],"Road signs...",function(v){ formData.Conditions.RoadSignsCondition = v; });
+            staticSelect("#roadMarkingsBox",["Good","Visible","Not visible","Not applicable"],"Road markings...",function(v){ formData.Conditions.RoadMarkingVisibility = v; });
+
+            // Crash type from lookup
+            lookupSelect("#crashTypeSelect","crashtypes","e.g. HEAD ON, SIDE SWIPE...",function(v){ formData.Conditions.CrashType = v; });
+            staticSelect("#hitRunBox",[{text:"Yes",value:true},{text:"No",value:false}],"Select...",function(v){ formData.Conditions.HitAndRun = v; });
+            $("#hitRunBox").dxSelectBox("instance").option({ displayExpr:"text", valueExpr:"value" });
+
+            // Weather checkboxes
+            weatherOpts.forEach(function(w) {
+                var wrap = $("<div>").css({ display:"flex", alignItems:"center", gap:"6px",
+                    background:"#f1f8f1", border:"1px solid #c8e6c9", borderRadius:"6px", padding:"6px 12px"
+                }).appendTo("#weatherCheckboxes");
+                $("<div>").appendTo(wrap).dxCheckBox({
+                    text: w,
+                    onValueChanged: function(e) {
+                        var idx = formData.Conditions.WeatherConditions.indexOf(w);
+                        if (e.value && idx === -1) formData.Conditions.WeatherConditions.push(w);
+                        else if (!e.value && idx > -1) formData.Conditions.WeatherConditions.splice(idx, 1);
+                    }
+                });
+            });
+
+            // ══════════════════════════════════════════════════════════
+            // STEP 4: VEHICLES
+            // ══════════════════════════════════════════════════════════
+            function buildVehicleForm(index) {
+                var ref  = vehicleRefs[index];
+                var data = { VehicleReference: ref };
+                formData.Vehicles[index] = data;
+
+                var tab = $("<div>").addClass("entry-tab" + (index === 0 ? " active" : ""))
+                    .attr("id", "vTab-" + index).text("Vehicle " + ref)
+                    .on("click", function() {
+                        $(".entry-tab").removeClass("active"); $(".entry-form").removeClass("active");
+                        $(this).addClass("active"); $("#vForm-" + index).addClass("active");
+                    });
+                $("#vehicleTabs").append(tab);
+
+                var fd = $("<div>").addClass("entry-form" + (index === 0 ? " active" : ""))
+                    .attr("id", "vForm-" + index).appendTo("#vehicleForms");
+
+                function sec(title) {
+                    $("<div>").css({ fontWeight:700, color:"#2e7d32", fontSize:".8rem",
+                        textTransform:"uppercase", letterSpacing:".5px", margin:"16px 0 10px"
+                    }).text(title).appendTo(fd);
+                }
+
+                sec("Vehicle " + ref + " — Details");
+                var vRow = $("<div class='field-row cols-4'>").appendTo(fd);
+                [
+                    ["#vLicDisc"+index,   "lkp_disc_"+index,  "Reg / Disc No.",  null, "text",   function(v){ data.LicenceDiscNumber = v; }],
+                    ["#vMake"+index,      null,                "Make",            null, "text",   function(v){ data.Make = v; }],
+                    ["#vModel"+index,     null,                "Model",           null, "text",   function(v){ data.Model = v; }],
+                    ["#vColour"+index,    null,                "Colour",          null, "text",   function(v){ data.Colour = v; }],
+                    ["#vCat"+index,       null,                "Category",        vehicleCategories, "sel", function(v){ data.VehicleCategory = v; }],
+                    ["#vFunc"+index,      null,                "Special Function",specialFuncs, "sel", function(v){ data.SpecialFunction = v; }],
+                    ["#vVin"+index,       null,                "VIN",             null, "text",   function(v){ data.VinNumber = v; }]
+                ].forEach(function(f) {
+                    var wrap = $("<div>").appendTo(vRow);
+                    $("<div class='field-label'>").text(f[2]).appendTo(wrap);
+                    var box = $("<div>").attr("id", f[0].slice(1)).appendTo(wrap);
+                    if (f[4] === "sel") staticSelect(box, f[3], f[2] + "...", f[5]);
+                    else textBox(box, f[2], f[5]);
+                });
+
+                sec("Driver Details");
+                var dRow = $("<div class='field-row cols-4'>").appendTo(fd);
+                [
+                    ["Surname",    function(v){ data.DriverSurname   = v; }],
+                    ["Full Names", function(v){ data.DriverFullNames = v; }],
+                    ["ID Number",  function(v){ data.DriverIdNumber  = v; }],
+                    ["Cell Phone", function(v){ data.DriverCellPhone = v; }]
+                ].forEach(function(f) {
+                    var w = $("<div>").appendTo(dRow);
+                    $("<div class='field-label'>").text(f[0]).appendTo(w);
+                    textBox($("<div>").appendTo(w), f[0], f[1]);
+                });
+                var dRow2 = $("<div class='field-row cols-4'>").appendTo(fd);
+                var lw = $("<div>").appendTo(dRow2);
+                $("<div class='field-label'>").text("Licence Code").appendTo(lw);
+                staticSelect($("<div>").appendTo(lw), licenceCodes, "Code...", function(v){ data.LicenceCode = v; });
+                var sw = $("<div>").appendTo(dRow2);
+                $("<div class='field-label'>").text("Seatbelt / Helmet").appendTo(sw);
+                staticSelect($("<div>").appendTo(sw), seatbeltOpts, "Select...", function(v){ data.SeatbeltUsed = v; });
+                var iw = $("<div>").appendTo(dRow2);
+                $("<div class='field-label'>").text("Injury Severity").appendTo(iw);
+                staticSelect($("<div>").appendTo(iw), injuries, "Select...", function(v){ data.SeverityOfInjury = v; });
+
+                sec("Vehicle Conduct");
+                var cRow = $("<div class='field-row cols-4'>").appendTo(fd);
+                [
+                    ["Manoeuvre",         manoeuvres,  function(v){ data.VehicleManoeuvre    = v; }],
+                    ["Position Before",   ["Correct road lane","Wrong road lane","Wrong side of road","Road shoulder","On-road parking bay","Off-road parking bay"], function(v){ data.PositionBeforeCrash = v; }],
+                    ["Alcohol Suspected", yesNoUnk,    function(v){ data.AlcoholSuspected    = v; }],
+                    ["Alcohol Test",      testResults, function(v){ data.AlcoholTestResult   = v; }],
+                    ["Drug Suspected",    yesNoUnk,    function(v){ data.DrugSuspected       = v; }]
+                ].forEach(function(f) {
+                    var w = $("<div>").appendTo(cRow);
+                    $("<div class='field-label'>").text(f[0]).appendTo(w);
+                    staticSelect($("<div>").appendTo(w), f[1], f[0] + "...", f[2]);
+                });
+            }
+
+            buildVehicleForm(0);
+            $("#btnAddVehicle").dxButton({
+                text:"Add Another Vehicle", type:"normal", icon:"plus", stylingMode:"outlined",
+                onClick: function() {
+                    if (vehicleCount >= 5) { DevExpress.ui.notify("Maximum 5 vehicles.", "warning", 2000); return; }
+                    buildVehicleForm(vehicleCount++);
+                }
+            });
+
+            // ══════════════════════════════════════════════════════════
+            // STEP 5: PERSONS
+            // ══════════════════════════════════════════════════════════
+            function buildPersonForm(index) {
+                var data = {};
+                formData.Persons[index] = data;
+
+                var tab = $("<div>").addClass("entry-tab" + (index === 0 ? " active" : ""))
+                    .attr("id","pTab-"+index).text("Person " + (index + 1))
+                    .on("click", function() {
+                        $(".entry-tab").removeClass("active"); $(".entry-form").removeClass("active");
+                        $(this).addClass("active"); $("#pForm-"+index).addClass("active");
+                    });
+                $("#personTabs").append(tab);
+
+                var fd = $("<div>").addClass("entry-form" + (index === 0 ? " active" : ""))
+                    .attr("id","pForm-"+index).appendTo("#personForms");
+                var row = $("<div class='field-row cols-4'>").appendTo(fd);
+
+                [
+                    ["Surname",          "text",   roles,          function(v){ data.Surname          = v; }],
+                    ["Full Names",       "text",   null,           function(v){ data.FullNames        = v; }],
+                    ["ID Number",        "text",   null,           function(v){ data.IdNumber         = v; }],
+                    ["Gender",           "sel",    ["Male","Female","Unknown"], function(v){ data.Gender = v; }],
+                    ["Role",             "sel",    roles,          function(v){ data.Role             = v; }],
+                    ["Vehicle Ref",      "sel",    vehicleRefs.slice(0, vehicleCount), function(v){ data.VehicleReference = v; }],
+                    ["Seating Position", "sel",    seatPositions,  function(v){ data.SeatingPosition  = v; }],
+                    ["Injury Severity",  "sel",    injuries,       function(v){ data.SeverityOfInjury = v; }],
+                    ["Seatbelt/Helmet",  "sel",    seatbeltOpts,   function(v){ data.SeatbeltHelmet   = v; }],
+                    ["Hospital",         "text",   null,           function(v){ data.Hospital         = v; }]
+                ].forEach(function(f) {
+                    var w = $("<div>").appendTo(row);
+                    $("<div class='field-label'>").text(f[0]).appendTo(w);
+                    if (f[1] === "sel") staticSelect($("<div>").appendTo(w), f[2], f[0]+"...", f[3]);
+                    else textBox($("<div>").appendTo(w), f[0], f[3]);
+                });
+            }
+
+            $("#btnAddPerson").dxButton({
+                text:"Add Person", type:"default", icon:"plus",
+                onClick: function() { buildPersonForm(personCount++); }
+            });
+
+            // ══════════════════════════════════════════════════════════
+            // STEP 6: FACTORS
+            // ══════════════════════════════════════════════════════════
+            function addFactorRow() {
+                var data = { FactorCategory: null, FactorDescription: null, IsMajorFactor: false };
+                factorRows.push(data);
+                formData.Factors = factorRows;
+
+                var row = $("<div>").css({ display:"grid", gridTemplateColumns:"180px 1fr 160px 40px",
+                    gap:"8px", alignItems:"center", marginBottom:"8px" }).appendTo("#factorsGrid");
+
+                var catDiv  = $("<div>").appendTo(row);
+                var descDiv = $("<div>").appendTo(row);
+                var majDiv  = $("<div>").appendTo(row);
+                var delDiv  = $("<div>").appendTo(row);
+
+                var descInst = descDiv.dxSelectBox({
+                    items: [], searchEnabled:true, placeholder: "Select category first...",
+                    onValueChanged: function(e) { data.FactorDescription = e.value; }
+                }).dxSelectBox("instance");
+
+                catDiv.dxSelectBox({
+                    items: Object.keys(factorMap), placeholder: "Category...",
+                    onValueChanged: function(e) {
+                        data.FactorCategory = e.value;
+                        descInst.option("items", factorMap[e.value] || []);
+                        descInst.option("value", null);
+                    }
+                });
+
+                majDiv.dxCheckBox({
+                    text: "Major factor",
+                    onValueChanged: function(e) {
+                        if (e.value) factorRows.forEach(function(f){ f.IsMajorFactor = false; });
+                        data.IsMajorFactor = e.value;
+                    }
+                });
+
+                delDiv.dxButton({
+                    icon:"trash", type:"danger", stylingMode:"outlined",
+                    onClick: function() {
+                        var idx = factorRows.indexOf(data);
+                        if (idx > -1) factorRows.splice(idx, 1);
+                        row.remove();
+                    }
+                });
+            }
+
+            $("#btnAddFactor").dxButton({ text:"Add Factor", type:"default", icon:"plus", onClick: addFactorRow });
+
+            // ══════════════════════════════════════════════════════════
+            // STEP 7: REVIEW
+            // ══════════════════════════════════════════════════════════
+            function rv(label, value) {
+                return '<div class="review-item"><div class="r-label">' + label +
+                       '</div><div class="r-value">' + (value || "—") + '</div></div>';
+            }
+
+            function buildReview() {
+                var ci = formData.CrashInfo, lo = formData.Location, co = formData.Conditions;
+                var html = '<div class="review-section"><h6>Crash Info</h6><div class="review-grid">' +
+                    rv("SAPS Station", ci.SapsStation) + rv("CR No.", ci.CrNo) +
+                    rv("CAS No.", ci.CasNo) + rv("Date", ci.CrashDate) +
+                    rv("Time", ci.CrashTime) + rv("Province", ci.ProvinceCode) +
+                    rv("Route", ci.RoadNumber) + '</div></div>';
+                html += '<div class="review-section"><h6>Location</h6><div class="review-grid">' +
+                    rv("Street", lo.StreetRoadName) + rv("Suburb", lo.Suburb) +
+                    rv("City/Town", lo.CityTown) + rv("Junction", lo.JunctionType) +
+                    rv("Surface", lo.RoadSurfaceCondition) + '</div></div>';
+                html += '<div class="review-section"><h6>Conditions</h6><div class="review-grid">' +
+                    rv("Light", co.LightCondition) + rv("Crash Type", co.CrashType) +
+                    rv("Weather", co.WeatherConditions.join(", ") || "—") +
+                    rv("Hit & Run", co.HitAndRun === true ? "Yes" : co.HitAndRun === false ? "No" : "—") +
+                    '</div></div>';
+                formData.Vehicles.forEach(function(v, i) {
+                    html += '<div class="review-section"><h6>Vehicle ' + (v.VehicleReference || vehicleRefs[i]) +
+                        '</h6><div class="review-grid">' +
+                        rv("Reg No.", v.LicenceDiscNumber) + rv("Make", v.Make) +
+                        rv("Model", v.Model) + rv("Driver", v.DriverSurname) +
+                        rv("Manoeuvre", v.VehicleManoeuvre) + rv("Injury", v.SeverityOfInjury) +
+                        '</div></div>';
+                });
+                if (formData.Persons.length > 0) {
+                    html += '<div class="review-section"><h6>Persons</h6><div class="review-grid">';
+                    formData.Persons.forEach(function(p) {
+                        html += rv(p.Role || "Person",
+                            (p.Surname||"") + " " + (p.FullNames||"") +
+                            (p.SeverityOfInjury ? " — " + p.SeverityOfInjury : ""));
+                    });
+                    html += '</div></div>';
+                }
+                if (factorRows.length > 0) {
+                    html += '<div class="review-section"><h6>Contributory Factors</h6><div class="review-grid">';
+                    factorRows.forEach(function(f) {
+                        html += rv(f.FactorCategory, f.FactorDescription + (f.IsMajorFactor ? " ⭐" : ""));
+                    });
+                    html += '</div></div>';
+                }
+                $("#reviewContent").html(html);
+            }
+
+            // ══════════════════════════════════════════════════════════
+            // NAVIGATION
+            // ══════════════════════════════════════════════════════════
+            function goToStep(n) {
+                currentStep = n;
+                $(".step-panel").removeClass("active");
+                $("#panel-" + currentStep).addClass("active");
+                buildStepBar();
+                updateNavButtons();
+                if (currentStep === 7) buildReview();
+                window.scrollTo(0, 0);
+            }
+
+            function updateNavButtons() {
+                $("#btnBack").dxButton("instance").option("visible", currentStep > 1);
+                $("#btnNext").dxButton("instance").option(
+                    currentStep === totalSteps
+                        ? { text:"Submit Report", type:"success", icon:"check" }
+                        : { text:"Next", type:"default", icon:"arrowright" }
+                );
+            }
+
+            $("#btnBack").dxButton({
+                text:"Back", type:"normal", icon:"arrowleft", stylingMode:"outlined", visible:false,
+                onClick: function() { if (currentStep > 1) goToStep(currentStep - 1); }
+            });
+
+            $("#btnNext").dxButton({
+                text:"Next", type:"default", icon:"arrowright",
+                onClick: function() {
+                    if (currentStep < totalSteps) {
+                        goToStep(currentStep + 1);
+                    } else {
+                        formData.Factors = factorRows;
+                        $("#formJsonInput").val(JSON.stringify(formData));
+                        DevExpress.ui.dialog.confirm(
+                            "Are you ready to submit this crash report?", "Confirm Submission"
+                        ).then(function(ok) {
+                            if (ok) document.getElementById("wizardForm").submit();
+                        });
+                    }
+                }
+            });
+
+            // Init
+            buildStepBar();
+            updateNavButtons();
+        });
+    </script>
+}

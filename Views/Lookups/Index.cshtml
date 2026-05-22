@@ -1,0 +1,182 @@
+﻿@{
+    ViewData["Title"] = "Manage Lookups";
+}
+
+<style>
+    .lookup-tabs {
+        margin-bottom: 0;
+    }
+
+    .add-row {
+        display: flex;
+        gap: 8px;
+        align-items: flex-end;
+        padding: 14px 16px;
+        background: #f1f8f1;
+        border-bottom: 1px solid #c8e6c9;
+    }
+
+        .add-row > div:first-child {
+            flex: 1;
+        }
+</style>
+
+<div style="background:#fff;border-radius:10px;border:1px solid #c8e6c9;
+            box-shadow:0 2px 8px rgba(0,0,0,.06);overflow:hidden;">
+
+    <div style="padding:16px 20px;border-bottom:2px solid #e8f5e9;
+                font-size:.78rem;text-transform:uppercase;letter-spacing:.7px;
+                color:#2e7d32;font-weight:700;">
+        Lookup Table Management
+    </div>
+
+    <div id="lookupTabs"></div>
+</div>
+
+@section Scripts {
+    <script>
+        $(function () {
+
+            // ── Generic helper: build one lookup tab ─────────────────
+            function makeLookupTab(title, endpoint, idField, textField, extraFields) {
+
+                return {
+                    title: title,
+                    template: function(_, container) {
+                        var wrap = $("<div>").appendTo(container);
+
+                        // Add-new row
+                        var addRow = $("<div class='add-row'>").appendTo(wrap);
+                        var addInput = $("<div>").appendTo(addRow);
+                        var addBtn   = $("<div>").css("min-width", "120px").appendTo(addRow);
+
+                        var inputInst = addInput.dxTextBox({
+                            placeholder: "Type to add new " + title.toLowerCase() + "...",
+                            showClearButton: true,
+                            onEnterKey: function() { doAdd(); }
+                        }).dxTextBox("instance");
+
+                        var gridInst;
+
+                        addBtn.dxButton({
+                            text: "Add",
+                            type: "default",
+                            icon: "plus",
+                            onClick: function() { doAdd(); }
+                        });
+
+                        function doAdd() {
+                            var val = (inputInst.option("value") || "").trim();
+                            if (!val) {
+                                DevExpress.ui.notify("Please enter a value.", "warning", 2000);
+                                return;
+                            }
+
+                            $.ajax({
+                                url:         "/api/lookup/" + endpoint,
+                                method:      "POST",
+                                contentType: "application/json",
+                                data:        JSON.stringify({ text: val }),
+                                success: function(result) {
+                                    DevExpress.ui.notify(
+                                        "'" + result.text + "' added successfully.", "success", 3000);
+                                    inputInst.option("value", "");
+                                    gridInst.getDataSource().reload();
+                                },
+                                error: function(xhr) {
+                                    var msg = xhr.responseJSON?.message ||
+                                              "Failed to add. It may already exist.";
+                                    DevExpress.ui.notify(msg, "error", 4000);
+                                }
+                            });
+                        }
+
+                        // Grid
+                        var gridDiv = $("<div>").appendTo(wrap);
+                        var cols = [
+                            { dataField: textField, caption: "Value", minWidth: 200 }
+                        ];
+                        if (extraFields) cols = cols.concat(extraFields);
+                        cols.push({
+                            caption: "", width: 80, alignment: "center",
+                            allowSorting: false,
+                            cellTemplate: function(cont, opts) {
+                                $("<div>").appendTo(cont).dxButton({
+                                    icon: "trash", hint: "Remove",
+                                    type: "danger", stylingMode: "outlined",
+                                    onClick: function() {
+                                        DevExpress.ui.dialog.confirm(
+                                            "Remove <b>" + opts.data[textField] + "</b> from lookup?",
+                                            "Confirm"
+                                        ).then(function(ok) {
+                                            if (!ok) return;
+                                            $.ajax({
+                                                url: "/api/lookup/" + endpoint + "/" + opts.data[idField],
+                                                method: "DELETE",
+                                                success: function() {
+                                                    gridInst.getDataSource().reload();
+                                                },
+                                                error: function() {
+                                                    DevExpress.ui.notify("Could not remove.", "error", 3000);
+                                                }
+                                            });
+                                        });
+                                    }
+                                });
+                            }
+                        });
+
+                        gridInst = gridDiv.dxDataGrid({
+                            dataSource: {
+                                load: function() {
+                                    return $.getJSON("/api/lookup/" + endpoint);
+                                }
+                            },
+                            columns:              cols,
+                            searchPanel:          { visible: true, placeholder: "Search..." },
+                            paging:               { pageSize: 20 },
+                            pager:                { showInfo: true, infoText: "{0}–{1} of {2}" },
+                            showBorders:          false,
+                            rowAlternationEnabled: true,
+                            hoverStateEnabled:    true
+                        }).dxDataGrid("instance");
+                    }
+                };
+            }
+
+            // ── Tab panel ─────────────────────────────────────────────
+            $("#lookupTabs").dxTabPanel({
+                animationEnabled: true,
+                swipeEnabled: false,
+                items: [
+                    makeLookupTab(
+                        "SAPS Stations (@ViewBag.StationsCount)",
+                        "stations", "id", "text",
+                        [{ dataField: "province", caption: "Province", width: 90 },
+                         { dataField: "district", caption: "District", width: 140 }]
+                    ),
+                    makeLookupTab(
+                        "Locations (@ViewBag.LocationsCount)",
+                        "locations", "id", "text",
+                        [{ dataField: "province", caption: "Province", width: 90 }]
+                    ),
+                    makeLookupTab(
+                        "Routes (@ViewBag.RoutesCount)",
+                        "routes", "id", "text",
+                        [{ dataField: "description", caption: "Description", minWidth: 160 }]
+                    ),
+                    makeLookupTab(
+                        "Crash Types (@ViewBag.CrashTypesCount)",
+                        "crashtypes", "id", "text",
+                        [{ dataField: "description", caption: "Description", minWidth: 200 }]
+                    ),
+                    makeLookupTab(
+                        "Vehicle Types (@ViewBag.VehicleTypesCount)",
+                        "vehicletypes", "id", "text",
+                        [{ dataField: "description", caption: "Description", minWidth: 200 }]
+                    )
+                ]
+            });
+        });
+    </script>
+}

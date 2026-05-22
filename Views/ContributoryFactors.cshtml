@@ -1,0 +1,105 @@
+﻿@{
+    ViewData["Title"] = "Add Contributory Factor";
+    var crashId = ViewBag.CrashId;
+}
+
+<form method="post" id="factorForm">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="CrashId" value="@crashId" />
+    <div id="dxForm"></div>
+    <div id="formButtons" style="margin-top:16px; display:flex; gap:10px;"></div>
+</form>
+
+@section Scripts {
+    <script>
+        var categories = ["Human", "Vehicle", "Road & Environmental"];
+
+        var humanFactors = [
+            "Cell phone holding/usage","Disregard for red traffic lights",
+            "Disregard for stop sign","Disregard for yield sign",
+            "Fatigue: driver falling asleep","Followed vehicle too closely",
+            "Hit and run","Jay-walking pedestrian",
+            "Overtook in face of oncoming traffic","Overtook across barrier line",
+            "Speed too high for circumstances","Turned in front of oncoming traffic",
+            "U-turn","Intoxicated driver","Intoxicated bicyclist","Intoxicated pedestrian","Other"
+        ];
+        var vehicleFactors = [
+            "Bicycle no rear reflectors","Bicycle no head lamp",
+            "Brakes faulty","Brakes: lights dirty",
+            "Chevrons: dirty","Chevrons: no reflective stripes",
+            "Headlights blinding","Headlights faulty","Headlights not switched on",
+            "Overload cargo","Overload: passengers","Steering: faulty",
+            "Tyres: burst prior to accident","Tyres: smooth","Other"
+        ];
+        var roadFactors = [
+            "Animal: stray/wild","Blind corner","Blind rise",
+            "Lighting: poor","Road markings poor/inadequate/none",
+            "Road traffic lane narrow","Road signs poor/inadequate/none",
+            "Road surface poor","Road surface wet/slippery","Road works",
+            "Sharp bend","Traffic lights defective","Visibility poor",
+            "Visibility: smoke/fog/rain/etc.","Other"
+        ];
+
+        var factorMap = {
+            "Human":                humanFactors,
+            "Vehicle":              vehicleFactors,
+            "Road & Environmental": roadFactors
+        };
+
+        var form = $("#dxForm").dxForm({
+            formData: { FactorCategory: null, FactorDescription: null, IsMajorFactor: false },
+            colCount: 1,
+            items: [
+                {
+                    itemType: "group", caption: "Factor Details", colSpan: 1,
+                    items: [
+                        {
+                            dataField: "FactorCategory", isRequired: true, label: { text: "Category" },
+                            editorType: "dxSelectBox",
+                            editorOptions: {
+                                items: categories,
+                                placeholder: "Select category...",
+                                onValueChanged: function (e) {
+                                    var descEditor = form.getEditor("FactorDescription");
+                                    descEditor.option("items", factorMap[e.value] || []);
+                                    descEditor.option("value", null);
+                                }
+                            }
+                        },
+                        {
+                            dataField: "FactorDescription", isRequired: true, label: { text: "Factor" },
+                            editorType: "dxSelectBox",
+                            editorOptions: { items: [], placeholder: "Select category first..." }
+                        },
+                        {
+                            dataField: "IsMajorFactor", label: { text: "Mark as the ONE major factor" },
+                            editorType: "dxCheckBox"
+                        }
+                    ]
+                }
+            ]
+        }).dxForm("instance");
+
+        function syncFormToPost() {
+            var data = form.option("formData");
+            Object.keys(data).forEach(function (key) {
+                var existing = $("#factorForm input[name='" + key + "']");
+                if (existing.length) existing.val(data[key]);
+                else $("<input>").attr({ type: "hidden", name: key }).val(data[key]).appendTo("#factorForm");
+            });
+        }
+
+        var btns = document.getElementById("formButtons");
+        $("<div>").appendTo(btns).dxButton({
+            text: "Save Factor", type: "default", icon: "save",
+            onClick: function () {
+                var result = form.validate();
+                if (result.isValid) { syncFormToPost(); document.getElementById("factorForm").submit(); }
+            }
+        });
+        $("<div>").appendTo(btns).dxButton({
+            text: "Cancel", type: "normal", stylingMode: "outlined",
+            onClick: function () { window.location.href = "/Crashes/Details/@crashId"; }
+        });
+    </script>
+}

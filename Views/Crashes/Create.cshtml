@@ -1,0 +1,131 @@
+﻿@model CrashReport.Models.Crash
+@{
+    ViewData["Title"] = "New Crash Report";
+}
+
+<form method="post" id="createForm">
+    @Html.AntiForgeryToken()
+    <div id="dxForm"></div>
+    <div id="formButtons" style="margin-top:16px; display:flex; gap:10px;"></div>
+</form>
+
+@section Scripts {
+    <script>
+        var provinces = ["EC","FS","GP","KZN","LP","MP","NC","NW","WC"];
+
+        var form = $("#dxForm").dxForm({
+            formData: {
+                CasNo:               "",
+                CrNo:                "",
+                IncidentReportNo:    "",
+                CapturingNumber:     "",
+                CrashDate:           new Date(),
+                CrashTime:           null,
+                NoOfVehiclesInvolved: 1,
+                NoOfAppendices:      0,
+                ProvinceCode:        null,
+                SpeedLimitKmh:       null,
+                RoadNumber:          "",
+                KmMarker:            "",
+                BriefDescription:    ""
+            },
+            colCount: 4,
+            items: [
+                {
+                    itemType: "group", caption: "Reference Numbers",
+                    colCount: 4, colSpan: 4,
+                    items: [
+                        { dataField: "CasNo",            label: { text: "CAS No." } },
+                        { dataField: "CrNo",             label: { text: "CR No." } },
+                        { dataField: "IncidentReportNo", label: { text: "Incident Report No." } },
+                        { dataField: "CapturingNumber",  label: { text: "Capturing Number" } }
+                    ]
+                },
+                {
+                    itemType: "group", caption: "Date & Time",
+                    colCount: 4, colSpan: 4,
+                    items: [
+                        {
+                            dataField: "CrashDate", isRequired: true, label: { text: "Crash Date" },
+                            editorType: "dxDateBox",
+                            editorOptions: { type: "date", displayFormat: "dd/MM/yyyy", pickerType: "calendar" }
+                        },
+                        {
+                            dataField: "CrashTime", label: { text: "Time (24h)" },
+                            editorType: "dxDateBox",
+                            editorOptions: { type: "time", displayFormat: "HH:mm" }
+                        },
+                        {
+                            dataField: "NoOfVehiclesInvolved", label: { text: "No. of Vehicles" },
+                            editorType: "dxNumberBox", editorOptions: { min: 1 }
+                        },
+                        {
+                            dataField: "NoOfAppendices", label: { text: "No. of Appendices" },
+                            editorType: "dxNumberBox", editorOptions: { min: 0 }
+                        }
+                    ]
+                },
+                {
+                    itemType: "group", caption: "Road Information",
+                    colCount: 4, colSpan: 4,
+                    items: [
+                        {
+                            dataField: "ProvinceCode", label: { text: "Province" },
+                            editorType: "dxSelectBox",
+                            editorOptions: { items: provinces, placeholder: "Select..." }
+                        },
+                        {
+                            dataField: "SpeedLimitKmh", label: { text: "Speed Limit (km/h)" },
+                            editorType: "dxNumberBox"
+                        },
+                        { dataField: "RoadNumber", label: { text: "Road Number" }, editorOptions: { placeholder: "e.g. N1, R39/1" } },
+                        { dataField: "KmMarker",   label: { text: "Km Marker" } }
+                    ]
+                },
+                {
+                    itemType: "group", caption: "Description", colSpan: 4,
+                    items: [
+                        {
+                            dataField: "BriefDescription", label: { text: "Brief Description" },
+                            colSpan: 4,
+                            editorType: "dxTextArea",
+                            editorOptions: { height: 90, placeholder: "It is alleged that..." }
+                        }
+                    ]
+                }
+            ]
+        }).dxForm("instance");
+
+        // Sync dxForm values into hidden inputs on submit
+        function syncFormToPost() {
+            var data = form.option("formData");
+            Object.keys(data).forEach(function (key) {
+                var val = data[key];
+                if (val instanceof Date) {
+                    // Format dates as yyyy-MM-dd, times as HH:mm
+                    if (key === "CrashTime") {
+                        val = val ? val.getHours().toString().padStart(2,"0") + ":" + val.getMinutes().toString().padStart(2,"0") : "";
+                    } else {
+                        val = val ? val.toISOString().split("T")[0] : "";
+                    }
+                }
+                var existing = $("#createForm input[name='" + key + "']");
+                if (existing.length) existing.val(val);
+                else $("<input>").attr({ type: "hidden", name: key }).val(val).appendTo("#createForm");
+            });
+        }
+
+        var btns = document.getElementById("formButtons");
+        $("<div>").appendTo(btns).dxButton({
+            text: "Save & Continue", type: "default", icon: "save",
+            onClick: function () {
+                var result = form.validate();
+                if (result.isValid) { syncFormToPost(); document.getElementById("createForm").submit(); }
+            }
+        });
+        $("<div>").appendTo(btns).dxButton({
+            text: "Cancel", type: "normal", stylingMode: "outlined",
+            onClick: function () { window.location.href = "/Crashes"; }
+        });
+    </script>
+}

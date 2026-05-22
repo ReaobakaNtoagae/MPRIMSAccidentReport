@@ -1,0 +1,125 @@
+﻿@model CrashReport.Models.Crash
+@using System.Text.Json
+@{
+    ViewData["Title"] = $"Edit — {Model.CrNo ?? "#" + Model.CrashId}";
+}
+
+
+<form method="post" id="editForm">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="CrashId" value="@Model.CrashId" />
+    <div id="dxForm"></div>
+    <div id="formButtons" style="margin-top:16px; display:flex; gap:10px;"></div>
+</form>
+
+@section Scripts {
+    <script>
+        var provinces = ["EC","FS","GP","KZN","LP","MP","NC","NW","WC"];
+
+        var form = $("#dxForm").dxForm({
+            formData: {
+                CasNo:               "@Model.CasNo",
+                CrNo:                "@Model.CrNo",
+                IncidentReportNo:    "@Model.IncidentReportNo",
+                CapturingNumber:     "@Model.CapturingNumber",
+                CrashDate:           new Date("@Model.CrashDate.ToString("yyyy-MM-dd")"),
+                CrashTime:           @(Model.CrashTime.HasValue ? $"new Date('1970-01-01T{Model.CrashTime.Value:HH:mm}:00')" : "null"),
+                NoOfVehiclesInvolved: @Model.NoOfVehiclesInvolved,
+                NoOfAppendices:      @Model.NoOfAppendices,
+                ProvinceCode:        "@Model.ProvinceCode",
+                SpeedLimitKmh:       @(Model.SpeedLimitKmh.HasValue? Model.SpeedLimitKmh.ToString() : "null"),
+                RoadNumber:          "@Model.RoadNumber",
+                KmMarker:            "@Model.KmMarker",
+                BriefDescription:    @Html.Raw(Model.BriefDescription != null ? JsonSerializer.Serialize(Model.BriefDescription) : "null")     
+            },
+            colCount: 4,
+            items: [
+                {
+                    itemType: "group", caption: "Reference Numbers",
+                    colCount: 4, colSpan: 4,
+                    items: [
+                        { dataField: "CasNo",            label: { text: "CAS No." } },
+                        { dataField: "CrNo",             label: { text: "CR No." } },
+                        { dataField: "IncidentReportNo", label: { text: "Incident Report No." } },
+                        { dataField: "CapturingNumber",  label: { text: "Capturing Number" } }
+                    ]
+                },
+                {
+                    itemType: "group", caption: "Date & Time",
+                    colCount: 4, colSpan: 4,
+                    items: [
+                        {
+                            dataField: "CrashDate", isRequired: true, label: { text: "Crash Date" },
+                            editorType: "dxDateBox",
+                            editorOptions: { type: "date", displayFormat: "dd/MM/yyyy", pickerType: "calendar" }
+                        },
+                        {
+                            dataField: "CrashTime", label: { text: "Time (24h)" },
+                            editorType: "dxDateBox", editorOptions: { type: "time", displayFormat: "HH:mm" }
+                        },
+                        {
+                            dataField: "NoOfVehiclesInvolved", label: { text: "No. of Vehicles" },
+                            editorType: "dxNumberBox", editorOptions: { min: 1 }
+                        },
+                        {
+                            dataField: "NoOfAppendices", label: { text: "No. of Appendices" },
+                            editorType: "dxNumberBox", editorOptions: { min: 0 }
+                        }
+                    ]
+                },
+                {
+                    itemType: "group", caption: "Road Information",
+                    colCount: 4, colSpan: 4,
+                    items: [
+                        {
+                            dataField: "ProvinceCode", label: { text: "Province" },
+                            editorType: "dxSelectBox", editorOptions: { items: provinces }
+                        },
+                        { dataField: "SpeedLimitKmh", label: { text: "Speed Limit (km/h)" }, editorType: "dxNumberBox" },
+                        { dataField: "RoadNumber",    label: { text: "Road Number" } },
+                        { dataField: "KmMarker",      label: { text: "Km Marker" } }
+                    ]
+                },
+                {
+                    itemType: "group", caption: "Description", colSpan: 4,
+                    items: [
+                        {
+                            dataField: "BriefDescription", label: { text: "Brief Description" },
+                            colSpan: 4, editorType: "dxTextArea", editorOptions: { height: 90 }
+                        }
+                    ]
+                }
+            ]
+        }).dxForm("instance");
+
+        function syncFormToPost() {
+            var data = form.option("formData");
+            Object.keys(data).forEach(function (key) {
+                var val = data[key];
+                if (val instanceof Date) {
+                    if (key === "CrashTime") {
+                        val = val ? val.getHours().toString().padStart(2,"0") + ":" + val.getMinutes().toString().padStart(2,"0") : "";
+                    } else {
+                        val = val ? val.toISOString().split("T")[0] : "";
+                    }
+                }
+                var existing = $("#editForm input[name='" + key + "']");
+                if (existing.length) existing.val(val);
+                else $("<input>").attr({ type: "hidden", name: key }).val(val).appendTo("#editForm");
+            });
+        }
+
+        var btns = document.getElementById("formButtons");
+        $("<div>").appendTo(btns).dxButton({
+            text: "Save Changes", type: "default", icon: "save",
+            onClick: function () {
+                var result = form.validate();
+                if (result.isValid) { syncFormToPost(); document.getElementById("editForm").submit(); }
+            }
+        });
+        $("<div>").appendTo(btns).dxButton({
+            text: "Cancel", type: "normal", stylingMode: "outlined",
+            onClick: function () { window.location.href = "/Crashes/Details/@Model.CrashId"; }
+        });
+    </script>
+}

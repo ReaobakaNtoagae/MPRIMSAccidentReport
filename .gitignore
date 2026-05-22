@@ -1,0 +1,65 @@
+## Build output
+bin/
+obj/
+out/
+
+## VS / Rider
+.vs/
+.idea/
+*.user
+*.suo
+*.userprefs
+*.sln.docstates
+.vscode/
+
+## NuGet
+*.nupkg
+*.snupkg
+project.lock.json
+project.fragment.lock.json
+artifacts/
+packages/
+!**/[Pp]ackages/build/
+.nuget/
+
+## ASP.NET Core
+wwwroot/lib/
+wwwroot/dist/
+appsettings.Development.json
+appsettings.Staging.json
+
+## Secrets / environment
+*.env
+.env
+secrets.json
+**/secrets.json
+**/appsettings.Production.json
+
+## Entity Framework migrations (keep folder, ignore snapshots if desired)
+# Uncomment the next line to exclude migration snapshots:
+# **/Migrations/*Snapshot.cs
+
+## Logs
+logs/
+*.log
+*.txt.log
+
+## OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+## Test results
+TestResults/
+coverage/
+*.coverage
+*.coveragexml
+
+## Publish
+publish/
+**/publish/
+
+## Temporary files
+*.tmp
+*.temp
+~$*

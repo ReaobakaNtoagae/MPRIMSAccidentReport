@@ -1,0 +1,53 @@
+﻿@{
+    ViewData["Title"] = "Vehicles";
+}
+
+<div id="vehiclesGrid"></div>
+
+@section Scripts {
+    <script>
+        $(function() {
+            $("#vehiclesGrid").dxDataGrid({
+                dataSource: "/Vehicles/GetAll",
+                columns: [
+                    { dataField: "LicenceDiscNumber", caption: "Reg / Disc No.", width: 140 },
+                    { dataField: "Make",              caption: "Make",           width: 120 },
+                    { dataField: "Model",             caption: "Model",          width: 130 },
+                    { dataField: "Colour",            caption: "Colour",         width: 100 },
+                    { dataField: "VehicleCategory",   caption: "Category",       width: 120 },
+                    { dataField: "SpecialFunction",   caption: "Function",       width: 110 },
+                    { dataField: "PrivateOrBusiness", caption: "Usage",          width: 100 },
+                    { dataField: "CrashCount",        caption: "Crashes",        width: 80, alignment: "center" },
+                    {
+                        caption: "Actions", width: 130, alignment: "center",
+                        allowSorting: false, allowFiltering: false,
+                        cellTemplate: function (container, options) {
+                            var id = options.data.VehicleId;
+                            $("<div>").css({ display:"flex", gap:"5px", justifyContent:"center" })
+                                .appendTo(container)
+                                .append(
+                                    $("<div>").dxButton({ icon:"find",  hint:"Details", type:"default", stylingMode:"outlined", onClick: function(){ window.location.href="/Vehicles/Details/"+id; }}),
+                                    $("<div>").dxButton({ icon:"edit",  hint:"Edit",    type:"normal",  stylingMode:"outlined", onClick: function(){ window.location.href="/Vehicles/Edit/"+id; }}),
+                                    $("<div>").dxButton({ icon:"trash", hint:"Delete",  type:"danger",  stylingMode:"outlined", onClick: function(){ window.location.href="/Vehicles/Delete/"+id; }})
+                                );
+                        }
+                    }
+                ],
+                toolbar: {
+                    items: [
+                        { widget:"dxButton", options:{ text:"Add Vehicle", type:"default", icon:"plus", onClick: function(){ window.location.href="/Vehicles/Create"; }}, location:"before" },
+                        "searchPanel"
+                    ]
+                },
+                searchPanel:           { visible: true },
+                headerFilter:          { visible: true },
+                filterRow:             { visible: true },
+                paging:                { pageSize: 20 },
+                pager:                 { showPageSizeSelector: true, allowedPageSizes: [10, 20, 50] },
+                showBorders:           true,
+                rowAlternationEnabled: true,
+                hoverStateEnabled:     true
+            });
+        });
+    </script>
+}

@@ -1,0 +1,90 @@
+﻿@model CrashReport.Models.Person
+@{
+    ViewData["Title"] = "Add Person";
+}
+
+<form method="post" id="personForm">
+    @Html.AntiForgeryToken()
+    <div id="dxForm"></div>
+    <div id="formButtons" style="margin-top:16px; display:flex; gap:10px;"></div>
+</form>
+
+@section Scripts {
+    <script>
+        var idTypes     = ["RSA_ID", "Passport", "Other"];
+        var populations = ["Black African", "Coloured", "Indian/Asian", "White", "Other", "Unknown"];
+        var genders     = ["Male", "Female", "Unknown"];
+
+        var form = $("#dxForm").dxForm({
+            formData: {},
+            colCount: 4,
+            items: [
+                {
+                    itemType: "group", caption: "Identity",
+                    colCount: 4, colSpan: 4,
+                    items: [
+                        {
+                            dataField: "IdType", isRequired: true, label: { text: "ID Type" },
+                            editorType: "dxSelectBox", editorOptions: { items: idTypes, placeholder: "Select..." }
+                        },
+                        { dataField: "IdNumber", label: { text: "ID Number" } },
+                        {
+                            dataField: "Age", label: { text: "Age" },
+                            editorType: "dxNumberBox", editorOptions: { min: 0, max: 120 }
+                        },
+                        {
+                            dataField: "PopulationGroup", label: { text: "Population Group" },
+                            editorType: "dxSelectBox", editorOptions: { items: populations, placeholder: "Select..." }
+                        },
+                        {
+                            dataField: "Gender", label: { text: "Gender" },
+                            editorType: "dxSelectBox", editorOptions: { items: genders, placeholder: "Select..." }
+                        },
+                        { dataField: "CountryOfOrigin", label: { text: "Country of Origin" } },
+                        { dataField: "Nationality",     label: { text: "Nationality" } }
+                    ]
+                },
+                {
+                    itemType: "group", caption: "Name",
+                    colCount: 2, colSpan: 4,
+                    items: [
+                        { dataField: "Surname",   isRequired: true, label: { text: "Surname" } },
+                        { dataField: "FullNames", isRequired: true, label: { text: "Full Names" } }
+                    ]
+                },
+                {
+                    itemType: "group", caption: "Contact Details",
+                    colCount: 2, colSpan: 4,
+                    items: [
+                        { dataField: "HomeAddress",        label: { text: "Home Address" },           colSpan: 2 },
+                        { dataField: "CellPhone",          label: { text: "Cell Phone" } },
+                        { dataField: "OtherPhone",         label: { text: "Other Phone" } },
+                        { dataField: "WorkContactAddress", label: { text: "Work / Contact Address" }, colSpan: 2 }
+                    ]
+                }
+            ]
+        }).dxForm("instance");
+
+        function syncFormToPost() {
+            var data = form.option("formData");
+            Object.keys(data).forEach(function (key) {
+                var existing = $("#personForm input[name='" + key + "']");
+                if (existing.length) existing.val(data[key]);
+                else $("<input>").attr({ type: "hidden", name: key }).val(data[key]).appendTo("#personForm");
+            });
+        }
+
+        var btns = document.getElementById("formButtons");
+        $("<div>").appendTo(btns).dxButton({
+            text: "Save Person", type: "default", icon: "save",
+            onClick: function () {
+                var result = form.validate();
+                if (result.isValid) { syncFormToPost(); document.getElementById("personForm").submit(); }
+            }
+        });
+        $("<div>").appendTo(btns).dxButton({
+            text: "Cancel", type: "normal", stylingMode: "outlined",
+            onClick: function () { window.location.href = "/Persons"; }
+        });
+    </script>
+}

@@ -1,0 +1,102 @@
+﻿@model CrashReport.Models.Vehicle
+@{
+    ViewData["Title"] = "Add Vehicle";
+}
+
+<form method="post" id="vehicleForm">
+    @Html.AntiForgeryToken()
+    <div id="dxForm"></div>
+    <div id="formButtons" style="margin-top:16px; display:flex; gap:10px;"></div>
+</form>
+
+@section Scripts {
+    <script>
+        var registrations   = ["RSA", "Other"];
+        var categories      = ["Passenger", "Goods", "Motorcycle", "Other"];
+        var typeCodes       = [
+            "01 - Motor car", "03 - Combi/minibus", "04 - Midibus",
+            "05 - Bus", "06 - Articulated bus",
+            "01G - Light delivery", "04G - 6t-3500kg truck", "05G - Articulated truck"
+        ];
+        var specialFuncs    = ["None", "Taxi", "Bus", "Police", "Military", "EMS", "Unknown", "Other"];
+        var usages          = ["Private", "Business", "Unknown"];
+        var licenceFittings = ["Passengers", "Goods", "Dangerous goods", "Not sure"];
+
+        var form = $("#dxForm").dxForm({
+            formData: { CountryOfRegistration: "RSA" },
+            colCount: 4,
+            items: [
+                {
+                    itemType: "group", caption: "Registration",
+                    colCount: 4, colSpan: 4,
+                    items: [
+                        {
+                            dataField: "CountryOfRegistration", label: { text: "Country of Reg." },
+                            editorType: "dxSelectBox", editorOptions: { items: registrations }
+                        },
+                        { dataField: "LicenceDiscNumber",   label: { text: "Licence Disc / Reg No." } },
+                        { dataField: "VinNumber",           label: { text: "VIN Number" } },
+                        { dataField: "TrailerLicenceNumber",label: { text: "Trailer Licence No." } }
+                    ]
+                },
+                {
+                    itemType: "group", caption: "Description",
+                    colCount: 4, colSpan: 4,
+                    items: [
+                        { dataField: "Make",  label: { text: "Make" },  editorOptions: { placeholder: "e.g. Toyota" } },
+                        { dataField: "Model", label: { text: "Model" }, editorOptions: { placeholder: "e.g. Hilux 2.4" } },
+                        { dataField: "Colour",label: { text: "Colour" } },
+                        {
+                            dataField: "VehicleCategory", label: { text: "Category" },
+                            editorType: "dxSelectBox", editorOptions: { items: categories, placeholder: "Select..." }
+                        },
+                        {
+                            dataField: "VehicleTypeCode", label: { text: "Type Code" },
+                            editorType: "dxSelectBox", editorOptions: { items: typeCodes, placeholder: "Select..." }
+                        }
+                    ]
+                },
+                {
+                    itemType: "group", caption: "Usage",
+                    colCount: 3, colSpan: 4,
+                    items: [
+                        {
+                            dataField: "SpecialFunction",    label: { text: "Special Function" },
+                            editorType: "dxSelectBox", editorOptions: { items: specialFuncs, placeholder: "Select..." }
+                        },
+                        {
+                            dataField: "PrivateOrBusiness",  label: { text: "Private / Business" },
+                            editorType: "dxSelectBox", editorOptions: { items: usages, placeholder: "Select..." }
+                        },
+                        {
+                            dataField: "LicenceTypeFitting", label: { text: "Licence Type Fitting" },
+                            editorType: "dxSelectBox", editorOptions: { items: licenceFittings, placeholder: "Select..." }
+                        }
+                    ]
+                }
+            ]
+        }).dxForm("instance");
+
+        function syncFormToPost() {
+            var data = form.option("formData");
+            Object.keys(data).forEach(function (key) {
+                var existing = $("#vehicleForm input[name='" + key + "']");
+                if (existing.length) existing.val(data[key]);
+                else $("<input>").attr({ type: "hidden", name: key }).val(data[key]).appendTo("#vehicleForm");
+            });
+        }
+
+        var btns = document.getElementById("formButtons");
+        $("<div>").appendTo(btns).dxButton({
+            text: "Save Vehicle", type: "default", icon: "save",
+            onClick: function () {
+                var result = form.validate();
+                if (result.isValid) { syncFormToPost(); document.getElementById("vehicleForm").submit(); }
+            }
+        });
+        $("<div>").appendTo(btns).dxButton({
+            text: "Cancel", type: "normal", stylingMode: "outlined",
+            onClick: function () { window.location.href = "/Vehicles"; }
+        });
+    </script>
+}
