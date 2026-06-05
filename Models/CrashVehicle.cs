@@ -13,6 +13,8 @@ public partial class CrashVehicle
 
     public int? DriverPersonId { get; set; }
 
+    public string? VehicleType { get; set; }
+
     public string VehicleReference { get; set; } = null!;
 
     public string? SeatbeltUsed { get; set; }

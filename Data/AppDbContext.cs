@@ -130,7 +130,7 @@ public class AppDbContext : DbContext
             e.Property(l => l.CrashId).HasColumnName("crash_id");
             e.Property(l => l.BuiltUpArea).HasColumnName("built_up_area");
             e.Property(l => l.AreaType).HasMaxLength(20).HasColumnName("area_type");
-            e.Property(l => l.StreetRoadName).HasMaxLength(200).HasColumnName("street_road_name");
+            e.Property(l => l.StreetRoadName).HasMaxLength(200).HasColumnName("street_road_name").IsRequired(false);
             e.Property(l => l.GpsXCoordinate).HasColumnType("decimal(10,7)").HasColumnName("gps_x_coordinate");
             e.Property(l => l.GpsYCoordinate).HasColumnType("decimal(10,7)").HasColumnName("gps_y_coordinate");
             e.Property(l => l.IntersectionStreet).HasMaxLength(200).HasColumnName("intersection_street");
@@ -200,6 +200,7 @@ public class AppDbContext : DbContext
             e.Property(cv => cv.CrashId).HasColumnName("crash_id");
             e.Property(cv => cv.VehicleId).HasColumnName("vehicle_id");
             e.Property(cv => cv.DriverPersonId).HasColumnName("driver_person_id");
+            e.Property(cv => cv.VehicleType).HasColumnName("vehicle_type").HasMaxLength(50);
             e.Property(cv => cv.VehicleReference).HasMaxLength(2).IsFixedLength().HasColumnName("vehicle_reference");
             e.Property(cv => cv.SeatbeltUsed).HasMaxLength(30).HasColumnName("seatbelt_used");
             e.Property(cv => cv.AlcoholSuspected).HasMaxLength(10).HasColumnName("alcohol_suspected");
@@ -225,6 +226,7 @@ public class AppDbContext : DbContext
             e.HasIndex(cv => cv.VehicleId).HasDatabaseName("idx_cv_vehicle");
             e.HasIndex(cv => cv.DriverPersonId).HasDatabaseName("idx_cv_driver");
         });
+
 
         // ── vehicle_damage ───────────────────────────────────
         modelBuilder.Entity<VehicleDamage>(e => {

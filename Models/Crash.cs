@@ -35,6 +35,8 @@ public partial class Crash
 
     public DateTime CreatedAt { get; set; }
 
+    public string? VehicleString { get; set; }
+
     public virtual ICollection<ContributoryFactor> ContributoryFactors { get; set; } = new List<ContributoryFactor>();
 
     public virtual ICollection<CrashCondition> CrashConditions { get; set; } = new List<CrashCondition>();

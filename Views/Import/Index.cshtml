@@ -28,10 +28,14 @@
             Upload Accident Report Workbook
         </div>
 
-        <form method="post" asp-action="Upload" enctype="multipart/form-data" id="uploadForm">
+        <form method="post"
+              asp-controller="Import"
+              asp-action="Upload"
+              enctype="multipart/form-data"
+              id="uploadForm">
             @Html.AntiForgeryToken()
 
-            <!-- Province selector -->
+            
             <div style="margin-bottom:16px;">
                 <div style="font-size:.75rem;color:#555;margin-bottom:6px;font-weight:600;">
                     Province (applied to all imported records)
@@ -40,15 +44,40 @@
                 <input type="hidden" id="provinceHidden" name="province" value="MP" />
             </div>
 
-            <!-- File uploader -->
             <div style="margin-bottom:20px;">
                 <div style="font-size:.75rem;color:#555;margin-bottom:6px;font-weight:600;">
                     Excel File (.xlsx)
                 </div>
-                <div id="fileUploader"></div>
+                <label for="fileInput" id="fileDropZone"
+                       style="display:flex;flex-direction:column;align-items:center;justify-content:center;
+                              gap:8px;padding:28px 20px;border:2px dashed #a5d6a7;border-radius:8px;
+                              background:#f9fdf9;cursor:pointer;transition:all .2s;">
+                    <span style="font-size:1.6rem;">📂</span>
+                    <span style="font-size:.84rem;color:#555;">
+                        Click to select or drop an Excel workbook here
+                    </span>
+                    <span id="fileNameDisplay"
+                          style="font-size:.78rem;color:#888;font-style:italic;">
+                        No file selected
+                    </span>
+                </label>
+                <input type="file"
+                       id="fileInput"
+                       name="file"
+                       accept=".xlsx,.xls"
+                       style="display:none;"
+                       required />
             </div>
 
-            <div id="submitBtn"></div>
+          
+            <button type="submit"
+                    id="submitBtn"
+                    disabled
+                    style="width:100%;padding:11px 0;background:#2e7d32;color:#fff;
+                           border:none;border-radius:7px;font-size:.88rem;font-weight:600;
+                           cursor:pointer;transition:background .2s;letter-spacing:.2px;">
+                Import Accidents
+            </button>
         </form>
     </div>
 
@@ -84,6 +113,7 @@
     <script>
         $(function () {
 
+            // ── Error toast ───────────────────────────────────────────
             var errMsg = $("#errMsg").data("msg");
             if (errMsg) DevExpress.ui.notify(errMsg, "error", 5000);
 
@@ -93,40 +123,91 @@
                     ));
 
         $("#provinceSelect").dxSelectBox({
-            items:        provinceItems,
+            items:       provinceItems,
             displayExpr: "text",
             valueExpr:   "value",
-            value:        "MP",
-            onValueChanged: function(e) {
+            value:       "MP",
+            onValueChanged: function (e) {
                 $("#provinceHidden").val(e.value);
             }
         });
 
-            // ── File uploader ─────────────────────────────────────────
-            $("#fileUploader").dxFileUploader({
-                name:                  "file",
-                accept:                ".xlsx,.xls",
-                uploadMode:            "useForm",
-                labelText:             "or drop an Excel workbook here",
-                selectButtonText:      "Select workbook",
-                allowedFileExtensions: [".xlsx", ".xls"],
-                maxFileSize:           10 * 1024 * 1024,
-                onValueChanged: function (e) {
-                    var hasFile = e.value && e.value.length > 0;
-                    $("#submitBtn").dxButton("instance").option("disabled", !hasFile);
+            // ── File input ────────────────────────────────────────────
+            var fileInput  = document.getElementById("fileInput");
+            var submitBtn  = document.getElementById("submitBtn");
+            var dropZone   = document.getElementById("fileDropZone");
+            var nameDisplay= document.getElementById("fileNameDisplay");
+
+            function onFileSelected(file) {
+                if (!file) return;
+                var ext = file.name.split('.').pop().toLowerCase();
+                if (ext !== "xlsx" && ext !== "xls") {
+                    DevExpress.ui.notify("Only .xlsx and .xls files are supported.", "error", 4000);
+                    fileInput.value = "";
+                    nameDisplay.textContent = "No file selected";
+                    submitBtn.disabled = true;
+                    return;
+                }
+                if (file.size > 10 * 1024 * 1024) {
+                    DevExpress.ui.notify("File too large. Maximum 10 MB.", "error", 4000);
+                    fileInput.value = "";
+                    nameDisplay.textContent = "No file selected";
+                    submitBtn.disabled = true;
+                    return;
+                }
+                nameDisplay.textContent = file.name;
+                nameDisplay.style.color = "#2e7d32";
+                nameDisplay.style.fontStyle = "normal";
+                dropZone.style.borderColor = "#2e7d32";
+                dropZone.style.background  = "#f1f8f1";
+                submitBtn.disabled = false;
+            }
+
+            // Click to select
+            fileInput.addEventListener("change", function () {
+                onFileSelected(this.files[0]);
+            });
+
+            // Drag and drop
+            dropZone.addEventListener("dragover", function (e) {
+                e.preventDefault();
+                dropZone.style.borderColor  = "#2e7d32";
+                dropZone.style.background   = "#e8f5e9";
+            });
+
+            dropZone.addEventListener("dragleave", function () {
+                dropZone.style.borderColor  = "#a5d6a7";
+                dropZone.style.background   = "#f9fdf9";
+            });
+
+            dropZone.addEventListener("drop", function (e) {
+                e.preventDefault();
+                dropZone.style.borderColor  = "#a5d6a7";
+                dropZone.style.background   = "#f9fdf9";
+                var file = e.dataTransfer.files[0];
+                if (file) {
+                    // Assign to the native input so it submits with the form
+                    var dt = new DataTransfer();
+                    dt.items.add(file);
+                    fileInput.files = dt.files;
+                    onFileSelected(file);
                 }
             });
 
-            // ── Submit button ─────────────────────────────────────────
-            $("#submitBtn").dxButton({
-                text:     "Import Accidents",
-                type:     "default",
-                icon:     "upload",
-                disabled: true,
-                onClick:  function () {
-                    DevExpress.ui.notify("Importing — please wait...", "info", 4000);
-                    document.getElementById("uploadForm").submit();
-                }
+            // ── Submit feedback ───────────────────────────────────────
+            document.getElementById("uploadForm").addEventListener("submit", function () {
+                submitBtn.disabled    = true;
+                submitBtn.textContent = "Importing — please wait...";
+                submitBtn.style.background = "#4a8554";
+                DevExpress.ui.notify("Importing workbook — this may take a moment...", "info", 10000);
+            });
+
+            // ── Submit button hover ───────────────────────────────────
+            submitBtn.addEventListener("mouseover", function () {
+                if (!this.disabled) this.style.background = "#256328";
+            });
+            submitBtn.addEventListener("mouseout", function () {
+                if (!this.disabled) this.style.background = "#2e7d32";
             });
         });
     </script>

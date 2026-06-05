@@ -15,7 +15,7 @@
 <style>
     .stat-grid {
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: 1fr;
         gap: 16px;
         margin-bottom: 20px;
     }
@@ -98,22 +98,12 @@
         }
 </style>
 
-<!-- ── Row 1: Top stat tiles ─────────────────────────────── -->
+<!-- ── Row 1: Total crashes tile only ────────────────────── -->
 <div class="stat-grid">
     <div class="stat-card" style="background: linear-gradient(135deg,#1b5e20,#2e7d32);">
         <div class="big-num">@ViewBag.TotalCrashes</div>
         <div class="label">Total Crash Reports</div>
         <div class="sub">@ViewBag.ThisMonthCrashes new in @ViewBag.CurrentMonth</div>
-    </div>
-    <div class="stat-card" style="background: linear-gradient(135deg,#1565c0,#1976d2);">
-        <div class="big-num">@ViewBag.TotalPersons</div>
-        <div class="label">Persons on Record</div>
-        <div class="sub">All involved parties</div>
-    </div>
-    <div class="stat-card" style="background: linear-gradient(135deg,#e65100,#f57c00);">
-        <div class="big-num">@ViewBag.TotalVehicles</div>
-        <div class="label">Vehicles on Record</div>
-        <div class="sub">All vehicle records</div>
     </div>
 </div>
 
@@ -177,10 +167,10 @@
 
             // ── Quick actions ─────────────────────────────────────────
             [
-                { text: "New CR1 Report",    type: "default", icon: "plus",     url: "/Home/Create"      },
-                { text: "Search Crashes",    type: "normal",  icon: "find",     url: "/Crashes"          },
-                { text: "Monthly Report",    type: "normal",  icon: "chart",    url: "/Report"           },
-                { text: "Import Excel",      type: "normal",  icon: "upload",   url: "/Import"           }
+                { text: "New CR1 Report",    type: "default", icon: "plus",     url: "/Home/Create" },
+                { text: "Search Crashes",    type: "normal",  icon: "find",     url: "/Crashes"     },
+                { text: "Monthly Report",    type: "normal",  icon: "chart",    url: "/Report"      },
+                { text: "Import Excel",      type: "normal",  icon: "upload",   url: "/Import"      }
             ].forEach(function (a) {
                 $("<div>").appendTo("#quickActions").dxButton({
                     text: a.text, type: a.type, icon: a.icon,

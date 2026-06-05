@@ -5,112 +5,353 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] — SA Crash Reporting</title>
     <link rel="stylesheet" href="https://cdn3.devexpress.com/jslib/25.2.7/css/dx.light.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
-        * {
+        *, *::before, *::after {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
         }
 
         :root {
-            --green-dark: #1b5e20;
-            --green-mid: #2e7d32;
-            --green-accent: #43a047;
-            --green-light: #e8f5e9;
-            --green-border: #a5d6a7;
+            --sidebar-w: 260px;
+            --sidebar-w-col: 48px;
+            --transition: 220ms cubic-bezier(.4,0,.2,1);
+            /* Green accent palette */
+            --g-700: #2e7d32;
+            --g-600: #388e3c;
+            --g-500: #43a047;
+            --g-400: #2e7d32;
+            --g-100: #e8f5e9;
+            --g-50: #f4fbf5;
+            --ink: #1a1a1a;
+            --muted: #6b7280;
+            --border: #e5e7eb;
+            /* Sidebar specific */
+            --sb-bg: #ffffff;
+            --sb-border: #e5e7eb;
+            --sb-text: #6b7280;
+            --sb-text-hover: #111827;
+            --sb-active-bg: #f3f4f6;
+            --sb-active-txt: #111827;
+            --sb-active-bar: #2e7d32;
+            --sb-section: #9ca3af;
+            --sb-toggle-bg: #2e7d32;
         }
 
         body {
-            font-family: "Segoe UI", sans-serif;
+            font-family: 'DM Sans', sans-serif;
             display: flex;
             height: 100vh;
             overflow: hidden;
-            background: #f1f8f1;
+            background: var(--g-50);
+            color: var(--ink);
         }
 
-        .app-sidebar {
-            width: 230px;
-            min-width: 230px;
-            background: var(--green-dark);
+        /* ══════════════════════════════════════════
+                   SIDEBAR
+                ══════════════════════════════════════════ */
+        .sidebar {
+            width: var(--sidebar-w);
+            min-width: var(--sidebar-w);
+            background: var(--sb-bg);
             display: flex;
             flex-direction: column;
-            box-shadow: 3px 0 10px rgba(0,0,0,.2);
-            overflow-y: auto;
+            transition: width var(--transition), min-width var(--transition);
+            overflow: hidden;
+            position: relative;
+            z-index: 100;
+            box-shadow: 1px 0 0 var(--sb-border);
         }
 
-        .app-brand {
-            padding: 20px 18px;
-            background: var(--green-mid);
-            color: #fff;
-            font-size: 1rem;
-            font-weight: 700;
-            letter-spacing: .2px;
-            border-bottom: 1px solid rgba(255,255,255,.15);
-        }
-
-            .app-brand small {
-                display: block;
-                color: rgba(255,255,255,.55);
-                font-size: .72rem;
-                font-weight: 400;
-                margin-top: 3px;
+            .sidebar.collapsed {
+                width: var(--sidebar-w-col);
+                min-width: var(--sidebar-w-col);
             }
 
-        .nav-section {
-            padding: 16px 18px 5px;
-            color: rgba(255,255,255,.3);
-            font-size: .68rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
+        /* Brand */
+        .sidebar-brand {
+            padding: 22px 20px 18px;
+            border-bottom: 1px solid var(--sb-border);
+            flex-shrink: 0;
+            overflow: hidden;
+            white-space: nowrap;
+            min-height: 72px;
         }
 
-        .nav-item a {
+        .brand-wordmark {
+            font-size: .95rem;
+            font-weight: 600;
+            color: #111827;
+            letter-spacing: .1px;
+            transition: opacity var(--transition);
+        }
+
+        .brand-sub {
+            margin-top: 3px;
+            color: #9ca3af;
+            font-size: .64rem;
+            font-family: 'DM Mono', monospace;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            transition: opacity var(--transition);
+        }
+
+        /* Collapsed: show a short monogram */
+        .brand-mono {
+            display: none;
+            font-size: .78rem;
+            font-weight: 700;
+            color: var(--g-600);
+            font-family: 'DM Mono', monospace;
+            letter-spacing: .5px;
+            padding-top: 6px;
+        }
+
+        .sidebar.collapsed .brand-wordmark,
+        .sidebar.collapsed .brand-sub {
+            opacity: 0;
+            height: 0;
+            overflow: hidden;
+            display: none;
+        }
+
+        .sidebar.collapsed .brand-mono {
+            display: block;
+        }
+
+        /* Toggle */
+        .sidebar-toggle {
+            position: absolute;
+            top: 22px;
+            right: -12px;
+            width: 24px;
+            height: 24px;
+            background: var(--sb-toggle-bg);
+            border: 2px solid #fff;
+            border-radius: 50%;
             display: flex;
             align-items: center;
-            gap: 10px;
-            padding: 10px 18px;
-            color: rgba(255,255,255,.72);
-            text-decoration: none;
-            font-size: .86rem;
-            transition: all .15s;
-            border-left: 3px solid transparent;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 10;
+            transition: background var(--transition);
+            box-shadow: 0 2px 8px rgba(0,0,0,.25);
         }
 
-            .nav-item a:hover, .nav-item a.active {
+            .sidebar-toggle:hover {
+                background: var(--g-600);
+            }
+
+            .sidebar-toggle svg {
+                width: 10px;
+                height: 10px;
+                transition: transform var(--transition);
+            }
+
+        .sidebar.collapsed .sidebar-toggle svg {
+            transform: rotate(180deg);
+        }
+
+        /* Nav scroll */
+        .nav-scroll {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 10px 0 24px;
+            scrollbar-width: thin;
+            scrollbar-color: #e5e7eb transparent;
+        }
+
+            .nav-scroll::-webkit-scrollbar {
+                width: 3px;
+            }
+
+            .nav-scroll::-webkit-scrollbar-thumb {
                 background: rgba(255,255,255,.1);
-                color: #fff;
-                border-left: 3px solid var(--green-accent);
-                padding-left: 15px;
+                border-radius: 3px;
             }
 
-            .nav-item a .nav-icon {
-                font-size: 1rem;
-                opacity: .75;
+        /* Section labels */
+        .nav-section-label {
+            padding: 18px 20px 5px;
+            font-size: .6rem;
+            font-family: 'DM Mono', monospace;
+            text-transform: uppercase;
+            letter-spacing: 1.4px;
+            color: var(--sb-section);
+            white-space: nowrap;
+            overflow: hidden;
+            transition: all var(--transition);
+        }
+
+        .sidebar.collapsed .nav-section-label {
+            padding: 14px 0 5px;
+            height: 10px;
+        }
+
+            .sidebar.collapsed .nav-section-label span {
+                display: none;
             }
 
+            .sidebar.collapsed .nav-section-label::after {
+                content: '';
+                display: block;
+                width: 20px;
+                height: 1px;
+                background: var(--sb-border);
+                margin: 0 auto;
+            }
+
+        /* Nav items */
+        .nav-item {
+            position: relative;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            padding: 9px 20px;
+            color: var(--sb-text);
+            text-decoration: none;
+            font-size: .84rem;
+            font-weight: 500;
+            transition: all var(--transition);
+            border-left: 3px solid transparent;
+            white-space: nowrap;
+            overflow: hidden;
+            line-height: 1.35;
+        }
+
+            .nav-link:hover {
+                background: var(--sb-active-bg);
+                color: var(--sb-text-hover);
+            }
+
+            .nav-link.active {
+                background: var(--sb-active-bg);
+                color: var(--sb-active-txt);
+                border-left-color: var(--sb-active-bar);
+            }
+
+        /* Collapsed dot indicator */
+        .sidebar.collapsed .nav-link {
+            padding: 11px 0;
+            justify-content: center;
+        }
+
+        .nav-dot {
+            display: none;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #d1d5db;
+            transition: background var(--transition);
+        }
+
+        .sidebar.collapsed .nav-dot {
+            display: block;
+        }
+
+        .sidebar.collapsed .nav-label {
+            display: none;
+        }
+
+        .nav-link:hover .nav-dot {
+            background: #6b7280;
+        }
+
+        .nav-link.active .nav-dot {
+            background: var(--g-600);
+            width: 7px;
+            height: 7px;
+        }
+
+        /* Tooltip on collapse */
+        .sidebar.collapsed .nav-item::after {
+            content: attr(data-label);
+            position: absolute;
+            left: calc(var(--sidebar-w-col) + 10px);
+            top: 50%;
+            transform: translateY(-50%);
+            background: #1f2937;
+            color: #fff;
+            font-size: .78rem;
+            font-family: 'DM Sans', sans-serif;
+            font-weight: 500;
+            padding: 6px 12px;
+            border-radius: 6px;
+            white-space: nowrap;
+            pointer-events: none;
+            opacity: 0;
+            z-index: 999;
+            box-shadow: 0 4px 14px rgba(0,0,0,.3);
+            border: 1px solid #374151;
+            transition: opacity .15s;
+        }
+
+        .sidebar.collapsed .nav-item:hover::after {
+            opacity: 1;
+        }
+
+        /* ══════════════════════════════════════════
+                   MAIN AREA
+                ══════════════════════════════════════════ */
         .app-main {
             flex: 1;
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            min-width: 0;
         }
 
-        .app-topbar {
+        .topbar {
             background: #fff;
-            padding: 0 24px;
-            border-bottom: 2px solid var(--green-border);
             height: 52px;
+            padding: 0 26px;
+            border-bottom: 1px solid var(--border);
             display: flex;
             align-items: center;
             justify-content: space-between;
             flex-shrink: 0;
         }
 
-            .app-topbar h5 {
-                font-size: .95rem;
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: .78rem;
+            color: var(--muted);
+        }
+
+            .breadcrumb .page-title {
+                font-size: .88rem;
                 font-weight: 600;
-                color: var(--green-dark);
+                color: var(--ink);
             }
+
+            .breadcrumb .sep {
+                color: var(--border);
+            }
+
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .topbar-badge {
+            background: var(--g-100);
+            color: var(--g-700);
+            font-size: .7rem;
+            font-family: 'DM Mono', monospace;
+            padding: 3px 10px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            letter-spacing: .3px;
+        }
 
         .app-content {
             flex: 1;
@@ -118,56 +359,187 @@
             padding: 24px;
         }
 
+        /* ══════════════════════════════════════════
+                   DEVEXTREME OVERRIDES
+                ══════════════════════════════════════════ */
         .dx-button-mode-contained.dx-button-default {
-            background-color: var(--green-mid) !important;
-            border-color: var(--green-mid) !important;
+            background-color: var(--g-700) !important;
+            border-color: var(--g-700) !important;
         }
 
             .dx-button-mode-contained.dx-button-default:hover {
-                background-color: var(--green-accent) !important;
-                border-color: var(--green-accent) !important;
+                background-color: var(--g-600) !important;
+                border-color: var(--g-600) !important;
             }
 
-        .dx-tabs-wrapper .dx-tab.dx-tab-selected {
-            border-bottom-color: var(--green-mid) !important;
-            color: var(--green-mid) !important;
+        .dx-datagrid .dx-row.dx-header-row > td {
+            background: var(--g-100) !important;
+            color: var(--g-800) !important;
+            font-weight: 600;
+            font-size: .75rem;
+            text-transform: uppercase;
+            letter-spacing: .5px;
         }
 
-        .dx-datagrid-header-panel, .dx-datagrid .dx-row.dx-header-row > td {
-            background: var(--green-light) !important;
-            color: var(--green-dark) !important;
+        .dx-datagrid-borders > .dx-datagrid-headers {
+            border-color: var(--border) !important;
         }
     </style>
 </head>
 <body>
-    <aside class="app-sidebar">
-        <div class="app-brand">CR1 System<small>SA Road Crash Reporting</small></div>
-        <nav>
-            <div class="nav-section">Main</div>
-            <div class="nav-item"><a asp-controller="Home" asp-action="Index"><span class="nav-icon">⬛</span> Dashboard</a></div>
-            <div class="nav-item"><a asp-controller="Home" asp-action="Create"><span class="nav-icon">＋</span> New CR1 Report</a></div>
-            <div class="nav-item"><a asp-controller="Import" asp-action="Index"><span class="nav-icon">📥</span> Import Excel</a></div>
 
-            <div class="nav-section">Reports</div>
-            <div class="nav-item"><a asp-controller="StandbyReport" asp-action="Index"><span class="nav-icon">📋</span> Weekly Standby</a></div>
-            
-            <div class="nav-section">Records</div>
-            <div class="nav-item"><a asp-controller="Crashes" asp-action="Index"><span class="nav-icon">△</span> Crash Reports</a></div>
-            <div class="nav-item"><a asp-controller="Persons" asp-action="Index"><span class="nav-icon">●</span> Persons</a></div>
-            <div class="nav-item"><a asp-controller="Vehicles" asp-action="Index"><span class="nav-icon">⬛</span> Vehicles</a></div>
+    <aside class="sidebar" id="sidebar">
 
-            <div class="nav-section">Admin</div>
-            <div class="nav-item"><a asp-controller="Lookups" asp-action="Index"><span class="nav-icon">🗂</span> Manage Lookups</a></div>
-       
+        <div class="sidebar-brand">
+            <div class="brand-wordmark">CR1 Crash Registry</div>
+            <div class="brand-sub">SA Road Crash Reporting</div>
+            <div class="brand-mono">CR1</div>
+        </div>
+
+        <div class="sidebar-toggle" id="sidebarToggle" title="Toggle sidebar">
+            <svg viewBox="0 0 10 10" fill="none" stroke="#ffffff" stroke-width="1.6"
+                 stroke-linecap="round" stroke-linejoin="round">
+                <path d="M7 1L3 5l4 4" />
+            </svg>
+        </div>
+
+        <nav class="nav-scroll">
+
+            <div class="nav-section-label"><span>Main</span></div>
+
+            <div class="nav-item" data-label="Dashboard">
+                <a class="nav-link" asp-controller="Home" asp-action="Index">
+                    <span class="nav-dot"></span>
+                    <span class="nav-label">Dashboard</span>
+                </a>
+            </div>
+
+            <div class="nav-item" data-label="New CR1 Report">
+                <a class="nav-link" asp-controller="Home" asp-action="Create">
+                    <span class="nav-dot"></span>
+                    <span class="nav-label">New CR1 Report</span>
+                </a>
+            </div>
+
+            <div class="nav-item" data-label="Import Excel">
+                <a class="nav-link" asp-controller="Import" asp-action="Index">
+                    <span class="nav-dot"></span>
+                    <span class="nav-label">Import Excel</span>
+                </a>
+            </div>
+
+            <div class="nav-section-label"><span>Reports</span></div>
+
+            <div class="nav-item" data-label="Weekly Standby Report">
+                <a class="nav-link" asp-controller="StandbyReport" asp-action="Index">
+                    <span class="nav-dot"></span>
+                    <span class="nav-label">Weekly Standby Report</span>
+                </a>
+            </div>
+
+            <div class="nav-item" data-label="Monthly Memo Report">
+                <a class="nav-link" asp-controller="MemoReport" asp-action="Index">
+                    <span class="nav-dot"></span>
+                    <span class="nav-label">Monthly Memo Report</span>
+                </a>
+            </div>
+
+            <div class="nav-item" data-label="Monthly Consolidated">
+                <a class="nav-link" asp-controller="Report" asp-action="Index">
+                    <span class="nav-dot"></span>
+                    <span class="nav-label">Monthly Consolidated</span>
+                </a>
+            </div>
+
+            <div class="nav-section-label"><span>Records</span></div>
+
+            <div class="nav-item" data-label="Crash Reports">
+                <a class="nav-link" asp-controller="Crashes" asp-action="Index">
+                    <span class="nav-dot"></span>
+                    <span class="nav-label">Crash Reports</span>
+                </a>
+            </div>
+
+            <div class="nav-item" data-label="Persons">
+                <a class="nav-link" asp-controller="Persons" asp-action="Index">
+                    <span class="nav-dot"></span>
+                    <span class="nav-label">Persons</span>
+                </a>
+            </div>
+
+            <div class="nav-item" data-label="Vehicles">
+                <a class="nav-link" asp-controller="Vehicles" asp-action="Index">
+                    <span class="nav-dot"></span>
+                    <span class="nav-label">Vehicles</span>
+                </a>
+            </div>
+
+            <div class="nav-section-label"><span>Admin</span></div>
+
+            <div class="nav-item" data-label="Manage Lookups">
+                <a class="nav-link" asp-controller="Lookups" asp-action="Index">
+                    <span class="nav-dot"></span>
+                    <span class="nav-label">Manage Lookups</span>
+                </a>
+            </div>
+
         </nav>
     </aside>
+
     <div class="app-main">
-        <div class="app-topbar"><h5>@(ViewData["Title"] ?? "Dashboard")</h5></div>
+        <div class="topbar">
+            <div class="breadcrumb">
+                <span>CR1 System</span>
+                <span class="sep">›</span>
+                <span class="page-title">@(ViewData["Title"] ?? "Dashboard")</span>
+            </div>
+            <div class="topbar-right">
+                <span class="topbar-badge">MP · Mpumalanga</span>
+                <span class="topbar-badge" id="currentDate"></span>
+            </div>
+        </div>
+
         <div class="app-content">@RenderBody()</div>
     </div>
+
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <script src="https://cdn3.devexpress.com/jslib/25.2.7/js/dx.all.js"></script>
     <script src="~/js/lookup-autocomplete.js"></script>
+
+    <script>
+        (function () {
+            var sidebar  = document.getElementById('sidebar');
+            var toggle   = document.getElementById('sidebarToggle');
+            var PREF_KEY = 'sidebar_collapsed';
+
+            function setCollapsed(v) {
+                sidebar.classList.toggle('collapsed', v);
+                localStorage.setItem(PREF_KEY, v ? '1' : '0');
+            }
+
+            setCollapsed(localStorage.getItem(PREF_KEY) === '1');
+            toggle.addEventListener('click', function () {
+                setCollapsed(!sidebar.classList.contains('collapsed'));
+            });
+
+            // Active link
+            var path = window.location.pathname.toLowerCase();
+            document.querySelectorAll('.nav-link').forEach(function (link) {
+                var href = (link.getAttribute('href') || '').toLowerCase();
+                if (href && (path === href || (href !== '/' && path.startsWith(href)))) {
+                    link.classList.add('active');
+                }
+            });
+
+            // Date badge
+            var d = new Date();
+            var months = ['Jan','Feb','Mar','Apr','May','Jun',
+                          'Jul','Aug','Sep','Oct','Nov','Dec'];
+            document.getElementById('currentDate').textContent =
+                d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
+        })();
+    </script>
+
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

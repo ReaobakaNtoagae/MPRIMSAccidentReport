@@ -108,7 +108,7 @@ public class CrashesController : Controller
                 c.ProvinceCode,
                 c.RoadNumber,
                 Location = c.CrashLocations
-                                 .Select(l => l.StreetRoadName ?? l.CityTown)
+                                 .Select(l => l.CityTown ?? l.StreetRoadName)
                                  .FirstOrDefault(),
                 CrashType = c.CrashConditions
                                  .Select(cc => cc.CrashType)
@@ -141,7 +141,7 @@ public class CrashesController : Controller
                 c.ProvinceCode,
                 c.SpeedLimitKmh,
                 Location = c.CrashLocations
-                                 .Select(l => l.StreetRoadName ?? l.CityTown)
+                                 .Select(l => l.CityTown ?? l.StreetRoadName)
                                  .FirstOrDefault(),
                 VehicleCount = c.CrashVehicles.Count,
                 PersonCount = c.CrashPeople.Count,
@@ -155,7 +155,7 @@ public class CrashesController : Controller
     }
 
 
-    
+
     // GET: /Crashes/FilterOptions — distinct values for dropdowns
     [HttpGet]
     public async Task<IActionResult> FilterOptions()
@@ -247,7 +247,7 @@ public class CrashesController : Controller
         return View(crash);
     }
 
-    
+
 
     [HttpPost]
     [ValidateAntiForgeryToken]
@@ -275,7 +275,7 @@ public class CrashesController : Controller
     }
 
 
-   
+
     public async Task<IActionResult> Delete(int? id)
     {
         if (id == null) return NotFound();
@@ -286,7 +286,7 @@ public class CrashesController : Controller
         return View(crash);
     }
 
-    
+
     [HttpPost, ActionName("Delete")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteConfirmed(int id)

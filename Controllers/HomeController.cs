@@ -16,14 +16,9 @@ public class HomeController : Controller
         _context = context;
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // GET: / — Dashboard
-    // ═══════════════════════════════════════════════════════════
     public async Task<IActionResult> Index()
     {
         ViewBag.TotalCrashes = await _context.Crashes.CountAsync();
-        ViewBag.TotalPersons = await _context.Persons.CountAsync();
-        ViewBag.TotalVehicles = await _context.Vehicles.CountAsync();
         ViewBag.FatalCount = await _context.CrashPeople
                                      .CountAsync(cp => cp.SeverityOfInjury == "Fatal");
         ViewBag.SeriousCount = await _context.CrashPeople
@@ -46,14 +41,10 @@ public class HomeController : Controller
         return View();
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // GET: /Home/Create — Multi-step form
-    // ═══════════════════════════════════════════════════════════
+
     public IActionResult Create() => View();
 
-    // ═══════════════════════════════════════════════════════════
-    // GET: /Home/Edit/5
-    // ═══════════════════════════════════════════════════════════
+
     public async Task<IActionResult> Edit(int? id)
     {
         if (id == null) return NotFound();
@@ -62,7 +53,6 @@ public class HomeController : Controller
         return View("~/Views/Crashes/Edit.cshtml", crash);
     }
 
-    // POST: /Home/Edit/5
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(int id,
@@ -85,9 +75,7 @@ public class HomeController : Controller
         return View("~/Views/Crashes/Edit.cshtml", crash);
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // POST: /Home/Delete/5
-    // ═══════════════════════════════════════════════════════════
+   
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(int id)
@@ -142,9 +130,7 @@ public class HomeController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // POST: /Home/Submit — Save multi-step form
-    // ═══════════════════════════════════════════════════════════
+
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Submit([FromForm] string formJson)

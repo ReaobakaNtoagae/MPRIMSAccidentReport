@@ -19,6 +19,7 @@ public partial class Vehicle
 
     public string? VinNumber { get; set; }
 
+    public string? VehicleType { get; set; }
     public string? TrailerLicenceNumber { get; set; }
 
     public string? VehicleCategory { get; set; }
