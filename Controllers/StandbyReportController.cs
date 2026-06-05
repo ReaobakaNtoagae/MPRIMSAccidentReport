@@ -1,6 +1,9 @@
 ﻿using CrashReport.Services;
 using CrashReport.ViewModels;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.Mvc.ViewEngines;
+using Microsoft.AspNetCore.Mvc.ViewFeatures;
 
 namespace CrashReport.Controllers;
 
@@ -17,14 +20,16 @@ public class StandbyReportController : Controller
         _wordService = wordService;
     }
 
-    // GET /StandbyReport
-    [HttpGet]
+    // GET: /StandbyReport - Shows the form
+    [HttpGet("/StandbyReport")]
     public IActionResult Index()
     {
         // Default: current Mon–Sun week, prior year auto-calculated
         var today = DateOnly.FromDateTime(DateTime.Today);
-        var weekStart = today.AddDays(-(int)today.DayOfWeek + (int)DayOfWeek.Monday);
-        if (weekStart > today) weekStart = weekStart.AddDays(-7);
+
+        // Calculate Monday of current week (Monday = 1, Sunday = 7)
+        int daysUntilMonday = ((int)today.DayOfWeek == 0 ? 7 : (int)today.DayOfWeek) - 1;
+        var weekStart = today.AddDays(-daysUntilMonday);
         var weekEnd = weekStart.AddDays(6);
 
         var model = new StandbyReportRequest
@@ -35,11 +40,11 @@ public class StandbyReportController : Controller
             PriorYearTo = weekEnd.AddYears(-1),
         };
 
-        return View(model);
+        return View("Index", model);
     }
 
-    // POST /StandbyReport  — preview in browser
-    [HttpPost]
+    // POST: /StandbyReport/Preview - Shows the report preview
+    [HttpPost("/StandbyReport/Preview")]
     public async Task<IActionResult> Preview(StandbyReportRequest request)
     {
         if (!ModelState.IsValid)
@@ -49,22 +54,57 @@ public class StandbyReportController : Controller
             request.DateFrom, request.DateTo,
             request.PriorYearFrom, request.PriorYearTo);
 
-        return View("Report", vm);
+  
+        return View("StandbyReport", vm);
     }
 
-    // GET /StandbyReport/Export  — download .docx
-    [HttpGet]
+    // GET: /StandbyReport/Export - Downloads Word document using OpenXML
+    [HttpGet("/StandbyReport/Export")]
     public async Task<IActionResult> Export(
-        DateOnly dateFrom, DateOnly dateTo,
-        DateOnly? priorYearFrom, DateOnly? priorYearTo)
+        DateOnly dateFrom,
+        DateOnly dateTo,
+        DateOnly? priorYearFrom = null,
+        DateOnly? priorYearTo = null)
+    {
+        try
+        {
+            if (dateFrom > dateTo)
+                return BadRequest("Start date must be before end date.");
+
+            if (dateTo > DateOnly.FromDateTime(DateTime.Today))
+                return BadRequest("Cannot generate report for future dates.");
+
+            var vm = await _dataService.BuildAsync(dateFrom, dateTo, priorYearFrom, priorYearTo);
+            var bytes = _wordService.Generate(vm);
+
+            string fileName = $"Weekly_Standby_Report_{vm.DateFrom:yyyy-MM-dd}_to_{vm.DateTo:yyyy-MM-dd}.docx";
+
+            return File(bytes,
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                fileName);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, $"Error generating report: {ex.Message}");
+        }
+    }
+
+    
+    [HttpGet("/StandbyReport/ExportHtml")]
+    public async Task<IActionResult> ExportHtml(
+        DateOnly dateFrom,
+        DateOnly dateTo,
+        DateOnly? priorYearFrom = null,
+        DateOnly? priorYearTo = null)
     {
         var vm = await _dataService.BuildAsync(dateFrom, dateTo, priorYearFrom, priorYearTo);
-        var bytes = _wordService.Generate(vm);
 
-        string fileName = $"StandbyReport_{dateFrom:yyyy-MM-dd}_to_{dateTo:yyyy-MM-dd}.docx";
+        // Return the view as HTML but with .docx extension
+        Response.Headers.Add("Content-Disposition", $"attachment; filename=Weekly_Standby_Report_{vm.DateFrom:yyyy-MM-dd}_to_{vm.DateTo:yyyy-MM-dd}.docx");
+        Response.ContentType = "application/msword";
 
-        return File(bytes,
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            fileName);
+        return View("SrandbyReport", vm);
     }
+
+
 }

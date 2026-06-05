@@ -1,114 +1,289 @@
 ﻿@model CrashReport.Services.ImportResult
 @{
     ViewData["Title"] = "Import Result";
+    var d = Model.Demographics;
 }
 
-<div style="max-width:700px;">
+<style>
+    .result-card { background:#fff; border-radius:10px; border:1px solid #c8e6c9;
+                   box-shadow:0 2px 8px rgba(0,0,0,.06); padding:24px; margin-bottom:16px; }
+    .result-card h6 { font-size:.78rem; text-transform:uppercase; letter-spacing:.7px;
+                      color:#2e7d32; font-weight:700; margin-bottom:14px;
+                      padding-bottom:8px; border-bottom:2px solid #e8f5e9; }
+    .stat-row { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:12px; }
+    .stat-box  { background:#f1f8f1; border-radius:8px; padding:14px 16px; text-align:center; }
+    .stat-box .num   { font-size:1.6rem; font-weight:800; color:#1b5e20; }
+    .stat-box .label { font-size:.72rem; color:#555; font-weight:600; margin-top:2px; }
+    .stat-box.warn   { background:#fff3e0; }
+    .stat-box.warn .num { color:#e65100; }
+    .stat-box.err    { background:#ffebee; }
+    .stat-box.err  .num { color:#b71c1c; }
 
-    <!-- Summary card -->
-    <div style="background:#fff;border-radius:10px;border:1px solid #c8e6c9;
-                box-shadow:0 2px 8px rgba(0,0,0,.06);padding:28px 32px;margin-bottom:20px;">
+    .demo-table { width:100%; border-collapse:collapse; font-size:.82rem; }
+    .demo-table th { background:#1F3864; color:#fff; padding:8px 12px; font-weight:700;
+                     font-size:.75rem; text-align:center; }
+    .demo-table th.left { text-align:left; }
+    .demo-table td { padding:7px 12px; border-bottom:1px solid #e8f5e9; text-align:center; }
+    .demo-table td.label { text-align:left; font-weight:600; color:#333; background:#f9fafb; }
+    .demo-table tr:last-child td { border-bottom:none; font-weight:700; background:#e8f5e9; }
+    .demo-section { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    .pct-bar { height:8px; background:#e8f5e9; border-radius:4px; margin-top:5px; overflow:hidden; }
+    .pct-fill { height:100%; border-radius:4px; background:#2e7d32; }
+    .msg-list { max-height:200px; overflow-y:auto; font-size:.78rem; }
+    .msg-list li { padding:4px 0; border-bottom:1px solid #f0f0f0; }
+</style>
 
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
-            @if (Model.Success)
-            {
-                <div style="width:40px;height:40px;border-radius:50%;background:#2e7d32;
-                                display:flex;align-items:center;justify-content:center;
-                                color:#fff;font-size:1.2rem;">
-                    ✓
-                </div>
-                <div>
-                    <div style="font-weight:700;color:#1b5e20;font-size:1rem;">Import Successful</div>
-                    <div style="font-size:.82rem;color:#666;">@Model.SheetName — @Model.ReportPeriod</div>
-                </div>
-            }
-            else
-            {
-                <div style="width:40px;height:40px;border-radius:50%;background:#b71c1c;
-                                display:flex;align-items:center;justify-content:center;
-                                color:#fff;font-size:1.2rem;">
-                    ✗
-                </div>
-                <div>
-                    <div style="font-weight:700;color:#b71c1c;font-size:1rem;">Import Failed</div>
-                    <div style="font-size:.82rem;color:#666;">@Model.SheetName</div>
-                </div>
-            }
+
+<div class="result-card">
+    <h6>📊 Import Summary — @Model.FileName</h6>
+    <div class="stat-row">
+        <div class="stat-box">
+            <div class="num">@Model.TotalRows</div>
+            <div class="label">Rows Processed</div>
         </div>
-
-        <!-- Stat tiles -->
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;">
-            <div style="background:#e8f5e9;border-radius:8px;padding:14px 16px;text-align:center;">
-                <div style="font-size:1.8rem;font-weight:800;color:#2e7d32;">@Model.ImportedCount</div>
-                <div style="font-size:.75rem;color:#555;margin-top:3px;">Imported</div>
-            </div>
-            <div style="background:#fff3e0;border-radius:8px;padding:14px 16px;text-align:center;">
-                <div style="font-size:1.8rem;font-weight:800;color:#e65100;">@Model.DuplicateCount</div>
-                <div style="font-size:.75rem;color:#555;margin-top:3px;">Duplicates Skipped</div>
-            </div>
-            <div style="background:#fce4ec;border-radius:8px;padding:14px 16px;text-align:center;">
-                <div style="font-size:1.8rem;font-weight:800;color:#b71c1c;">@Model.SkippedCount</div>
-                <div style="font-size:.75rem;color:#555;margin-top:3px;">Rows Skipped</div>
-            </div>
-            <div style="background:#e8eaf6;border-radius:8px;padding:14px 16px;text-align:center;">
-                <div style="font-size:1.8rem;font-weight:800;color:#283593;">@Model.Warnings.Count</div>
-                <div style="font-size:.75rem;color:#555;margin-top:3px;">Warnings</div>
-            </div>
+        <div class="stat-box">
+            <div class="num">@Model.Imported</div>
+            <div class="label">Imported</div>
         </div>
-
-        <div style="display:flex;gap:10px;" id="resultActions"></div>
+        <div class="stat-box @(Model.Skipped > 0 ? "warn" : "")">
+            <div class="num">@Model.Skipped</div>
+            <div class="label">Skipped (duplicates)</div>
+        </div>
+        <div class="stat-box @(Model.Errors > 0 ? "err" : "")">
+            <div class="num">@Model.Errors</div>
+            <div class="label">Errors</div>
+        </div>
     </div>
-
-    <!-- Errors -->
-    @if (Model.Errors.Any())
-    {
-        <div style="background:#ffebee;border-radius:10px;border:1px solid #ef9a9a;
-                        padding:18px 22px;margin-bottom:16px;">
-            <div style="font-weight:700;color:#b71c1c;margin-bottom:10px;font-size:.85rem;">
-                Errors
-            </div>
-            @foreach (var e in Model.Errors)
-            {
-                <div style="font-size:.82rem;color:#c62828;margin-bottom:4px;">✗ @e</div>
-            }
-        </div>
-    }
-
-    <!-- Warnings -->
-    @if (Model.Warnings.Any())
-    {
-        <div style="background:#fff8e1;border-radius:10px;border:1px solid #ffe082;
-                        padding:18px 22px;">
-            <div style="font-weight:700;color:#e65100;margin-bottom:10px;font-size:.85rem;">
-                Warnings (@Model.Warnings.Count)
-            </div>
-            <div style="max-height:250px;overflow-y:auto;">
-                @foreach (var w in Model.Warnings)
-                {
-                    <div style="font-size:.8rem;color:#bf360c;margin-bottom:4px;">⚠ @w</div>
-                }
-            </div>
-        </div>
-    }
-
 </div>
 
+@if (d.HasGenderData || d.HasAgeData || d.HasRaceData)
+{
+    <div class="result-card">
+        <h6>👥 Victim Demographics (from imported spreadsheet)</h6>
+        <p style="font-size:.78rem;color:#666;margin-bottom:16px;">
+            These totals are sourced from the summary section at the bottom of the spreadsheet.
+            Gender is broken down per victim type (fatal victims only).
+            Race totals have no per-crash link in the source data.
+        </p>
+
+        <div class="demo-section">
+
+            @* ── Gender per victim type ── *@
+            @if (d.HasGenderData)
+            {
+                <div>
+                    <div style="font-weight:700;color:#1b5e20;font-size:.82rem;
+                                text-transform:uppercase;margin-bottom:8px;">
+                        Fatal Victims — Gender by Type
+                    </div>
+                    <table class="demo-table">
+                        <thead>
+                            <tr>
+                                <th class="left">Victim Type</th>
+                                <th>Male</th>
+                                <th>Female</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @{
+                                var gRows = new[]
+                                {
+                                    ("Driver",     d.DriverMale,     d.DriverFemale),
+                                    ("Passenger",  d.PassengerMale,  d.PassengerFemale),
+                                    ("Pedestrian", d.PedestrianMale, d.PedestrianFemale),
+                                    ("Cyclist",    d.CyclistMale,    d.CyclistFemale)
+                                };
+                            }
+                            @foreach (var (lbl, m, f) in gRows)
+                            {
+                                <tr>
+                                    <td class="label">@lbl</td>
+                                    <td>@m</td>
+                                    <td>@f</td>
+                                    <td><strong>@(m + f)</strong></td>
+                                </tr>
+                            }
+                            <tr>
+                                <td class="label">TOTAL</td>
+                                <td><strong>@d.TotalMale</strong></td>
+                                <td><strong>@d.TotalFemale</strong></td>
+                                <td><strong>@d.GenderTotal</strong></td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    @* Visual breakdown *@
+                    @if (d.GenderTotal > 0)
+                    {
+                        var mPct = Math.Round(d.TotalMale * 100.0 / d.GenderTotal, 1);
+                        var fPct = Math.Round(d.TotalFemale * 100.0 / d.GenderTotal, 1);
+                        <div style="display:flex;gap:20px;margin-top:12px;font-size:.78rem;">
+                            <div style="flex:1;background:#E3F2FD;border-radius:8px;padding:10px 14px;">
+                                <div style="font-weight:700;color:#1565C0;">♂ Male</div>
+                                <div style="font-size:1.3rem;font-weight:800;color:#1565C0;">@d.TotalMale</div>
+                                <div class="pct-bar"><div class="pct-fill" style="width:@mPct%;background:#1565C0;"></div></div>
+                                <div style="color:#555;margin-top:3px;">@mPct%</div>
+                            </div>
+                            <div style="flex:1;background:#FCE4EC;border-radius:8px;padding:10px 14px;">
+                                <div style="font-weight:700;color:#C62828;">♀ Female</div>
+                                <div style="font-size:1.3rem;font-weight:800;color:#C62828;">@d.TotalFemale</div>
+                                <div class="pct-bar"><div class="pct-fill" style="width:@fPct%;background:#C62828;"></div></div>
+                                <div style="color:#555;margin-top:3px;">@fPct%</div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+
+            @* ── Age distribution ── *@
+            @if (d.HasAgeData)
+            {
+                <div>
+                    <div style="font-weight:700;color:#1b5e20;font-size:.82rem;
+                                text-transform:uppercase;margin-bottom:8px;">
+                        Age Distribution
+                    </div>
+                    <table class="demo-table">
+                        <thead>
+                            <tr>
+                                <th class="left">Age Group</th>
+                                <th>Count</th>
+                                <th>%</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @{
+                                var ageRows = new[]
+                                {
+                                    ("0 – 7",   d.Age0to7),
+                                    ("8 – 12",  d.Age8to12),
+                                    ("13 – 18", d.Age13to18),
+                                    ("19 – 35", d.Age19to35),
+                                    ("36+",     d.Age36Plus)
+                                };
+                            }
+                            @foreach (var (lbl, cnt) in ageRows)
+                            {
+                                var pct = d.AgeTotal > 0
+                                    ? Math.Round(cnt * 100.0 / d.AgeTotal, 1) : 0;
+                                <tr>
+                                    <td class="label">@lbl</td>
+                                    <td>@cnt</td>
+                                    <td>
+                                        <div style="display:flex;align-items:center;gap:6px;">
+                                            <div class="pct-bar" style="flex:1;margin:0;">
+                                                <div class="pct-fill" style="width:@pct%;"></div>
+                                            </div>
+                                            <span style="min-width:35px;text-align:right;font-size:.72rem;">@pct%</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                            <tr>
+                                <td class="label">TOTAL</td>
+                                <td><strong>@d.AgeTotal</strong></td>
+                                <td></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            }
+
+        </div>
+
+        @* ── Race breakdown (full width) ── *@
+        @if (d.HasRaceData)
+        {
+            <div style="margin-top:20px;">
+                <div style="font-weight:700;color:#1b5e20;font-size:.82rem;
+                            text-transform:uppercase;margin-bottom:8px;">
+                    Race / Population Group
+                    <span style="font-size:.72rem;font-weight:400;color:#888;
+                                 text-transform:none;margin-left:8px;">
+                        (summary totals — no per-crash link in source data)
+                    </span>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;">
+                    @{
+                        var raceItems = new[]
+                        {
+                            ("Black",    d.RaceBlack,    "#1A237E"),
+                            ("Coloured", d.RaceColoured, "#4527A0"),
+                            ("White",    d.RaceWhite,    "#006064"),
+                            ("Indian",   d.RaceIndian,   "#1B5E20"),
+                            ("Other",    d.RaceOther,    "#BF360C")
+                        };
+                    }
+                    @foreach (var (lbl, cnt, clr) in raceItems)
+                    {
+                        var pct = d.RaceTotal > 0
+                            ? Math.Round(cnt * 100.0 / d.RaceTotal, 1) : 0;
+                        <div style="background:#f9fafb;border-radius:8px;padding:12px 14px;
+                                    border-left:4px solid @clr;">
+                            <div style="font-size:.72rem;font-weight:700;color:#555;">@lbl</div>
+                            <div style="font-size:1.4rem;font-weight:800;color:@clr;">@cnt</div>
+                            <div class="pct-bar">
+                                <div class="pct-fill" style="width:@pct%;background:@clr;"></div>
+                            </div>
+                            <div style="font-size:.7rem;color:#888;margin-top:3px;">@pct%</div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@* Warnings and errors *@
+@if (Model.Warnings.Any() || Model.ErrorMessages.Any())
+{
+    <div class="result-card">
+        <h6>⚠ Warnings &amp; Errors</h6>
+        @if (Model.Warnings.Any())
+        {
+            <div style="font-size:.78rem;font-weight:600;color:#e65100;margin-bottom:6px;">
+                @Model.Warnings.Count Warnings
+            </div>
+            <ul class="msg-list" style="color:#555;padding-left:16px;margin-bottom:14px;">
+                @foreach (var w in Model.Warnings)
+                {
+                    <li>@w</li>
+                }
+            </ul>
+        }
+        @if (Model.ErrorMessages.Any())
+        {
+            <div style="font-size:.78rem;font-weight:600;color:#b71c1c;margin-bottom:6px;">
+                @Model.ErrorMessages.Count Errors
+            </div>
+            <ul class="msg-list" style="color:#555;padding-left:16px;">
+                @foreach (var e in Model.ErrorMessages)
+                {
+                    <li>@e</li>
+                }
+            </ul>
+        }
+    </div>
+}
+
+<div style="display:flex;gap:10px;margin-top:4px;">
+    <div id="btnBack"></div>
+    <div id="btnView"></div>
+</div>
+
+
 @section Scripts {
-    <script>
-        $(function () {
-            var actions = document.getElementById("resultActions");
-            $("<div>").appendTo(actions).dxButton({
-                text: "View Crash Reports", type: "default", icon: "find",
-                onClick: function () { window.location.href = "/Crashes"; }
-            });
-            $("<div>").appendTo(actions).dxButton({
-                text: "Import Another", type: "normal", icon: "upload", stylingMode: "outlined",
-                onClick: function () { window.location.href = "/Import"; }
-            });
-            $("<div>").appendTo(actions).dxButton({
-                text: "Dashboard", type: "normal", icon: "home", stylingMode: "outlined",
-                onClick: function () { window.location.href = "/"; }
-            });
-        });
-    </script>
+<script>
+$(function () {
+    $("#btnBack").dxButton({
+        text: "Import Another File", type: "normal", icon: "arrowleft", stylingMode: "outlined",
+        onClick: function() { window.location.href = "/Import"; }
+    });
+    $("#btnView").dxButton({
+        text: "View Crash Reports", type: "default", icon: "find",
+        onClick: function() { window.location.href = "/Crashes"; }
+    });
+});
+</script>
 }

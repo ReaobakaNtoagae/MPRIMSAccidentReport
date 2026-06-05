@@ -58,32 +58,60 @@ public class StandbyReportDataService
             DayRange = GetDayRange(from, to)
         };
 
-        // ── Current period ─────────────────────────────────────
-        var current = await LoadPeriodAsync(from, to);
-        vm.CurrentProvince = SumAll(current);
-        vm.CurrentEhlanzeni = FilterByDistrict(current, "EHLANZENI");
-        vm.CurrentBohlabelo = FilterByDistrict(current, "BOHLABELO");
-        vm.CurrentGertSibande = FilterByDistrict(current, "GERT SIBANDE");
-        vm.CurrentNkangala = FilterByDistrict(current, "NKANGALA");
-
-        // ── Prior year (same period) ───────────────────────────
-        if (priorFrom.HasValue && priorTo.HasValue)
-        {
-            var prior = await LoadPeriodAsync(priorFrom.Value, priorTo.Value);
-            vm.PriorProvince = SumAll(prior);
-            vm.PriorEhlanzeni = FilterByDistrict(prior, "EHLANZENI");
-            vm.PriorBohlabelo = FilterByDistrict(prior, "BOHLABELO");
-            vm.PriorGertSibande = FilterByDistrict(prior, "GERT SIBANDE");
-            vm.PriorNkangala = FilterByDistrict(prior, "NKANGALA");
-        }
+        // ... existing code ...
 
         // ── Problematic routes ─────────────────────────────────
         vm.ProblematicRoutes = await BuildProblematicRoutesAsync(from, to);
 
-        // ── Victim demographics ────────────────────────────────
-        vm.Victims = await BuildDemographicsAsync(from, to);
+        // ── Sub-period (last 3 days or Valentine's weekend) ────
+        vm.SubPeriod = await BuildSubPeriodAsync(from, to);
+
+        // ── Victim demographics for sub-period ────────────────
+        if (vm.SubPeriod != null)
+        {
+            vm.Victims = await BuildDemographicsAsync(vm.SubPeriod.From, vm.SubPeriod.To);
+        }
+        else
+        {
+            // Fallback to full period if no sub-period
+            vm.Victims = await BuildDemographicsAsync(from, to);
+        }
 
         return vm;
+    }
+
+    // ── Build sub-period (last 3 days or Valentine's weekend) ──
+    private async Task<SubPeriodStats?> BuildSubPeriodAsync(DateOnly from, DateOnly to)
+    {
+        int daysDiff = to.DayNumber - from.DayNumber;
+        if (daysDiff < 3) return null;
+
+        // Default: last 3 days of the week
+        DateOnly subFrom = to.AddDays(-2);
+        DateOnly subTo = to;
+
+        // Valentine's override: if period spans Feb 14–16 use those dates
+        var feb14 = new DateOnly(from.Year, 2, 14);
+        var feb16 = new DateOnly(from.Year, 2, 16);
+        if (from <= feb14 && to >= feb16)
+        {
+            subFrom = feb14;
+            subTo = feb16;
+        }
+
+        var periodData = await LoadPeriodAsync(subFrom, subTo);
+
+        return new SubPeriodStats
+        {
+            Label = $"{subFrom:dd MMMM yyyy} – {subTo:dd MMMM yyyy}",
+            From = subFrom,
+            To = subTo,
+            Province = SumAll(periodData),
+            Ehlanzeni = FilterByDistrict(periodData, "EHLANZENI"),
+            Bohlabelo = FilterByDistrict(periodData, "BOHLABELO"),
+            GertSibande = FilterByDistrict(periodData, "GERT SIBANDE"),
+            Nkangala = FilterByDistrict(periodData, "NKANGALA")
+        };
     }
 
     // ── Load all crash data for a date range ──────────────────
@@ -136,7 +164,6 @@ public class StandbyReportDataService
 
     private static DistrictStats Aggregate(List<CrashRow> rows, string name)
     {
-        // Build detail list for each crash that has fatalities
         var fatalDetails = rows
             .Where(r => r.Fatalities > 0)
             .OrderBy(r => r.CrashDate)
@@ -145,9 +172,7 @@ public class StandbyReportDataService
             {
                 CrNo = r.CrNo,
                 Date = r.CrashDate.ToString("dd/MM/yyyy"),
-                Time = r.CrashTime.HasValue
-                               ? r.CrashTime.Value.ToString("HH:mm")
-                               : "Unknown",
+                Time = r.CrashTime.HasValue ? r.CrashTime.Value.ToString("HH:mm") : "Unknown",
                 Route = r.Route,
                 Location = r.Location,
                 Count = r.Fatalities
@@ -161,14 +186,14 @@ public class StandbyReportDataService
             Fatalities = rows.Sum(r => r.Fatalities),
             Serious = rows.Sum(r => r.Serious),
             Slight = rows.Sum(r => r.Slight),
-            FatalTime1 = rows.Count(r => r.Fatalities > 0 && IsInTimeSlot(r.CrashTime, 6, 14)),
-            FatalTime2 = rows.Count(r => r.Fatalities > 0 && IsInTimeSlot(r.CrashTime, 14, 22)),
-            FatalTime3 = rows.Count(r => r.Fatalities > 0 && IsInTimeSlot(r.CrashTime, 22, 6)),
+            // FIX: Sum fatalities, not count of crashes with fatalities
+            FatalTime1 = rows.Where(r => IsInTimeSlot(r.CrashTime, 6, 14)).Sum(r => r.Fatalities),
+            FatalTime2 = rows.Where(r => IsInTimeSlot(r.CrashTime, 14, 22)).Sum(r => r.Fatalities),
+            FatalTime3 = rows.Where(r => IsInTimeSlot(r.CrashTime, 22, 6)).Sum(r => r.Fatalities),
             FatalPedestrians = rows.Sum(r => r.FatalPedestrian),
             FatalDetails = fatalDetails
         };
     }
-
     // ── Build problematic routes ──────────────────────────────
     private async Task<List<ProblematicRoute>> BuildProblematicRoutesAsync(
         DateOnly from, DateOnly to)
@@ -215,8 +240,7 @@ public class StandbyReportDataService
     }
 
     // ── Victim demographics ────────────────────────────────────
-    private async Task<VictimDemographics> BuildDemographicsAsync(
-        DateOnly from, DateOnly to)
+    private async Task<VictimDemographics> BuildDemographicsAsync(DateOnly from, DateOnly to)
     {
         var people = await _context.CrashPeople
             .Include(cp => cp.Crash)
@@ -226,35 +250,47 @@ public class StandbyReportDataService
                          cp.SeverityOfInjury == "Fatal")
             .ToListAsync();
 
-        static int CountByRoleGender(
-            IEnumerable<CrashReport.Models.CrashPerson> list, string role, string gender) =>
-            list.Count(p =>
-                string.Equals(p.Role, role, StringComparison.OrdinalIgnoreCase) &&
-                (p.Person == null
-                    ? false
-                    : string.Equals(p.Person.Gender, gender,
-                        StringComparison.OrdinalIgnoreCase)));
+        static bool IsMale(CrashReport.Models.CrashPerson p) =>
+            p.Person != null && string.Equals(p.Person.Gender, "Male", StringComparison.OrdinalIgnoreCase);
+
+        static bool IsFemale(CrashReport.Models.CrashPerson p) =>
+            p.Person != null && string.Equals(p.Person.Gender, "Female", StringComparison.OrdinalIgnoreCase);
+
+        static bool IsRole(CrashReport.Models.CrashPerson p, string role) =>
+            string.Equals(p.Role, role, StringComparison.OrdinalIgnoreCase);
 
         return new VictimDemographics
         {
             TotalFatalities = people.Count,
-            MaleDriver = CountByRoleGender(people, "Driver", "Male"),
-            FemaleDriver = CountByRoleGender(people, "Driver", "Female"),
-            MalePassenger = CountByRoleGender(people, "Passenger", "Male"),
-            FemalePassenger = CountByRoleGender(people, "Passenger", "Female"),
-            MalePedestrian = CountByRoleGender(people, "Pedestrian", "Male"),
-            FemalePedestrian = CountByRoleGender(people, "Pedestrian", "Female"),
-            MaleCyclist = CountByRoleGender(people, "Bicyclist", "Male"),
-            FemaleCyclist = CountByRoleGender(people, "Bicyclist", "Female"),
-            MaleTotal = people.Count(p =>
-                p.Person != null &&
-                string.Equals(p.Person.Gender, "Male", StringComparison.OrdinalIgnoreCase)),
-            FemaleTotal = people.Count(p =>
-                p.Person != null &&
-                string.Equals(p.Person.Gender, "Female", StringComparison.OrdinalIgnoreCase))
+
+            // Age breakdown
+            Age0to7 = people.Count(p => p.Person?.Age is >= 0 and <= 7),
+            Age8to12 = people.Count(p => p.Person?.Age is >= 8 and <= 12),
+            Age13to18 = people.Count(p => p.Person?.Age is >= 13 and <= 18),
+            Age19to35 = people.Count(p => p.Person?.Age is >= 19 and <= 35),
+            Age36Plus = people.Count(p => p.Person?.Age >= 36),
+
+            // Gender totals
+            MaleTotal = people.Count(IsMale),
+            FemaleTotal = people.Count(IsFemale),
+
+            // Driver
+            MaleDriver = people.Count(p => IsMale(p) && IsRole(p, "Driver")),
+            FemaleDriver = people.Count(p => IsFemale(p) && IsRole(p, "Driver")),
+
+            // Passenger
+            MalePassenger = people.Count(p => IsMale(p) && IsRole(p, "Passenger")),
+            FemalePassenger = people.Count(p => IsFemale(p) && IsRole(p, "Passenger")),
+
+            // Pedestrian
+            MalePedestrian = people.Count(p => IsMale(p) && IsRole(p, "Pedestrian")),
+            FemalePedestrian = people.Count(p => IsFemale(p) && IsRole(p, "Pedestrian")),
+
+            // Cyclist
+            MaleCyclist = people.Count(p => IsMale(p) && IsRole(p, "Bicyclist")),
+            FemaleCyclist = people.Count(p => IsFemale(p) && IsRole(p, "Bicyclist"))
         };
     }
-
     // ── Helpers ───────────────────────────────────────────────
     private static string ExtractStation(string? crNo)
     {

@@ -1,260 +1,163 @@
-﻿using CrashReport.Data;
+﻿using ClosedXML.Excel;
+using CrashReport.Data;
 using CrashReport.Models;
-using ClosedXML.Excel;
 using Microsoft.EntityFrameworkCore;
+using System.Text.RegularExpressions;
 
 namespace CrashReport.Services;
-
-public class ImportResult
-{
-    public bool Success { get; set; }
-    public int ImportedCount { get; set; }
-    public int SkippedCount { get; set; }
-    public int DuplicateCount { get; set; }
-    public string SheetName { get; set; } = string.Empty;
-    public string ReportPeriod { get; set; } = string.Empty;
-    public List<string> Errors { get; set; } = new();
-    public List<string> Warnings { get; set; } = new();
-}
 
 public class ExcelImportService
 {
     private readonly AppDbContext _context;
+    private readonly ILogger<ExcelImportService> _logger;
 
-    // ── Column positions (0-based, matching the EHL workbook) ─
-    // Row 6: SAPS | AR NO | CAS | DATE | DAY | TIME | ROUTE | LOCATION | TYPE
-    //          0      1      2     3      4     5       6        7         8
-    // FATAL:   D=9  P=10  PD=11  C=12
-    // GENDER:  M=13 F=14
-    // SERIOUS: D=15 P=16  PD=17  C=18
-    // SLIGHT:  D=19 P=20  PD=21  C=22
-    // VEHICLES: 23
-    private const int COL_SAPS = 0;
-    private const int COL_AR_NO = 1;
-    private const int COL_CAS = 2;
-    private const int COL_DATE = 3;
-    private const int COL_DAY = 4;
-    private const int COL_TIME = 5;
-    private const int COL_ROUTE = 6;
-    private const int COL_LOCATION = 7;
-    private const int COL_CRASH_TYPE = 8;
-    private const int COL_FATAL_D = 9;
-    private const int COL_FATAL_P = 10;
-    private const int COL_FATAL_PD = 11;
-    private const int COL_FATAL_C = 12;
-    private const int COL_GENDER_M = 13;
-    private const int COL_GENDER_F = 14;
-    private const int COL_SERIOUS_D = 15;
-    private const int COL_SERIOUS_P = 16;
-    private const int COL_SERIOUS_PD = 17;
-    private const int COL_SERIOUS_C = 18;
-    private const int COL_SLIGHT_D = 19;
-    private const int COL_SLIGHT_P = 20;
-    private const int COL_SLIGHT_PD = 21;
-    private const int COL_SLIGHT_C = 22;
-    private const int COL_VEHICLES = 23;
-
-    private const int DATA_START_ROW = 7; // Row 7 is the first data row
-
-    // ── Stop words that mark end of data ─────────────────────
+    // ── Cells in col A (SAPS) that signal end of data ─────────
     private static readonly HashSet<string> StopWords =
         new(StringComparer.OrdinalIgnoreCase)
         {
-            "TOTAL", "GRAND TOTAL", "RACE", "VICTIMS",
-            "AGE", "VICTIM GENDER", "DRIVER", "PASSENGER",
-            "PEDESTRIAN", "CYCLIST", "CYLIST"
+            "TOTAL", "GRAND TOTAL", "SUBTOTAL"
         };
 
-    public ExcelImportService(AppDbContext context)
+    public ExcelImportService(AppDbContext context,
+        ILogger<ExcelImportService> logger)
     {
         _context = context;
+        _logger = logger;
     }
 
     public async Task<ImportResult> ImportAsync(
-        Stream fileStream,
-        string fileName,
-        string defaultProvince = "MP")
+        Stream stream, string fileName, string province = "MP")
     {
-        var result = new ImportResult();
+        var result = new ImportResult { FileName = fileName };
 
-        try
+        using var wb = new XLWorkbook(stream);
+        var ws = wb.Worksheets.First();
+
+        // ── Load ALL rows into memory once ────────────────────
+        var rows = new List<IXLRow>();
+        foreach (var row in ws.RowsUsed())
+            rows.Add(row);
+
+        // ── Split into data section and summary section ───────
+        var dataRows = new List<IXLRow>();
+        var summaryRows = new List<IXLRow>();
+        bool inSummary = false;
+
+        foreach (var row in rows)
         {
-            using var wb = new XLWorkbook(fileStream);
+            var rowNum = row.RowNumber();
+            if (rowNum < 7) continue;  // skip header rows 1-6
 
-            // ── Pick the first data sheet ─────────────────────
-            IXLWorksheet? ws = null;
-            foreach (var sheet in wb.Worksheets)
+            var col0 = row.Cell(1).GetString().Trim();  // SAPS column
+            var col8 = row.Cell(9).GetString().Trim();  // ACCIDENT TYPE column
+            var col7 = row.Cell(8).GetString().Trim();  // LOCATION column
+
+            // ── Detect end of data / start of summary ─────────
+            // Row 128 is blank, Row 129 col9="TOTAL", Row 130 col1 starts with "TOTAL:"
+            if (!inSummary)
             {
-                var cell1 = sheet.Cell(1, 1).GetString().Trim().ToUpper();
-                if (!cell1.Contains("GRAND") && !cell1.Contains("SUMMARY"))
+                if (col8.Equals("TOTAL", StringComparison.OrdinalIgnoreCase) ||
+                    col7.Equals("GRAND TOTAL", StringComparison.OrdinalIgnoreCase) ||
+                    col0.StartsWith("TOTAL", StringComparison.OrdinalIgnoreCase))
                 {
-                    ws = sheet;
-                    break;
-                }
-            }
-
-            if (ws == null)
-            {
-                result.Success = false;
-                result.Errors.Add("No valid data sheet found in the workbook.");
-                return result;
-            }
-
-            result.SheetName = ws.Name;
-
-            // ── Extract report period from row 1 col F ────────
-            var periodText = ws.Cell(1, 6).GetString().Trim();
-            result.ReportPeriod = periodText.Contains("ACCIDENT REPORT")
-                ? periodText.Replace("ACCIDENT REPORT:", "").Trim()
-                : ws.Name;
-
-            // ── Ensure a placeholder "Unknown" person exists ──
-            // Imported injury summaries need a PersonId FK.
-            // We create one generic person per import session.
-            var unknownPerson = await GetOrCreateUnknownPersonAsync();
-
-            // ── Process rows ──────────────────────────────────
-            int rowNum = DATA_START_ROW;
-
-            while (true)
-            {
-                var row = ws.Row(rowNum);
-
-                // Read col A — stop on summary/total rows
-                var firstVal = row.Cell(COL_SAPS + 1).GetString().Trim();
-                if (StopWords.Contains(firstVal))
-                    break;
-
-                // Stop on truly empty rows (col A AND col D both empty)
-                var dateVal = row.Cell(COL_DATE + 1).GetString().Trim();
-                if (string.IsNullOrEmpty(firstVal) && string.IsNullOrEmpty(dateVal))
-                {
-                    rowNum++;
-                    // Allow up to 3 consecutive blank rows before stopping
-                    if (rowNum > DATA_START_ROW + 200) break;
+                    inSummary = true;
                     continue;
                 }
 
-                // Skip if no SAPS station
-                if (string.IsNullOrEmpty(firstVal)) { rowNum++; continue; }
+                // Skip blank rows inside data section
+                if (string.IsNullOrWhiteSpace(col0)) continue;
 
-                try
-                {
-                    var parsed = ParseRow(row, defaultProvince);
-                    if (parsed == null) { result.SkippedCount++; rowNum++; continue; }
-
-                    // ── Duplicate check: SAPS + AR No + Date ──
-                    // Use CrNo (SAPS-ARNO) + date as the unique key.
-                    // CAS is often null so don't rely on it alone.
-                    var isDuplicate = await _context.Crashes.AnyAsync(c =>
-                        c.CrNo == parsed.Crash.CrNo &&
-                        c.CrashDate == parsed.Crash.CrashDate);
-
-                    if (isDuplicate)
-                    {
-                        result.DuplicateCount++;
-                        result.Warnings.Add(
-                            $"Row {rowNum}: Duplicate skipped — " +
-                            $"{parsed.Crash.CrNo} on {parsed.Crash.CrashDate}");
-                        rowNum++;
-                        continue;
-                    }
-
-                    // ── Save inside a transaction so a person ──
-                    // summary failure doesn't leave an orphan crash
-                    using var tx = await _context.Database.BeginTransactionAsync();
-                    try
-                    {
-                        // 1. Crash
-                        _context.Crashes.Add(parsed.Crash);
-                        await _context.SaveChangesAsync();
-
-                        // 2. Location
-                        parsed.Location.CrashId = parsed.Crash.CrashId;
-                        _context.CrashLocations.Add(parsed.Location);
-
-                        // 3. Conditions
-                        parsed.Condition.CrashId = parsed.Crash.CrashId;
-                        _context.CrashConditions.Add(parsed.Condition);
-
-                        // 4. Person summaries
-                        // Use the unknownPerson placeholder for the required FK.
-                        foreach (var cp in parsed.PersonSummaries)
-                        {
-                            cp.CrashId = parsed.Crash.CrashId;
-                            cp.PersonId = unknownPerson.PersonId;
-                            _context.CrashPeople.Add(cp);
-                        }
-
-                        await _context.SaveChangesAsync();
-                        await tx.CommitAsync();
-
-                        result.ImportedCount++;
-                    }
-                    catch (Exception innerEx)
-                    {
-                        await tx.RollbackAsync();
-                        result.Warnings.Add(
-                            $"Row {rowNum}: Rolled back — {innerEx.InnerException?.Message ?? innerEx.Message}");
-                        result.SkippedCount++;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    result.Warnings.Add($"Row {rowNum}: Parse error — {ex.Message}");
-                    result.SkippedCount++;
-                }
-
-                rowNum++;
+                dataRows.Add(row);
             }
-
-            result.Success = true;
+            else
+            {
+                summaryRows.Add(row);
+            }
         }
-        catch (Exception ex)
+
+        // ── Parse summary section ─────────────────────────────
+        result.Demographics = ParseDemographics(summaryRows);
+
+        // ── Import data rows ──────────────────────────────────
+        // Load lookup for duplicate checking
+        var existingCrNos = await _context.Crashes
+            .Select(c => c.CrNo)
+            .Where(c => c != null)
+            .ToHashSetAsync();
+
+        foreach (var row in dataRows)
         {
-            result.Success = false;
-            result.Errors.Add($"Failed to open workbook: {ex.Message}");
+            result.TotalRows++;
+            try
+            {
+                var crash = ParseDataRow(row, province);
+                if (crash == null)
+                {
+                    result.Skipped++;
+                    result.AddWarning($"Row {row.RowNumber()}: could not parse — skipped.");
+                    continue;
+                }
+
+                // Duplicate check on CrNo
+                if (crash.CrNo != null && existingCrNos.Contains(crash.CrNo))
+                {
+                    result.Skipped++;
+                    result.AddWarning($"Row {row.RowNumber()}: duplicate CrNo '{crash.CrNo}' — skipped.");
+                    continue;
+                }
+
+                _context.Crashes.Add(crash);
+                if (crash.CrNo != null) existingCrNos.Add(crash.CrNo);
+                result.Imported++;
+            }
+            catch (Exception ex)
+            {
+                result.Errors++;
+                result.AddError($"Row {row.RowNumber()}: {ex.Message}");
+                _logger.LogWarning(ex, "Import error on row {row}", row.RowNumber());
+            }
         }
 
+        await _context.SaveChangesAsync();
         return result;
     }
 
-    // ── Parse one data row ────────────────────────────────────
-    private ParsedRow? ParseRow(IXLRow row, string defaultProvince)
+    // ─────────────────────────────────────────────────────────
+    // Parse a single data row → Crash entity
+    // ─────────────────────────────────────────────────────────
+    private static Crash? ParseDataRow(IXLRow row, string province)
     {
-        var saps = row.Cell(COL_SAPS + 1).GetString().Trim();
-        var arNoRaw = row.Cell(COL_AR_NO + 1).GetString().Trim();
-        var cas = row.Cell(COL_CAS + 1).GetString().Trim();
-        var dateRaw = row.Cell(COL_DATE + 1).GetString().Trim();
-        var day = row.Cell(COL_DAY + 1).GetString().Trim();
-        var timeRaw = row.Cell(COL_TIME + 1).GetString().Trim();
-        var route = row.Cell(COL_ROUTE + 1).GetString().Trim();
-        var location = row.Cell(COL_LOCATION + 1).GetString().Trim();
-        var crashType = row.Cell(COL_CRASH_TYPE + 1).GetString().Trim();
-        var vehicles = row.Cell(COL_VEHICLES + 1).GetString().Trim();
+
+        var saps = row.Cell(1).GetString().Trim().ToUpper();
+        var arNo = row.Cell(2).GetString().Trim();
+        var casNo = row.Cell(3).GetString().Trim();
+        var dateRaw = row.Cell(4).GetString().Trim();
+        var timeRaw = row.Cell(6).GetString().Trim();
+        var route = row.Cell(7).GetString().Trim().ToUpper();
+        var location = row.Cell(8).GetString().Trim();
+        var crashType = row.Cell(9).GetString().Trim().ToUpper();
+        var vehicles = row.Cell(24).GetString().Trim();
+        var vehicleCount = CountVehicles(vehicles);
 
         if (string.IsNullOrEmpty(saps)) return null;
 
-        // ── Parse date ────────────────────────────────────────
-        // Workbook uses dd/MM (e.g. "01/02") or dd/MM/yyyy
-        var crashDate = DateOnly.FromDateTime(DateTime.Today);
+        
+        DateOnly crashDate = DateOnly.FromDateTime(DateTime.Today);
         if (!string.IsNullOrEmpty(dateRaw))
         {
-            if (!DateOnly.TryParseExact(dateRaw, "dd/MM/yyyy",
-                    System.Globalization.CultureInfo.InvariantCulture,
-                    System.Globalization.DateTimeStyles.None, out crashDate))
+            var parts = dateRaw.Replace('-', '/').Split('/');
+            if (parts.Length >= 2 &&
+                int.TryParse(parts[0], out var dd) &&
+                int.TryParse(parts[1], out var mm))
             {
-                if (DateOnly.TryParseExact(dateRaw, "dd/MM",
-                        System.Globalization.CultureInfo.InvariantCulture,
-                        System.Globalization.DateTimeStyles.None, out var partial))
-                {
-                    // Infer year from the sheet name or today
-                    crashDate = new DateOnly(DateTime.Today.Year, partial.Month, partial.Day);
-                }
+                var year = DateTime.Today.Year;
+
+                dd = Math.Min(dd, DateTime.DaysInMonth(year, mm));
+                crashDate = new DateOnly(year, mm, dd);
             }
         }
 
-        // ── Parse time (format: "20H00") ──────────────────────
+
         TimeOnly? crashTime = null;
         if (!string.IsNullOrEmpty(timeRaw))
         {
@@ -262,139 +165,296 @@ public class ExcelImportService
             if (TimeOnly.TryParse(norm, out var t)) crashTime = t;
         }
 
-        // ── AR number — keep as-is (can be numeric or string)
-        var arNo = string.IsNullOrEmpty(arNoRaw) ? null : arNoRaw;
+        // ── Injury counts (for creating CrashPerson placeholders) ─
+        int fatalD = IntCell(row, 10), fatalP = IntCell(row, 11),
+            fatalPD = IntCell(row, 12), fatalC = IntCell(row, 13);
+        int fatalM = IntCell(row, 14), fatalF = IntCell(row, 15);
+        int serD = IntCell(row, 16), serP = IntCell(row, 17),
+            serPD = IntCell(row, 18), serC = IntCell(row, 19);
+        int sliD = IntCell(row, 20), sliP = IntCell(row, 21),
+            sliPD = IntCell(row, 22), sliC = IntCell(row, 23);
 
-        // ── Build Crash record ────────────────────────────────
+        // ── Build CrNo ─────────────────────────────────────────
+        var crNo = string.IsNullOrEmpty(arNo)
+            ? saps : $"{saps}-{arNo}";
+
         var crash = new Crash
         {
-            CasNo = string.IsNullOrEmpty(cas) ? null : cas,
-            CrNo = arNo != null ? $"{saps}-{arNo}" : saps,
+            CrNo = crNo,
+            CasNo = string.IsNullOrEmpty(casNo) ? null : casNo,
+            ProvinceCode = province,
             CrashDate = crashDate,
             CrashTime = crashTime,
-            ProvinceCode = defaultProvince,    // MP = Mpumalanga
             RoadNumber = string.IsNullOrEmpty(route) ? null : route,
-            NoOfVehiclesInvolved = (byte)CountVehicles(vehicles),
-            BriefDescription = BuildDescription(day, vehicles)
+            NoOfVehiclesInvolved = (byte)Math.Min(vehicleCount, 255),  
+            CreatedAt = DateTime.UtcNow
         };
 
-        // ── Location ──────────────────────────────────────────
-        var loc = new CrashLocation
+ 
+        if (!string.IsNullOrEmpty(crashType))
         {
-            StreetRoadName = string.IsNullOrEmpty(location) ? null : location,
-            RoadFunctionalClassification = string.IsNullOrEmpty(route) ? null : route
-        };
+            crash.CrashConditions.Add(new CrashCondition
+            {
+                CrashType = crashType
+            });
+        }
 
-        // ── Conditions ────────────────────────────────────────
-        var cond = new CrashCondition
-        {
-            CrashType = NormaliseCrashType(crashType)
-        };
 
-        // ── Person summaries (one row per injured person) ─────
-        // Columns map: Fatal D/P/PD/C, Serious D/P/PD/C, Slight D/P/PD/C
-        var persons = new List<CrashPerson>();
+        var fatalTotal = fatalD + fatalP + fatalPD + fatalC;
+        AddPersons(crash, "Driver", "Fatal", fatalD, fatalM, fatalF, fatalTotal);
+        AddPersons(crash, "Passenger", "Fatal", fatalP, fatalM, fatalF, fatalTotal);
+        AddPersons(crash, "Pedestrian", "Fatal", fatalPD, fatalM, fatalF, fatalTotal);
+        AddPersons(crash, "Bicyclist", "Fatal", fatalC, fatalM, fatalF, fatalTotal);
+        AddPersons(crash, "Driver", "Serious", serD, 0, 0, 0);
+        AddPersons(crash, "Passenger", "Serious", serP, 0, 0, 0);
+        AddPersons(crash, "Pedestrian", "Serious", serPD, 0, 0, 0);
+        AddPersons(crash, "Bicyclist", "Serious", serC, 0, 0, 0);
+        AddPersons(crash, "Driver", "Slight", sliD, 0, 0, 0);
+        AddPersons(crash, "Passenger", "Slight", sliP, 0, 0, 0);
+        AddPersons(crash, "Pedestrian", "Slight", sliPD, 0, 0, 0);
+        AddPersons(crash, "Bicyclist", "Slight", sliC, 0, 0, 0);
 
-        AddSummaries(persons, GetInt(row, COL_FATAL_D), "Driver", "Fatal");
-        AddSummaries(persons, GetInt(row, COL_FATAL_P), "Passenger", "Fatal");
-        AddSummaries(persons, GetInt(row, COL_FATAL_PD), "Pedestrian", "Fatal");
-        AddSummaries(persons, GetInt(row, COL_FATAL_C), "Bicyclist", "Fatal");
-        AddSummaries(persons, GetInt(row, COL_SERIOUS_D), "Driver", "Serious");
-        AddSummaries(persons, GetInt(row, COL_SERIOUS_P), "Passenger", "Serious");
-        AddSummaries(persons, GetInt(row, COL_SERIOUS_PD), "Pedestrian", "Serious");
-        AddSummaries(persons, GetInt(row, COL_SERIOUS_C), "Bicyclist", "Serious");
-        AddSummaries(persons, GetInt(row, COL_SLIGHT_D), "Driver", "Slight");
-        AddSummaries(persons, GetInt(row, COL_SLIGHT_P), "Passenger", "Slight");
-        AddSummaries(persons, GetInt(row, COL_SLIGHT_PD), "Pedestrian", "Slight");
-        AddSummaries(persons, GetInt(row, COL_SLIGHT_C), "Bicyclist", "Slight");
-
-        return new ParsedRow
-        {
-            Crash = crash,
-            Location = loc,
-            Condition = cond,
-            PersonSummaries = persons
-        };
+        return crash;
     }
 
-    // ── Create or reuse a single "Unknown (Imported)" person ─
-    private async Task<Person> GetOrCreateUnknownPersonAsync()
+
+    private static void AddPersons(Crash crash,
+        string role, string severity, int count,
+        int maleTotal, int femaleTotal, int totalFatal)
     {
-        const string unknownSurname = "UNKNOWN";
-        const string unknownFullNames = "IMPORTED RECORD";
+        if (count <= 0) return;
 
-        var existing = await _context.Persons
-            .FirstOrDefaultAsync(p =>
-                p.Surname == unknownSurname &&
-                p.FullNames == unknownFullNames);
-
-        if (existing != null) return existing;
-
-        var person = new Person
-        {
-            IdType = "Other",
-            Surname = unknownSurname,
-            FullNames = unknownFullNames
-        };
-        _context.Persons.Add(person);
-        await _context.SaveChangesAsync();
-        return person;
-    }
-
-    // ── Helpers ───────────────────────────────────────────────
-    private static void AddSummaries(
-        List<CrashPerson> list, int count, string role, string severity)
-    {
         for (int i = 0; i < count; i++)
-            list.Add(new CrashPerson { Role = role, SeverityOfInjury = severity });
+        {
+            // Assign gender from M/F totals when this is a fatal row
+            // and we have gender data. Assign Male first, then Female.
+            string? gender = null;
+            if (severity == "Fatal" && totalFatal > 0 &&
+                (maleTotal > 0 || femaleTotal > 0))
+            {
+                // Simple allocation: fill males first
+                var assigned = crash.CrashPeople
+                    .Count(p => p.SeverityOfInjury == "Fatal" && p.Person?.Gender != null);
+                if (assigned < maleTotal)
+                    gender = "Male";
+                else if (assigned < maleTotal + femaleTotal)
+                    gender = "Female";
+            }
+
+            var person = new Person
+            {
+                Surname = "IMPORTED",
+                FullNames = "RECORD",
+                Gender = gender,
+                IdType = "UNKNOWN"
+            };
+
+            crash.CrashPeople.Add(new CrashPerson
+            {
+                Person = person,
+                Role = role,
+                SeverityOfInjury = severity
+            });
+        }
     }
 
-    private static int GetInt(IXLRow row, int colIndex)
+ 
+    private static ImportDemographics ParseDemographics(List<IXLRow> summaryRows)
     {
-        var cell = row.Cell(colIndex + 1);
-        if (cell.IsEmpty()) return 0;
-        if (cell.TryGetValue<int>(out var vi)) return vi;
-        if (cell.TryGetValue<double>(out var vd)) return (int)vd;
+        var demo = new ImportDemographics();
+
+        foreach (var row in summaryRows)
+        {
+            var label = row.Cell(1).GetString().Trim().ToUpper();
+
+            // ── AGE distribution ──────────────────────────────
+            // Row 134: headers — AGE | 0-7 | 08-12 | 13-18 | 19-35 | 36+
+            // Row 135: values  — (blank) | val | val | val | val | val
+            if (label == "AGE")
+            {
+                // The next non-blank row holds the values
+                var idx = summaryRows.IndexOf(row);
+                for (int j = idx + 1; j < summaryRows.Count; j++)
+                {
+                    var vRow = summaryRows[j];
+                    var vLabel = vRow.Cell(1).GetString().Trim().ToUpper();
+                    if (vLabel == "TOTAL" || vLabel == "GRAND TOTAL") break;
+
+                    // Values are in cols B-F (ClosedXML 2-6)
+                    var a = IntCell(vRow, 2);  // 0-7
+                    var b = IntCell(vRow, 3);  // 08-12
+                    var c = IntCell(vRow, 4);  // 13-18
+                    var d = IntCell(vRow, 5);  // 19-35
+                    var e = IntCell(vRow, 6);  // 36+
+
+                    if (a + b + c + d + e > 0)
+                    {
+                        demo.Age0to7 = a;
+                        demo.Age8to12 = b;
+                        demo.Age13to18 = c;
+                        demo.Age19to35 = d;
+                        demo.Age36Plus = e;
+                        break;
+                    }
+                }
+            }
+
+            
+            else if (label == "DRIVER")
+            {
+                demo.DriverMale = IntCell(row, 2);
+                demo.DriverFemale = IntCell(row, 3);
+            }
+            else if (label == "PASSENGER")
+            {
+                demo.PassengerMale = IntCell(row, 2);
+                demo.PassengerFemale = IntCell(row, 3);
+            }
+            else if (label == "PEDESTRIAN")
+            {
+                demo.PedestrianMale = IntCell(row, 2);
+                demo.PedestrianFemale = IntCell(row, 3);
+            }
+            else if (label is "CYCLIST" or "CYLIST")
+            {
+                demo.CyclistMale = IntCell(row, 2);
+                demo.CyclistFemale = IntCell(row, 3);
+            }
+
+            // ── Race distribution ─────────────────────────────
+            // Row 147: RACE | B | C | W | I | O
+            // Row 148: vals in cols B-F
+            else if (label == "RACE")
+            {
+                var idx = summaryRows.IndexOf(row);
+                if (idx + 1 < summaryRows.Count)
+                {
+                    var vRow = summaryRows[idx + 1];
+                    demo.RaceBlack = IntCell(vRow, 2);  // B
+                    demo.RaceColoured = IntCell(vRow, 3);  // C
+                    demo.RaceWhite = IntCell(vRow, 4);  // W
+                    demo.RaceIndian = IntCell(vRow, 5);  // I
+                    demo.RaceOther = IntCell(vRow, 6);  // O
+                }
+            }
+        }
+
+        return demo;
+    }
+
+
+    private static int CountVehicles(string vehiclesStr)
+    {
+        if (string.IsNullOrWhiteSpace(vehiclesStr))
+            return 0;
+
+        var s = vehiclesStr.Trim().TrimEnd('`').Trim();
+
+        // Special case: if it's just "P/D" (pedestrian only), no vehicles
+        if (s.Equals("P/D", StringComparison.OrdinalIgnoreCase))
+            return 0;
+
+        // Split on '/' to get individual vehicle entries
+        var parts = s.Split('/')
+            .Select(p => p.Trim())
+            .Where(p => !string.IsNullOrWhiteSpace(p))
+            .ToList();
+
+        // Define what counts as a VEHICLE (not a person/cyclist)
+        var nonVehicleTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "P/D",      // Pedestrian
+        "B/C",      // Bicycle/Cyclist
+        "HIT N RUN" // This is an event, not a vehicle
+    };
+
+        // Count only the parts that are actual vehicles
+        var vehicleCount = parts.Count(p => !nonVehicleTypes.Contains(p));
+
+        // If we found zero vehicles but there were parts, check if all were vehicles
+        // (e.g., if someone put "M/C" which IS a vehicle)
+        if (vehicleCount == 0 && parts.Any())
+        {
+            // Motorcycles (M/C) ARE vehicles - count them
+            vehicleCount = parts.Count(p => p.Equals("M/C", StringComparison.OrdinalIgnoreCase));
+        }
+
+        // If still zero but there were parts, something's wrong - log and default to 1
+        if (vehicleCount == 0 && parts.Any())
+        {
+            // This might be a vehicle type we don't recognize
+            // You could log this for investigation
+            return parts.Count; // Count everything as vehicles as fallback
+        }
+
+        return vehicleCount;
+    }
+    private static int IntCell(IXLRow row, int col)
+    {
+        try
+        {
+            var cell = row.Cell(col);
+            if (cell.IsEmpty()) return 0;
+            if (cell.TryGetValue(out int i)) return i;
+            if (int.TryParse(cell.GetString().Trim(), out var p)) return p;
+        }
+        catch { }
         return 0;
     }
+}
 
-    private static int CountVehicles(string vehicleStr)
-    {
-        if (string.IsNullOrEmpty(vehicleStr)) return 1;
-        return vehicleStr.Split('/').Length;
-    }
 
-    private static string BuildDescription(string day, string vehicles)
-    {
-        var parts = new List<string>();
-        if (!string.IsNullOrEmpty(day)) parts.Add($"Day: {day}");
-        if (!string.IsNullOrEmpty(vehicles)) parts.Add($"Vehicles: {vehicles}");
-        return string.Join(". ", parts);
-    }
 
-    private static string? NormaliseCrashType(string raw)
-    {
-        if (string.IsNullOrEmpty(raw)) return null;
-        return raw.Trim().ToUpper() switch
-        {
-            "HEAD ON" => "Head on",
-            "HEAD REAR" => "Head/rear end",
-            "REAR END" => "Head/rear end",
-            "SIDE SWIPE" => "Sideswipe - same direction",
-            "PEDESTRIAN" => "Crash with pedestrian",
-            "OVERTURNED" => "Overturned",
-            "LOST CONTROL" => "Single vehicle left road",
-            "ROLLOVER" => "Overturned",
-            _ => raw.Trim()
-        };
-    }
+public class ImportResult
+{
+    public string FileName { get; set; } = string.Empty;
+    public int TotalRows { get; set; }
+    public int Imported { get; set; }
+    public int Skipped { get; set; }
+    public int Errors { get; set; }
 
-    // ── Internal DTO ─────────────────────────────────────────
-    private class ParsedRow
-    {
-        public Crash Crash { get; set; } = null!;
-        public CrashLocation Location { get; set; } = null!;
-        public CrashCondition Condition { get; set; } = null!;
-        public List<CrashPerson> PersonSummaries { get; set; } = new();
-    }
+    public List<string> Warnings { get; set; } = new();
+    public List<string> ErrorMessages { get; set; } = new();
+
+    public ImportDemographics Demographics { get; set; } = new();
+
+    public void AddWarning(string msg) { if (Warnings.Count < 50) Warnings.Add(msg); }
+    public void AddError(string msg) { if (ErrorMessages.Count < 50) ErrorMessages.Add(msg); }
+}
+
+public class ImportDemographics
+{
+    // ── Age distribution ──────────────────────────────────────
+    public int Age0to7 { get; set; }
+    public int Age8to12 { get; set; }
+    public int Age13to18 { get; set; }
+    public int Age19to35 { get; set; }
+    public int Age36Plus { get; set; }
+    public int AgeTotal => Age0to7 + Age8to12 + Age13to18 + Age19to35 + Age36Plus;
+
+    // ── Gender per victim type (fatal victims only) ───────────
+    public int DriverMale { get; set; }
+    public int DriverFemale { get; set; }
+    public int PassengerMale { get; set; }
+    public int PassengerFemale { get; set; }
+    public int PedestrianMale { get; set; }
+    public int PedestrianFemale { get; set; }
+    public int CyclistMale { get; set; }
+    public int CyclistFemale { get; set; }
+
+    public int TotalMale => DriverMale + PassengerMale + PedestrianMale + CyclistMale;
+    public int TotalFemale => DriverFemale + PassengerFemale + PedestrianFemale + CyclistFemale;
+    public int GenderTotal => TotalMale + TotalFemale;
+
+    // ── Race (totals only — no per-crash link in source data) ──
+    public int RaceBlack { get; set; }
+    public int RaceColoured { get; set; }
+    public int RaceWhite { get; set; }
+    public int RaceIndian { get; set; }
+    public int RaceOther { get; set; }
+    public int RaceTotal => RaceBlack + RaceColoured + RaceWhite + RaceIndian + RaceOther;
+
+    public bool HasAgeData => AgeTotal > 0;
+    public bool HasGenderData => GenderTotal > 0;
+    public bool HasRaceData => RaceTotal > 0;
 }

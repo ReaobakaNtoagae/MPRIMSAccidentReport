@@ -12,10 +12,10 @@ public class ImportController : Controller
         _importService = importService;
     }
 
-    // GET: /Import
+    
     public IActionResult Index() => View();
 
-    // POST: /Import/Upload
+   
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Upload(IFormFile file, string province = "MP")

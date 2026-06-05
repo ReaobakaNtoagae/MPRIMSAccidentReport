@@ -18,7 +18,6 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 
 builder.Services.AddScoped<ExcelImportService>();
-builder.Services.AddScoped<MonthlyReportService>();
 builder.Services.AddScoped<WordexportService>();
 builder.Services.AddScoped<StandbyReportDataService>();
 builder.Services.AddScoped<StandbyReportWordService>();

@@ -124,6 +124,8 @@ public class CrashesController : Controller
         return Json(data);
     }
 
+
+
     // GET: /Crashes/GetAll — used by dashboard (unfiltered)
     [HttpGet]
     public async Task<IActionResult> GetAll()
@@ -152,6 +154,8 @@ public class CrashesController : Controller
         return Json(data);
     }
 
+
+    
     // GET: /Crashes/FilterOptions — distinct values for dropdowns
     [HttpGet]
     public async Task<IActionResult> FilterOptions()
@@ -179,6 +183,7 @@ public class CrashesController : Controller
 
         return Json(new { stations, routes, crashTypes });
     }
+
 
     // GET: /Crashes/Details/5
     public async Task<IActionResult> Details(int? id)
@@ -213,6 +218,7 @@ public class CrashesController : Controller
     public IActionResult Create() =>
         View(new Crash { CrashDate = DateOnly.FromDateTime(DateTime.Today) });
 
+
     // POST: /Crashes/Create
     [HttpPost]
     [ValidateAntiForgeryToken]
@@ -230,6 +236,8 @@ public class CrashesController : Controller
         return View(crash);
     }
 
+
+
     // GET: /Crashes/Edit/5
     public async Task<IActionResult> Edit(int? id)
     {
@@ -239,7 +247,8 @@ public class CrashesController : Controller
         return View(crash);
     }
 
-    // POST: /Crashes/Edit/5
+    
+
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(int id,
@@ -265,7 +274,8 @@ public class CrashesController : Controller
         return View(crash);
     }
 
-    // GET: /Crashes/Delete/5
+
+   
     public async Task<IActionResult> Delete(int? id)
     {
         if (id == null) return NotFound();
@@ -276,7 +286,7 @@ public class CrashesController : Controller
         return View(crash);
     }
 
-    // POST: /Crashes/Delete/5
+    
     [HttpPost, ActionName("Delete")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteConfirmed(int id)
@@ -286,6 +296,8 @@ public class CrashesController : Controller
         await _context.SaveChangesAsync();
         return RedirectToAction(nameof(Index));
     }
+
+
 
     private bool CrashExists(int id) =>
         _context.Crashes.Any(c => c.CrashId == id);
