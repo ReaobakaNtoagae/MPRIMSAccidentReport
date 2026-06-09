@@ -129,7 +129,7 @@ public class MonthlyMemoDataService
         return vm;
     }
 
-    // ─────────────────────────────────────────────────────────
+  
     private async Task<List<Row>> LoadAsync(DateOnly from, DateOnly to)
     {
         var crashes = await _context.Crashes

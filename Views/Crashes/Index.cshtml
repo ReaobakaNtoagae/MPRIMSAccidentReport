@@ -79,6 +79,14 @@
         color: #555;
         font-weight: 500;
     }
+
+    /* Action buttons container */
+    .action-buttons {
+        display: flex;
+        gap: 6px;
+        justify-content: center;
+        align-items: center;
+    }
 </style>
 
 <!-- Search & Filter Panel -->
@@ -168,7 +176,7 @@
             var provinces  = ["EC","FS","GP","KZN","LP","MP","NC","NW","WC"];
             var severities = ["Fatal","Serious","Slight","No injury"];
 
-            // ── Helper: lookup-backed CustomStore ────────────────────
+           
             function lookupStore(endpoint) {
                 return new DevExpress.data.CustomStore({
                     key: "text",
@@ -177,7 +185,6 @@
                 });
             }
 
-            // ── Create all widget instances first ─────────────────────
             var keywordInst = $("#keywordBox").dxTextBox({
                 placeholder: "Search by station, location, route, AR No, CAS...",
                 showClearButton: true,
@@ -244,7 +251,7 @@
                 dataSource: severities, placeholder: "Any severity", showClearButton: true
             }).dxSelectBox("instance");
 
-            // ── Action buttons ────────────────────────────────────────
+           
             $("#btnSearch").dxButton({
                 text: "Search", type: "default", icon: "find", onClick: runSearch
             });
@@ -259,7 +266,7 @@
                 onClick: function () { window.location.href = "/Home/Create"; }
             });
 
-            // ── Collapse toggle ───────────────────────────────────────
+ 
             var filterOpen = true;
             $("#toggleFilters").on("click", function () {
                 filterOpen = !filterOpen;
@@ -267,7 +274,7 @@
                 $("#toggleIcon").toggleClass("collapsed", !filterOpen);
             });
 
-            // ── Results grid ──────────────────────────────────────────
+ 
             var gridInst = $("#crashGrid").dxDataGrid({
                 dataSource: [],
                 columns: [
@@ -291,11 +298,6 @@
                     {
                         caption: "Injuries", width: 180, alignment: "center",
                         allowSorting: false,
-                        // FIX: build DOM nodes instead of parsing HTML strings.
-                        // container.html(htmlString) goes through jQuery's buildFragment
-                        // which calls document.createDocumentFragment() — this fails when
-                        // DevExtreme passes the container before it is attached to the DOM.
-                        // Using $('<span>').text() + .append() avoids that path entirely.
                         cellTemplate: function (container, options) {
                             var d     = options.data;
                             var $wrap = $('<div>').css({
@@ -333,33 +335,42 @@
                         }
                     },
                     {
-                        caption: "Actions", width: 130, alignment: "center",
+                        caption: "Actions", width: 110, alignment: "center",
                         allowSorting: false,
                         cellTemplate: function (container, options) {
-                            var id    = options.data.CrashId;
-                            var $wrap = $('<div>').css({ display:'flex', gap:'6px', justifyContent:'center' });
+                            var id = options.data.CrashId;
+                            var $container = $(container);
 
-                            $('<button>').text('View')
-                                .css({ fontSize:'.72rem', padding:'2px 10px',
-                                       borderRadius:'6px', border:'1px solid #c8e6c9',
-                                       background:'#f1f8f1', color:'#2e7d32',
-                                       cursor:'pointer' })
-                                .on('click', function() {
-                                    window.location.href = '/Home/Details/' + id;
-                                })
-                                .appendTo($wrap);
+                            // Create container for buttons
+                            var $btnContainer = $('<div>').addClass('action-buttons');
 
-                            $('<button>').text('Edit')
-                                .css({ fontSize:'.72rem', padding:'2px 10px',
-                                       borderRadius:'6px', border:'1px solid #bbdefb',
-                                       background:'#e3f2fd', color:'#0277bd',
-                                       cursor:'pointer' })
-                                .on('click', function() {
-                                    window.location.href = '/Home/Edit/' + id;
-                                })
-                                .appendTo($wrap);
+                            // View button with icon
+                            $('<div>').dxButton({
+                                icon: "find",
+                                hint: "View Details",
+                                type: "normal",
+                                stylingMode: "outlined",
+                                elementAttr: { style: "min-width: 32px; height: 32px;" },
+                                onClick: function(e) {
+                                    e.event.stopPropagation();
+                                    window.location.href = '/Crashes/Details/' + id;
+                                }
+                            }).appendTo($btnContainer);
 
-                            $(container).empty().append($wrap);
+                            // Edit button with icon
+                            $('<div>').dxButton({
+                                icon: "edit",
+                                hint: "Edit Report",
+                                type: "normal",
+                                stylingMode: "outlined",
+                                elementAttr: { style: "min-width: 32px; height: 32px;" },
+                                onClick: function(e) {
+                                    e.event.stopPropagation();
+                                    window.location.href = '/Crashes/Edit/' + id;
+                                }
+                            }).appendTo($btnContainer);
+
+                            $container.empty().append($btnContainer);
                         }
                     }
                 ],
@@ -381,7 +392,7 @@
                 }
             }).dxDataGrid("instance");
 
-            // ── Search ────────────────────────────────────────────────
+    
             function runSearch() {
                 var params = buildParams();
                 updateBadges(params);
@@ -427,7 +438,7 @@
                        String(dt.getDate()).padStart(2,"0");
             }
 
-            // ── Filter badges ─────────────────────────────────────────
+            
             var badgeLabels = {
                 keyword:"Keyword", arNo:"AR No", casNo:"CAS No", sapsStation:"SAPS",
                 route:"Route", province:"Province", crashType:"Type",
@@ -473,7 +484,7 @@
                 runSearch();
             }
 
-            // ── Initial load ──────────────────────────────────────────
+        
             runSearch();
         });
     </script>

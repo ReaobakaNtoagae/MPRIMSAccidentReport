@@ -71,12 +71,10 @@ function sectionHeading(text) {
     });
 }
 
-// ── TABLE 1: Full-week stats (current vs prior year) ──────────
-// Columns: Label | Province 2024 2025 | Ehlanzeni 2024 2025 | Bohlabelo | Gert Sibande | Nkangala
-// Total width = 9560 DXA (matches template)
+
 const TW1 = 9560;
 const C1 = [1686, 935, 747, 658, 694, 745, 794, 808, 800, 881, 812];
-// Simplified to 6-column structure: label + 5 districts × 2 cols
+
 
 function weekStatsTable(vm) {
     const districts = [
@@ -94,7 +92,7 @@ function weekStatsTable(vm) {
     const priorYear = vm.DateFrom ? parseInt(vm.DateFrom.split('-')[0]) - 1 : new Date().getFullYear() - 1;
     const curYear = vm.DateFrom ? parseInt(vm.DateFrom.split('-')[0]) : new Date().getFullYear();
 
-    // Row 1: district names (merged across 2 year cols each)
+
     const hdrRow = new TableRow({
         children: [
             new TableCell({
@@ -116,7 +114,7 @@ function weekStatsTable(vm) {
         ]
     });
 
-    // Row 2: year headers
+    
     const yearRow = new TableRow({
         children: [
             new TableCell({
@@ -131,7 +129,7 @@ function weekStatsTable(vm) {
         ]
     });
 
-    // Data rows
+    
     const metrics = [
         { label: 'CRASHES', key: 'Crashes' },
         { label: 'FATALITIES', key: 'Fatalities' },
@@ -162,10 +160,10 @@ function weekStatsTable(vm) {
     });
 }
 
-// ── Fatal crash detail table (exact times) ───────────────────
+
 function fatalDetailTable(vm) {
     var TW = 9560;
-    var cols = [1200, 1000, 800, 1200, 2760, 2600];  // date, time, fatal, route, location, district
+    var cols = [1200, 1000, 800, 1200, 2760, 2600];  
     var hdrRow = new TableRow({
         children: [
             hdrCell("DATE", cols[0]),
@@ -177,7 +175,7 @@ function fatalDetailTable(vm) {
         ]
     });
 
-    // Collect all fatal details from all districts
+    
     var allDetails = [];
     var districtNames = ["EHLANZENI", "BOHLABELO", "GERT SIBANDE", "NKANGALA"];
     var districtKeys = ["CurrentEhlanzeni", "CurrentBohlabelo", "CurrentGertSibande", "CurrentNkangala"];
@@ -190,7 +188,7 @@ function fatalDetailTable(vm) {
         }
     });
 
-    // Sort by date then time
+    
     allDetails.sort(function (a, b) {
         var da = a.detail.Date + a.detail.Time;
         var db = b.detail.Date + b.detail.Time;
@@ -237,7 +235,7 @@ function fatalDetailTable(vm) {
     });
 }
 
-// ── TABLE 2: Time-slot fatalities ────────────────────────────
+
 function fatalTimeTable(vm) {
     const districts = [
         { label: 'PROVINCE', cur: vm.CurrentProvince, pri: vm.PriorProvince },
@@ -289,7 +287,7 @@ function fatalTimeTable(vm) {
     });
 }
 
-// ── TABLE 3: Sub-period stats (single year) ──────────────────
+
 function subPeriodTable(sp) {
     const TW = 9737;
     const labelW = 1784;
@@ -339,7 +337,7 @@ function subPeriodTable(sp) {
     });
 }
 
-// ── TABLE 4: Sub-period time slots ───────────────────────────
+
 function subPeriodTimeTable(sp) {
     const TW = 9560;
     const labelW = 1918;
@@ -385,7 +383,7 @@ function subPeriodTimeTable(sp) {
     });
 }
 
-// ── TABLE 5: Victim age breakdown ─────────────────────────────
+
 function victimsAgeTable(vm) {
     const TW = 9242;
     const colW = Math.floor(TW / 6);
@@ -432,7 +430,7 @@ function victimsAgeTable(vm) {
     });
 }
 
-// ── TABLE 6: Victim gender breakdown ─────────────────────────
+
 function victimsGenderTable(vm) {
     const TW = 9242;
     const c1 = 3080, c2 = 3081, c3 = 3081;
@@ -468,7 +466,7 @@ function victimsGenderTable(vm) {
     });
 }
 
-// ── Build problematic routes text ─────────────────────────────
+
 function buildRoutesSection(vm) {
     const paras = [
         new Paragraph({
@@ -508,7 +506,7 @@ function buildRoutesSection(vm) {
     return paras;
 }
 
-// ── Fatality summary text ─────────────────────────────────────
+
 function buildFatalSummary(vm) {
     const p = vm.CurrentProvince || {};
     const lines = [];
@@ -552,7 +550,7 @@ function buildFatalSummary(vm) {
     return lines;
 }
 
-// ── Build date string ─────────────────────────────────────────
+
 function fmtDate(d) {
     if (!d) return '';
     const months = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE',
@@ -561,12 +559,12 @@ function fmtDate(d) {
     return `${parseInt(parts[2])} ${months[parseInt(parts[1]) - 1]} ${parts[0]}`;
 }
 
-// ── Assemble document ─────────────────────────────────────────
+
 const title = `WEEKLY STATISTICS REPORT: ${fmtDate(vm.DateFrom)} TO ${fmtDate(vm.DateTo)}`;
 const dayRange = `(${vm.DayRange || 'MONDAY TO SUNDAY'})`;
 
 const children = [
-    // Title
+    
     new Paragraph({
         spacing: { before: 240, after: 60 },
         children: [txt(title, { bold: true, size: 24 })]
@@ -576,7 +574,7 @@ const children = [
         children: [txt(dayRange, { bold: true, size: 22 })]
     }),
 
-    // Table 1: week stats
+    
     weekStatsTable(vm),
 
     // Fatalities heading

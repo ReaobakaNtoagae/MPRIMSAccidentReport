@@ -225,10 +225,10 @@
         }
 </style>
 
-<!-- Step bar -->
+
 <div class="wizard-steps" id="stepBar"></div>
 
-<!-- STEP 1: Crash Info -->
+
 <div class="step-panel active" id="panel-1">
     <div class="panel-card">
         <h6>Reference Numbers</h6>
@@ -258,7 +258,7 @@
     </div>
 </div>
 
-<!-- STEP 2: Location -->
+
 <div class="step-panel" id="panel-2">
     <div class="panel-card">
         <h6>Crash Location</h6>
@@ -284,7 +284,7 @@
     </div>
 </div>
 
-<!-- STEP 3: Conditions -->
+
 <div class="step-panel" id="panel-3">
     <div class="panel-card">
         <h6>Environmental Conditions</h6>
@@ -310,7 +310,7 @@
     </div>
 </div>
 
-<!-- STEP 4: Vehicles -->
+
 <div class="step-panel" id="panel-4">
     <div class="panel-card">
         <h6>Vehicles Involved</h6>
@@ -320,7 +320,7 @@
     </div>
 </div>
 
-<!-- STEP 5: Persons -->
+
 <div class="step-panel" id="panel-5">
     <div class="panel-card">
         <h6>Persons Involved (excluding drivers already captured)</h6>
@@ -330,7 +330,7 @@
     </div>
 </div>
 
-<!-- STEP 6: Factors -->
+
 <div class="step-panel" id="panel-6">
     <div class="panel-card">
         <h6>Contributory Factors</h6>
@@ -339,7 +339,7 @@
     </div>
 </div>
 
-<!-- STEP 7: Review -->
+
 <div class="step-panel" id="panel-7">
     <div class="panel-card">
         <h6>Review Your Report</h6>
@@ -347,7 +347,7 @@
     </div>
 </div>
 
-<!-- Nav -->
+
 <div class="wizard-nav" style="margin-top:16px;">
     <div id="btnBack"></div>
     <span id="stepCounter" style="font-size:.82rem;color:#666;font-weight:500;"></span>
@@ -358,9 +358,7 @@
     <script>
         $(function () {
 
-            // ══════════════════════════════════════════════════════════
-            // STATE
-            // ══════════════════════════════════════════════════════════
+
             var currentStep = 1;
             var totalSteps  = 7;
             var stepLabels  = ["Crash Info","Location","Conditions","Vehicles","Persons","Factors","Review"];
@@ -378,7 +376,7 @@
             var personCount  = 0;
             var factorRows   = [];
 
-            // ── Static option lists ───────────────────────────────────
+           
             var provinces      = ["EC","FS","GP","KZN","LP","MP","NC","NW","WC"];
             var vehicleRefs    = ["A","B","C","D","E"];
             var manoeuvres     = ["Travelling straight","Turning right","Turning left","U-turn",
@@ -425,9 +423,7 @@
                                   "Visibility: smoke/fog/rain/etc.","Other"];
             var factorMap      = { "Human": humanFactors, "Vehicle": vehicleFactors, "Road & Environmental": roadFactors };
 
-            // ══════════════════════════════════════════════════════════
-            // STEP BAR
-            // ══════════════════════════════════════════════════════════
+    
             function buildStepBar() {
                 var bar = $("#stepBar").empty();
                 stepLabels.forEach(function(label, i) {
@@ -439,9 +435,7 @@
                 $("#stepCounter").text("Step " + currentStep + " of " + totalSteps);
             }
 
-            // ══════════════════════════════════════════════════════════
-            // HELPER: dxSelectBox backed by lookup API
-            // ══════════════════════════════════════════════════════════
+       
             function lookupSelect(container, endpoint, placeholder, onChange) {
                 return $(container).dxSelectBox({
                     dataSource: new DevExpress.data.CustomStore({
@@ -483,7 +477,7 @@
                 }).dxSelectBox("instance");
             }
 
-            // ── Helper: plain static dxSelectBox ─────────────────────
+           
             function staticSelect(container, items, placeholder, onChange) {
                 return $(container).dxSelectBox({
                     items: items, searchEnabled: true, showClearButton: true,
@@ -506,9 +500,7 @@
                 }).dxNumberBox("instance");
             }
 
-            // ══════════════════════════════════════════════════════════
-            // STEP 1 FIELDS
-            // ══════════════════════════════════════════════════════════
+           
             lookupSelect("#sapsSelect", "stations", "Search SAPS station...", function(v) {
                 formData.CrashInfo.SapsStation = v;
                 var ar = formData.CrashInfo.ArNo || "";
@@ -533,13 +525,13 @@
                 type: "time",
                 displayFormat: "HH:mm",
                 pickerType: "list",
-                interval: 5,        // 5-minute increments in picker
+                interval: 5, 
                 useMaskBehavior: true,
                 placeholder: "HH:mm",
                 onValueChanged: function(e) {
                     var d = e.value;
                     if (d) {
-                        // Store full HH:mm:ss (seconds always 00 from manual entry)
+                        
                         formData.CrashInfo.CrashTime =
                             d.getHours().toString().padStart(2,"0") + ":" +
                             d.getMinutes().toString().padStart(2,"0") + ":00";
@@ -557,9 +549,7 @@
                 onValueChanged: function(e) { formData.CrashInfo.BriefDescription = e.value; }
             });
 
-            // ══════════════════════════════════════════════════════════
-            // STEP 2 FIELDS
-            // ══════════════════════════════════════════════════════════
+        
             lookupSelect("#locationSelect","locations","Street / road name...",function(v){ formData.Location.StreetRoadName = v; });
             staticSelect("#areaTypeBox",   areaTypes,  "Select...",            function(v){ formData.Location.AreaType = v; });
             textBox("#suburbBox",          "Suburb",                            function(v){ formData.Location.Suburb = v; });
@@ -573,9 +563,7 @@
             staticSelect("#surfaceTypeBox",surfaceTypes, "Select...",           function(v){ formData.Location.RoadSurfaceType = v; });
             staticSelect("#surfaceCondBox",surfaceConds, "Select...",           function(v){ formData.Location.RoadSurfaceCondition = v; });
 
-            // ══════════════════════════════════════════════════════════
-            // STEP 3 FIELDS
-            // ══════════════════════════════════════════════════════════
+            
             staticSelect("#lightBox",      lightConds,  "Light condition...",  function(v){ formData.Conditions.LightCondition = v; });
             staticSelect("#trafficCtrlBox",trafficCtrl, "Traffic control...",  function(v){ formData.Conditions.TrafficControlType = v; });
             staticSelect("#obstructionBox",["Crash site","Roadworks","Roadblock","None","Other"],"Obstruction...",function(v){ formData.Conditions.ObstructionType = v; });
@@ -583,12 +571,12 @@
             staticSelect("#roadSignsBox",  ["Visible","Not visible","Damaged","Missing","N/A"],"Road signs...",function(v){ formData.Conditions.RoadSignsCondition = v; });
             staticSelect("#roadMarkingsBox",["Good","Visible","Not visible","Not applicable"],"Road markings...",function(v){ formData.Conditions.RoadMarkingVisibility = v; });
 
-            // Crash type from lookup
+           
             lookupSelect("#crashTypeSelect","crashtypes","e.g. HEAD ON, SIDE SWIPE...",function(v){ formData.Conditions.CrashType = v; });
             staticSelect("#hitRunBox",[{text:"Yes",value:true},{text:"No",value:false}],"Select...",function(v){ formData.Conditions.HitAndRun = v; });
             $("#hitRunBox").dxSelectBox("instance").option({ displayExpr:"text", valueExpr:"value" });
 
-            // Weather checkboxes
+            
             weatherOpts.forEach(function(w) {
                 var wrap = $("<div>").css({ display:"flex", alignItems:"center", gap:"6px",
                     background:"#f1f8f1", border:"1px solid #c8e6c9", borderRadius:"6px", padding:"6px 12px"
@@ -603,9 +591,6 @@
                 });
             });
 
-            // ══════════════════════════════════════════════════════════
-            // STEP 4: VEHICLES
-            // ══════════════════════════════════════════════════════════
             function buildVehicleForm(index) {
                 var ref  = vehicleRefs[index];
                 var data = { VehicleReference: ref };
@@ -693,9 +678,7 @@
                 }
             });
 
-            // ══════════════════════════════════════════════════════════
-            // STEP 5: PERSONS
-            // ══════════════════════════════════════════════════════════
+           
             function buildPersonForm(index) {
                 var data = {};
                 formData.Persons[index] = data;
@@ -736,9 +719,7 @@
                 onClick: function() { buildPersonForm(personCount++); }
             });
 
-            // ══════════════════════════════════════════════════════════
-            // STEP 6: FACTORS
-            // ══════════════════════════════════════════════════════════
+
             function addFactorRow() {
                 var data = { FactorCategory: null, FactorDescription: null, IsMajorFactor: false };
                 factorRows.push(data);
@@ -786,9 +767,7 @@
 
             $("#btnAddFactor").dxButton({ text:"Add Factor", type:"default", icon:"plus", onClick: addFactorRow });
 
-            // ══════════════════════════════════════════════════════════
-            // STEP 7: REVIEW
-            // ══════════════════════════════════════════════════════════
+
             function rv(label, value) {
                 return '<div class="review-item"><div class="r-label">' + label +
                        '</div><div class="r-value">' + (value || "—") + '</div></div>';
@@ -837,9 +816,6 @@
                 $("#reviewContent").html(html);
             }
 
-            // ══════════════════════════════════════════════════════════
-            // NAVIGATION
-            // ══════════════════════════════════════════════════════════
             function goToStep(n) {
                 currentStep = n;
                 $(".step-panel").removeClass("active");
@@ -881,7 +857,7 @@
                 }
             });
 
-            // Init
+      
             buildStepBar();
             updateNavButtons();
         });

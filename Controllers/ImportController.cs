@@ -47,7 +47,7 @@ public class ImportController : Controller
         return RedirectToAction(nameof(Result));
     }
 
-    // GET: /Import/Result
+  
     public IActionResult Result()
     {
         var json = TempData["ImportResult"]?.ToString();

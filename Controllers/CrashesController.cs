@@ -14,10 +14,10 @@ public class CrashesController : Controller
         _context = context;
     }
 
-    // GET: /Crashes
+    
     public IActionResult Index() => View();
 
-    // GET: /Crashes/Search — filtered JSON for the DataGrid
+    
     [HttpGet]
     public async Task<IActionResult> Search(
         string? keyword = null,
@@ -126,7 +126,7 @@ public class CrashesController : Controller
 
 
 
-    // GET: /Crashes/GetAll — used by dashboard (unfiltered)
+    
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
@@ -156,7 +156,7 @@ public class CrashesController : Controller
 
 
 
-    // GET: /Crashes/FilterOptions — distinct values for dropdowns
+    
     [HttpGet]
     public async Task<IActionResult> FilterOptions()
     {
@@ -185,7 +185,7 @@ public class CrashesController : Controller
     }
 
 
-    // GET: /Crashes/Details/5
+    
     public async Task<IActionResult> Details(int? id)
     {
         if (id == null) return NotFound();
@@ -212,18 +212,18 @@ public class CrashesController : Controller
 
         if (crash == null) return NotFound();
 
-        // Debug: Log counts to see if data is loading
+        
         Console.WriteLine($"Loaded crash {crash.CrashId}: {crash.CrashVehicles?.Count ?? 0} vehicles, {crash.CrashPeople?.Count ?? 0} people");
 
         return View(crash);
     }
 
-    // GET: /Crashes/Create
+   
     public IActionResult Create() =>
         View(new Crash { CrashDate = DateOnly.FromDateTime(DateTime.Today) });
 
 
-    // POST: /Crashes/Create
+ 
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(
@@ -242,7 +242,7 @@ public class CrashesController : Controller
 
 
 
-    // GET: /Crashes/Edit/5
+   
     public async Task<IActionResult> Edit(int? id)
     {
         if (id == null) return NotFound();

@@ -73,14 +73,11 @@ public class MonthlyMemoDocService
             UseShellExecute = false,
             CreateNoWindow = true,
 
-            // Set working directory to the script folder so require('docx')
-            // and require('pngjs') resolve from local node_modules if present
+    
             WorkingDirectory = scriptDir
         };
 
-        // Ensure the npm global modules directory is on NODE_PATH so packages
-        // installed with "npm install -g docx pngjs" are found even when
-        // the ASP.NET process doesn't inherit the user's shell environment
+  
         var nodePath = BuildNodePath(scriptDir);
         proc.StartInfo.Environment["NODE_PATH"] = nodePath;
 
@@ -91,43 +88,34 @@ public class MonthlyMemoDocService
         return (proc.ExitCode, stdout, stderr);
     }
 
-    /// <summary>
-    /// Builds a NODE_PATH that includes (in priority order):
-    ///   1. node_modules next to the script (wwwroot/js/node_modules)
-    ///   2. The user-level npm global modules  (%APPDATA%\npm\node_modules)
-    ///   3. Common system-wide npm locations   (%ProgramFiles%\nodejs\node_modules)
-    ///   4. Any existing NODE_PATH from the environment
-    /// </summary>
     private static string BuildNodePath(string scriptDir)
     {
-        var sep = Path.PathSeparator;   // ';' on Windows, ':' on Linux
+        var sep = Path.PathSeparator;
         var paths = new List<string>();
 
-        // 1. Local node_modules beside the script
+        
         paths.Add(Path.Combine(scriptDir, "node_modules"));
 
-        // 2. npm global prefix → node_modules
-        //    %APPDATA%\npm\node_modules  (Windows user install)
+
         var appData = Environment.GetEnvironmentVariable("APPDATA");
         if (!string.IsNullOrEmpty(appData))
             paths.Add(Path.Combine(appData, "npm", "node_modules"));
 
-        // 3. Detect npm prefix dynamically (works on Windows and Linux)
+
         var npmPrefix = GetNpmPrefix();
         if (!string.IsNullOrEmpty(npmPrefix))
         {
-            // Windows: <prefix>\node_modules
-            // Linux:   <prefix>/lib/node_modules
+          
             paths.Add(Path.Combine(npmPrefix, "node_modules"));
             paths.Add(Path.Combine(npmPrefix, "lib", "node_modules"));
         }
 
-        // 4. %ProgramFiles%\nodejs\node_modules  (Windows system-wide install)
+        
         var pf = Environment.GetEnvironmentVariable("ProgramFiles");
         if (!string.IsNullOrEmpty(pf))
             paths.Add(Path.Combine(pf, "nodejs", "node_modules"));
 
-        // 5. Inherit any existing NODE_PATH
+        
         var existing = Environment.GetEnvironmentVariable("NODE_PATH");
         if (!string.IsNullOrEmpty(existing))
             paths.Add(existing);

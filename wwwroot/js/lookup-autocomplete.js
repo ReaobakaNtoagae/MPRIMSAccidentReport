@@ -1,20 +1,4 @@
-﻿/**
- * lookup-autocomplete.js
- *
- * Creates a DevExtreme dxAutocomplete that:
- *  - searches the lookup API as the user types
- *  - shows a '+ Add "[value]"' option when no exact match exists
- *  - POSTs to the API to persist the new entry, then selects it
- *
- * Usage:
- *   LookupAutoComplete.create({
- *       container:        "#myDiv",
- *       endpoint:         "stations",   // api/lookup/{endpoint}
- *       placeholder:      "SAPS station...",
- *       onValueSelected:  function(item) { }   // called with { id, text, ... }
- *   });
- */
-var LookupAutoComplete = (function ($) {
+﻿var LookupAutoComplete = (function ($) {
     "use strict";
 
     function create(opts) {
@@ -91,7 +75,7 @@ var LookupAutoComplete = (function ($) {
                             onSelected(created);
                         },
                         error: function (xhr) {
-                            // 409 = already exists — treat as a valid pick
+                            
                             onSelected({ text: sel.text });
                         }
                     });

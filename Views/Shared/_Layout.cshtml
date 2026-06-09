@@ -4,9 +4,11 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] — SA Crash Reporting</title>
-    <link rel="stylesheet" href="https://cdn3.devexpress.com/jslib/25.2.7/css/dx.light.css" />
+
+    <link rel="stylesheet" href="https://cdn3.devexpress.com/jslib/23.2.6/css/dx.light.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+
     <style>
         *, *::before, *::after {
             box-sizing: border-box;
@@ -50,8 +52,8 @@
         }
 
         /* ══════════════════════════════════════════
-                   SIDEBAR
-                ══════════════════════════════════════════ */
+                           SIDEBAR
+                        ══════════════════════════════════════════ */
         .sidebar {
             width: var(--sidebar-w);
             min-width: var(--sidebar-w);
@@ -297,8 +299,8 @@
         }
 
         /* ══════════════════════════════════════════
-                   MAIN AREA
-                ══════════════════════════════════════════ */
+                           MAIN AREA
+                        ══════════════════════════════════════════ */
         .app-main {
             flex: 1;
             display: flex;
@@ -360,8 +362,8 @@
         }
 
         /* ══════════════════════════════════════════
-                   DEVEXTREME OVERRIDES
-                ══════════════════════════════════════════ */
+                           DEVEXTREME OVERRIDES
+                        ══════════════════════════════════════════ */
         .dx-button-mode-contained.dx-button-default {
             background-color: var(--g-700) !important;
             border-color: var(--g-700) !important;
@@ -502,8 +504,36 @@
         <div class="app-content">@RenderBody()</div>
     </div>
 
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
-    <script src="https://cdn3.devexpress.com/jslib/25.2.7/js/dx.all.js"></script>
+    <!-- jQuery (required for DevExtreme) -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+
+    <!-- DevExtreme 23.2.6 (stable version) -->
+    <script src="https://cdn3.devexpress.com/jslib/23.2.6/js/dx.all.js"></script>
+
+    <!-- Verify DevExtreme loaded correctly -->
+    <script>
+        (function() {
+            // Check if DevExtreme loaded properly
+            var checkDevExtreme = function() {
+                if (typeof DevExpress === 'undefined') {
+                    console.error('DevExtreme failed to load from primary CDN');
+                    // Try fallback CDN
+                    var script = document.createElement('script');
+                    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/devextreme/23.2.6/js/dx.all.js';
+                    script.onload = function() {
+                        console.log('DevExtreme loaded from fallback CDN');
+                    };
+                    document.head.appendChild(script);
+                } else {
+                    console.log('DevExtreme loaded successfully');
+                }
+            };
+
+            // Small delay to ensure script execution
+            setTimeout(checkDevExtreme, 100);
+        })();
+    </script>
+
     <script src="~/js/lookup-autocomplete.js"></script>
 
     <script>

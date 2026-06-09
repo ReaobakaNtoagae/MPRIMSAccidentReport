@@ -4,122 +4,299 @@
     ViewData["Title"] = $"Edit — {Model.CrNo ?? "#" + Model.CrashId}";
 }
 
+<style>
+    .edit-container {
+        background: #fff;
+        border-radius: 10px;
+        border: 1px solid #c8e6c9;
+        box-shadow: 0 2px 8px rgba(0,0,0,.06);
+        padding: 24px;
+    }
 
-<form method="post" id="editForm">
-    @Html.AntiForgeryToken()
-    <input type="hidden" name="CrashId" value="@Model.CrashId" />
-    <div id="dxForm"></div>
-    <div id="formButtons" style="margin-top:16px; display:flex; gap:10px;"></div>
-</form>
+    .form-buttons {
+        margin-top: 24px;
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+        padding-top: 16px;
+        border-top: 1px solid #e8f5e9;
+    }
+</style>
+
+<div class="edit-container">
+    <form method="post" id="editForm">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="CrashId" value="@Model.CrashId" />
+        <div id="dxForm"></div>
+        <div id="formButtons" class="form-buttons"></div>
+    </form>
+</div>
 
 @section Scripts {
     <script>
-        var provinces = ["EC","FS","GP","KZN","LP","MP","NC","NW","WC"];
+        $(document).ready(function() {
+           
+            if (typeof DevExpress === 'undefined') {
+                console.error("DevExpress not loaded!");
+                $("#dxForm").html('<div style="padding:20px;color:red;text-align:center;">Error: DevExtreme components not loaded. Please refresh the page.</div>');
+                return;
+            }
 
-        var form = $("#dxForm").dxForm({
-            formData: {
-                CasNo:               "@Model.CasNo",
-                CrNo:                "@Model.CrNo",
-                IncidentReportNo:    "@Model.IncidentReportNo",
-                CapturingNumber:     "@Model.CapturingNumber",
-                CrashDate:           new Date("@Model.CrashDate.ToString("yyyy-MM-dd")"),
-                CrashTime:           @(Model.CrashTime.HasValue ? $"new Date('1970-01-01T{Model.CrashTime.Value:HH:mm}:00')" : "null"),
-                NoOfVehiclesInvolved: @Model.NoOfVehiclesInvolved,
-                NoOfAppendices:      @Model.NoOfAppendices,
-                ProvinceCode:        "@Model.ProvinceCode",
-                SpeedLimitKmh:       @(Model.SpeedLimitKmh.HasValue? Model.SpeedLimitKmh.ToString() : "null"),
-                RoadNumber:          "@Model.RoadNumber",
-                KmMarker:            "@Model.KmMarker",
-                BriefDescription:    @Html.Raw(Model.BriefDescription != null ? JsonSerializer.Serialize(Model.BriefDescription) : "null")     
-            },
-            colCount: 4,
-            items: [
-                {
-                    itemType: "group", caption: "Reference Numbers",
-                    colCount: 4, colSpan: 4,
-                    items: [
-                        { dataField: "CasNo",            label: { text: "CAS No." } },
-                        { dataField: "CrNo",             label: { text: "CR No." } },
-                        { dataField: "IncidentReportNo", label: { text: "Incident Report No." } },
-                        { dataField: "CapturingNumber",  label: { text: "Capturing Number" } }
-                    ]
-                },
-                {
-                    itemType: "group", caption: "Date & Time",
-                    colCount: 4, colSpan: 4,
-                    items: [
-                        {
-                            dataField: "CrashDate", isRequired: true, label: { text: "Crash Date" },
-                            editorType: "dxDateBox",
-                            editorOptions: { type: "date", displayFormat: "dd/MM/yyyy", pickerType: "calendar" }
-                        },
-                        {
-                            dataField: "CrashTime", label: { text: "Time (24h)" },
-                            editorType: "dxDateBox", editorOptions: { type: "time", displayFormat: "HH:mm" }
-                        },
-                        {
-                            dataField: "NoOfVehiclesInvolved", label: { text: "No. of Vehicles" },
-                            editorType: "dxNumberBox", editorOptions: { min: 1 }
-                        },
-                        {
-                            dataField: "NoOfAppendices", label: { text: "No. of Appendices" },
-                            editorType: "dxNumberBox", editorOptions: { min: 0 }
-                        }
-                    ]
-                },
-                {
-                    itemType: "group", caption: "Road Information",
-                    colCount: 4, colSpan: 4,
-                    items: [
-                        {
-                            dataField: "ProvinceCode", label: { text: "Province" },
-                            editorType: "dxSelectBox", editorOptions: { items: provinces }
-                        },
-                        { dataField: "SpeedLimitKmh", label: { text: "Speed Limit (km/h)" }, editorType: "dxNumberBox" },
-                        { dataField: "RoadNumber",    label: { text: "Road Number" } },
-                        { dataField: "KmMarker",      label: { text: "Km Marker" } }
-                    ]
-                },
-                {
-                    itemType: "group", caption: "Description", colSpan: 4,
-                    items: [
-                        {
-                            dataField: "BriefDescription", label: { text: "Brief Description" },
-                            colSpan: 4, editorType: "dxTextArea", editorOptions: { height: 90 }
-                        }
-                    ]
+            var provinces = ["EC", "FS", "GP", "KZN", "LP", "MP", "NC", "NW", "WC"];
+
+    
+            var crashDate = null;
+            if ("@Model.CrashDate" && "@Model.CrashDate" !== "") {
+                crashDate = new Date("@Model.CrashDate.ToString("yyyy-MM-dd")");
+            }
+
+            var crashTime = null;
+            if ("@Model.CrashTime" && "@Model.CrashTime" !== "") {
+                var timeParts = "@Model.CrashTime".split(':');
+                if (timeParts.length >= 2) {
+                    crashTime = new Date();
+                    crashTime.setHours(parseInt(timeParts[0]), parseInt(timeParts[1]), 0);
                 }
-            ]
-        }).dxForm("instance");
+            }
 
-        function syncFormToPost() {
-            var data = form.option("formData");
-            Object.keys(data).forEach(function (key) {
-                var val = data[key];
-                if (val instanceof Date) {
-                    if (key === "CrashTime") {
-                        val = val ? val.getHours().toString().padStart(2,"0") + ":" + val.getMinutes().toString().padStart(2,"0") : "";
+            var formData = {
+                CasNo: "@Html.Raw(Model.CasNo ?? "")",
+                CrNo: "@Html.Raw(Model.CrNo ?? "")",
+                IncidentReportNo: "@Html.Raw(Model.IncidentReportNo ?? "")",
+                CapturingNumber: "@Html.Raw(Model.CapturingNumber ?? "")",
+                CrashDate: crashDate,
+                CrashTime: crashTime,
+                NoOfVehiclesInvolved: @(Model.NoOfVehiclesInvolved.ToString()),
+                NoOfAppendices: @(Model.NoOfAppendices.ToString()),
+                ProvinceCode: "@Html.Raw(Model.ProvinceCode ?? "")",
+                SpeedLimitKmh: @(Model.SpeedLimitKmh.HasValue? Model.SpeedLimitKmh.Value.ToString() : "null"),
+                RoadNumber: "@Html.Raw(Model.RoadNumber ?? "")",
+                KmMarker: "@Html.Raw(Model.KmMarker ?? "")",
+                BriefDescription: "@Html.Raw((Model.BriefDescription ?? "").Replace("\"", "\\\"").Replace("\n", "\\n").Replace("\r", ""))"
+            };
+
+            console.log("Form data prepared:", formData);
+
+            // Create form
+            var form = $("#dxForm").dxForm({
+                formData: formData,
+                colCount: 4,
+                labelLocation: "top",
+                validationGroup: "editForm",
+                items: [
+                    {
+                        itemType: "group",
+                        caption: "Reference Numbers",
+                        colCount: 4,
+                        colSpan: 4,
+                        items: [
+                            {
+                                dataField: "CasNo",
+                                label: { text: "CAS No." },
+                                editorOptions: { placeholder: "e.g., 2025/123456" }
+                            },
+                            {
+                                dataField: "CrNo",
+                                label: { text: "CR No." },
+                                isRequired: true,
+                                editorOptions: { placeholder: "e.g., NELSPRUIT-118" }
+                            },
+                            {
+                                dataField: "IncidentReportNo",
+                                label: { text: "Incident Report No." },
+                                editorOptions: { placeholder: "Optional" }
+                            },
+                            {
+                                dataField: "CapturingNumber",
+                                label: { text: "Capturing Number" },
+                                editorOptions: { placeholder: "Optional" }
+                            }
+                        ]
+                    },
+                    {
+                        itemType: "group",
+                        caption: "Date & Time",
+                        colCount: 4,
+                        colSpan: 4,
+                        items: [
+                            {
+                                dataField: "CrashDate",
+                                caption: "Crash Date",
+                                isRequired: true,
+                                editorType: "dxDateBox",
+                                editorOptions: {
+                                    type: "date",
+                                    displayFormat: "dd/MM/yyyy",
+                                    pickerType: "calendar",
+                                    placeholder: "Select crash date"
+                                },
+                                validationRules: [{ type: "required", message: "Crash date is required" }]
+                            },
+                            {
+                                dataField: "CrashTime",
+                                caption: "Time (24h)",
+                                editorType: "dxDateBox",
+                                editorOptions: {
+                                    type: "time",
+                                    displayFormat: "HH:mm",
+                                    placeholder: "Select time"
+                                }
+                            },
+                            {
+                                dataField: "NoOfVehiclesInvolved",
+                                caption: "No. of Vehicles",
+                                editorType: "dxNumberBox",
+                                editorOptions: {
+                                    min: 1,
+                                    max: 50,
+                                    placeholder: "Number of vehicles"
+                                },
+                                validationRules: [{ type: "required", message: "Number of vehicles is required" }]
+                            },
+                            {
+                                dataField: "NoOfAppendices",
+                                caption: "No. of Appendices",
+                                editorType: "dxNumberBox",
+                                editorOptions: {
+                                    min: 0,
+                                    placeholder: "Number of appendices"
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        itemType: "group",
+                        caption: "Road Information",
+                        colCount: 4,
+                        colSpan: 4,
+                        items: [
+                            {
+                                dataField: "ProvinceCode",
+                                caption: "Province",
+                                editorType: "dxSelectBox",
+                                editorOptions: {
+                                    items: provinces,
+                                    placeholder: "Select province"
+                                },
+                                validationRules: [{ type: "required", message: "Province is required" }]
+                            },
+                            {
+                                dataField: "SpeedLimitKmh",
+                                caption: "Speed Limit (km/h)",
+                                editorType: "dxNumberBox",
+                                editorOptions: {
+                                    min: 0,
+                                    max: 200,
+                                    placeholder: "Speed limit"
+                                }
+                            },
+                            {
+                                dataField: "RoadNumber",
+                                caption: "Road Number",
+                                editorOptions: { placeholder: "e.g., N4, R40" }
+                            },
+                            {
+                                dataField: "KmMarker",
+                                caption: "Km Marker",
+                                editorOptions: { placeholder: "e.g., 12.5, S4" }
+                            }
+                        ]
+                    },
+                    {
+                        itemType: "group",
+                        caption: "Description",
+                        colSpan: 4,
+                        items: [
+                            {
+                                dataField: "BriefDescription",
+                                caption: "Brief Description",
+                                colSpan: 4,
+                                editorType: "dxTextArea",
+                                editorOptions: {
+                                    height: 100,
+                                    placeholder: "Enter a brief description of the crash..."
+                                }
+                            }
+                        ]
+                    }
+                ]
+            }).dxForm("instance");
+
+
+            function syncFormToPost() {
+                var data = form.option("formData");
+
+         
+                $("#editForm input.hidden-field").remove();
+
+            
+                Object.keys(data).forEach(function(key) {
+                    var val = data[key];
+
+                  
+                    if (val instanceof Date) {
+                        if (key === "CrashTime") {
+                   
+                            if (val && !isNaN(val.getTime())) {
+                                val = val.getHours().toString().padStart(2, "0") + ":" +
+                                      val.getMinutes().toString().padStart(2, "0");
+                            } else {
+                                val = "";
+                            }
+                        } else if (key === "CrashDate") {
+                       
+                            if (val && !isNaN(val.getTime())) {
+                                val = val.getFullYear() + "-" +
+                                      (val.getMonth() + 1).toString().padStart(2, "0") + "-" +
+                                      val.getDate().toString().padStart(2, "0");
+                            } else {
+                                val = "";
+                            }
+                        }
+                    }
+
+                    if (val === null || val === undefined) {
+                        val = "";
+                    }
+
+           
+                    $("<input>")
+                        .attr({
+                            type: "hidden",
+                            name: key,
+                            "class": "hidden-field"
+                        })
+                        .val(val)
+                        .appendTo("#editForm");
+                });
+            }
+
+          
+            $("#formButtons").dxButton({
+                text: "Save Changes",
+                type: "default",
+                icon: "save",
+                onClick: function() {
+                    var result = form.validate();
+                    if (result.isValid) {
+                        syncFormToPost();
+                        document.getElementById("editForm").submit();
                     } else {
-                        val = val ? val.toISOString().split("T")[0] : "";
+                        DevExpress.ui.notify("Please fix validation errors before saving.", "error", 3000);
                     }
                 }
-                var existing = $("#editForm input[name='" + key + "']");
-                if (existing.length) existing.val(val);
-                else $("<input>").attr({ type: "hidden", name: key }).val(val).appendTo("#editForm");
             });
-        }
 
-        var btns = document.getElementById("formButtons");
-        $("<div>").appendTo(btns).dxButton({
-            text: "Save Changes", type: "default", icon: "save",
-            onClick: function () {
-                var result = form.validate();
-                if (result.isValid) { syncFormToPost(); document.getElementById("editForm").submit(); }
-            }
-        });
-        $("<div>").appendTo(btns).dxButton({
-            text: "Cancel", type: "normal", stylingMode: "outlined",
-            onClick: function () { window.location.href = "/Crashes/Details/@Model.CrashId"; }
+    
+            $("#formButtons").dxButton({
+                text: "Cancel",
+                type: "normal",
+                stylingMode: "outlined",
+                icon: "close",
+                onClick: function() {
+                    window.location.href = "/Crashes/Details/@Model.CrashId";
+                }
+            });
         });
     </script>
 }

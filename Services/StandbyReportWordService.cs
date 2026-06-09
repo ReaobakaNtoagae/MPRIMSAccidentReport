@@ -10,7 +10,7 @@ namespace CrashReport.Services;
 public class StandbyReportWordService
 {
     private const string NAVY = "1A3C6E";
-    private const string NAVY2 = "253F6E";   // year sub-header row
+    private const string NAVY2 = "253F6E";
     private const string LIGHT_BLUE = "E8F0FB";
     private const string ALT_ROW = "F5F8FF";
     private const string WHITE = "FFFFFF";
@@ -26,8 +26,8 @@ public class StandbyReportWordService
 
 
     private const int LBL_W = 1600;
-    private const int YR_W = 1259;   // each year column
-    private const int DIST_W = 2518;   // single-year district column
+    private const int YR_W = 1259; 
+    private const int DIST_W = 2518;  
 
     
     public byte[] Generate(StandbyReportViewModel vm)
@@ -53,12 +53,12 @@ public class StandbyReportWordService
 
         string fullRange = $"{vm.DateFrom:dd MMMM yyyy}".ToUpper() + " TO " + $"{vm.DateTo:dd MMMM yyyy}".ToUpper();
 
-        // Title
+        
         body.Append(StyledPara(PT11, true, JustificationValues.Center, 80, $"WEEKLY STATISTICS REPORT: {fullRange}"));
         body.Append(StyledPara(PT9, false, JustificationValues.Center, 80, $"({vm.DayRange})"));
         body.Append(BlankLine());
 
-        // Full-week summary table
+        
         var mainTable = BuildSixColTable(vm, prior, py, cy,
             new[] { "CRASHES", "FATALITIES", "SERIOUS", "SLIGHT" },
             new Func<DistrictStats, int>[] { d => d.Crashes, d => d.Fatalities, d => d.Serious, d => d.Slight },
@@ -66,7 +66,7 @@ public class StandbyReportWordService
         body.Append(mainTable);
         body.Append(BlankLine());
 
-        // Time-band table
+        
         body.Append(StyledPara(PT9, true, JustificationValues.Left, 60, "FATALITIES"));
         var timeTable = BuildSixColTable(vm, prior, py, cy,
             new[] { "06H00 – 14H00", "14H00 – 22H00", "22H00 – 06H00" },
@@ -75,7 +75,7 @@ public class StandbyReportWordService
         body.Append(timeTable);
         body.Append(BlankLine());
 
-        // Narrative
+        
         int tb1 = vm.CurrentProvince.FatalTime1, tb2 = vm.CurrentProvince.FatalTime2, tb3 = vm.CurrentProvince.FatalTime3;
         body.Append(StyledPara(PT9, false, JustificationValues.Left, 60,
             $"FATALITIES OCCURRED BETWEEN 06:00 TO 14:00 ({tb1}) 14:00 TO 22:00 ({tb2}) 22:00 TO 06:00 ({tb3})"));
@@ -94,7 +94,7 @@ public class StandbyReportWordService
         }
         body.Append(BlankLine());
 
-        // Problematic routes
+        
         if (vm.ProblematicRoutes.Any())
         {
             body.Append(StyledPara(PT9, true, JustificationValues.Left, 60, "PROBLEMATIC ROUTES"));
@@ -110,7 +110,7 @@ public class StandbyReportWordService
             body.Append(BlankLine());
         }
 
-        // Fatal crash detail
+        
         var fatalDistricts = new[]
         {
             ("EHLANZENI", vm.CurrentEhlanzeni),
@@ -126,7 +126,7 @@ public class StandbyReportWordService
             body.Append(BlankLine());
         }
 
-        // Sub-period
+       
         if (vm.SubPeriod is not null)
         {
             var sp = vm.SubPeriod;
@@ -179,13 +179,13 @@ public class StandbyReportWordService
 
         if (hasPrior)
         {
-            // Header row 1: District names with colspan=2
+          
             var hdrRow1 = new TableRow();
             var rowProps1 = new TableRowProperties();
             rowProps1.AppendChild(new TableRowHeight { Val = 400, HeightType = HeightRuleValues.Exact });
             hdrRow1.AppendChild(rowProps1);
 
-            // First cell - empty corner
+            
             var cornerCell = new TableCell();
             var cornerProps = new TableCellProperties(
                 new TableCellWidth { Width = colWidths[0].ToString(), Type = TableWidthUnitValues.Dxa },
@@ -194,7 +194,7 @@ public class StandbyReportWordService
             cornerCell.AppendChild(HdrPara(firstColLabel, NAVY, PT8));
             hdrRow1.AppendChild(cornerCell);
 
-            // District cells with colspan=2
+           
             for (int i = 0; i < districtNames.Length; i++)
             {
                 var cell = new TableCell();
@@ -208,13 +208,13 @@ public class StandbyReportWordService
             }
             table.Append(hdrRow1);
 
-            // Header row 2: Years
+           
             var hdrRow2 = new TableRow();
             var rowProps2 = new TableRowProperties();
             rowProps2.AppendChild(new TableRowHeight { Val = 300, HeightType = HeightRuleValues.Exact });
             hdrRow2.AppendChild(rowProps2);
 
-            // Empty cell under corner
+           
             var emptyCell = new TableCell();
             var emptyProps = new TableCellProperties(
                 new TableCellWidth { Width = colWidths[0].ToString(), Type = TableWidthUnitValues.Dxa },
@@ -223,7 +223,7 @@ public class StandbyReportWordService
             emptyCell.AppendChild(new Paragraph());
             hdrRow2.AppendChild(emptyCell);
 
-            // Year cells
+            
             for (int i = 0; i < 5; i++)
             {
                 hdrRow2.AppendChild(YearCell(py.ToString(), YR_W));
@@ -233,7 +233,7 @@ public class StandbyReportWordService
         }
         else
         {
-            // Single-row header
+            
             var hdrRow = new TableRow();
             var rowProps = new TableRowProperties();
             rowProps.AppendChild(new TableRowHeight { Val = 400, HeightType = HeightRuleValues.Exact });
@@ -260,14 +260,14 @@ public class StandbyReportWordService
             table.Append(hdrRow);
         }
 
-        // Data rows
+    
         for (int i = 0; i < rowLabels.Length; i++)
         {
             var fn = getters[i];
             string bg = i % 2 == 1 ? ALT_ROW : WHITE;
             var tr = new TableRow();
 
-            // Label cell
+           
             var labelCell = new TableCell();
             var labelProps = new TableCellProperties(
                 new TableCellWidth { Width = colWidths[0].ToString(), Type = TableWidthUnitValues.Dxa },
@@ -327,7 +327,7 @@ public class StandbyReportWordService
         return table;
     }
 
-    // ── Sub-period tables (single year, simple header) ────────────────────────
+   
     private Table BuildSubPeriodTable(SubPeriodStats sp, int cy)
     {
         int[] widths = { LBL_W, DIST_W, DIST_W, DIST_W, DIST_W, DIST_W };
@@ -385,7 +385,7 @@ public class StandbyReportWordService
         return tr;
     }
 
-    // ── Fatal crash detail table ──────────────────────────────────────────────
+  
     private Table BuildFatalDetailTable(List<(string District, DistrictStats Stats)> districts)
     {
         int[] cols = { 1300, 1600, 1200, 900, 2200, 3500, 1688 };
@@ -420,7 +420,7 @@ public class StandbyReportWordService
         return t;
     }
 
-    // ── Age table ─────────────────────────────────────────────────────────────
+   
     private Table BuildAgeTable(VictimDemographics v)
     {
         int cw = 2398;
@@ -439,7 +439,7 @@ public class StandbyReportWordService
         return t;
     }
 
-    // ── Gender table ──────────────────────────────────────────────────────────
+   
     private Table BuildGenderTable(VictimDemographics v)
     {
         int[] widths = { 5000, 3000, 3388 };
@@ -471,9 +471,7 @@ public class StandbyReportWordService
         return t;
     }
 
-    // =========================================================================
-    // LOW-LEVEL OPENXML HELPERS
-    // =========================================================================
+   
     private static Table NewTable(int[] colWidths)
     {
         var bv = new EnumValue<BorderValues>(BorderValues.Single);
@@ -571,7 +569,7 @@ public class StandbyReportWordService
         return tc;
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
+
     private static Paragraph StyledPara(string size, bool bold, JustificationValues just,
                                          uint spacingAfter, string text)
     {

@@ -4,13 +4,13 @@
 }
 
 <style>
-    /* ── Page shell ──────────────────────────────────────────── */
+    
     .sr-page {
         max-width: 620px;
         padding-bottom: 40px;
     }
 
-    /* ── Page header ─────────────────────────────────────────── */
+  
     .sr-page-header {
         display: flex;
         align-items: center;
@@ -44,7 +44,7 @@
         margin: 0;
     }
 
-    /* ── Cards ───────────────────────────────────────────────── */
+ 
     .sr-card {
         background: #fff;
         border: 1px solid #dde8dd;
@@ -95,7 +95,7 @@
         padding: 18px 18px 20px;
     }
 
-    /* ── Date row ────────────────────────────────────────────── */
+   
     .sr-date-row {
         display: grid;
         grid-template-columns: 1fr auto 1fr;
@@ -111,7 +111,7 @@
         white-space: nowrap;
     }
 
-    /* ── Field labels ────────────────────────────────────────── */
+   
     .sr-label {
         display: block;
         font-size: .74rem;
@@ -122,7 +122,7 @@
         margin-bottom: 5px;
     }
 
-    /* ── Inputs ──────────────────────────────────────────────── */
+   
     .sr-input {
         width: 100%;
         height: 38px;
@@ -149,14 +149,15 @@
             cursor: not-allowed;
         }
 
-    /* ── Prior year toggle ───────────────────────────────────── */
+ 
     .sr-toggle-row {
         display: flex;
         align-items: center;
         gap: 10px;
         margin-bottom: 16px;
     }
-    /* Native checkbox hidden — custom toggle */
+  
+
     .sr-toggle-wrap {
         position: relative;
         width: 36px;
@@ -208,7 +209,7 @@
         user-select: none;
     }
 
-    /* ── Submit button ───────────────────────────────────────── */
+  
     .sr-submit-row {
         display: flex;
         align-items: center;
@@ -248,14 +249,14 @@
             height: 16px;
         }
 
-    /* ── Helper text under prior year ────────────────────────── */
+    
     .sr-hint {
         font-size: .75rem;
         color: #888;
         margin-top: 10px;
     }
 
-    /* ── Week quick-picks ────────────────────────────────────── */
+ 
     .sr-quickpick {
         display: flex;
         gap: 6px;
@@ -399,7 +400,7 @@
             const toggle     = document.getElementById('priorToggle');
             const priorFields= document.getElementById('priorFields');
 
-            // ── Toggle prior-year fields ──────────────────────────────
+            
             function syncToggle() {
                 const on = toggle.checked;
                 priorFields.style.display  = on ? '' : 'none';
@@ -410,7 +411,7 @@
             toggle.addEventListener('change', syncToggle);
             syncToggle();
 
-            // ── Auto-shift prior year when main dates change ──────────
+          
             function shiftYear(val, delta) {
                 if (!val) return '';
                 const d = new Date(val);
@@ -424,10 +425,10 @@
                 if (toggle.checked) pToInput.value = shiftYear(toInput.value, -1);
             });
 
-            // ── Quick-pick week buttons ───────────────────────────────
+           
             function getMondayOf(offset) {
                 const today = new Date();
-                const dow   = today.getDay() || 7;                  // Mon=1 … Sun=7
+                const dow   = today.getDay() || 7; 
                 const mon   = new Date(today);
                 mon.setDate(today.getDate() - (dow - 1) + offset * 7);
                 mon.setHours(0, 0, 0, 0);
@@ -447,13 +448,13 @@
                         pFromInput.value = fmt(new Date(mon.setFullYear(mon.getFullYear() - 1)));
                         pToInput.value   = fmt(new Date(sun.setFullYear(sun.getFullYear() - 1)));
                     }
-                    // Highlight active button
+                  
                     document.querySelectorAll('.sr-qp-btn').forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
                 });
             });
 
-            // Highlight whichever quick-pick matches the current values on load
+            
             const currentFrom = fromInput.value;
             document.querySelectorAll('.sr-qp-btn').forEach(btn => {
                 const { mon } = getMondayOf(parseInt(btn.dataset.offset, 10));

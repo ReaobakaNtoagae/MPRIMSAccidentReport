@@ -13,7 +13,7 @@ public class ExcelImportService
     private readonly AppDbContext _context;
     private readonly ILogger<ExcelImportService> _logger;
 
-    // Non-vehicle types
+  
     private static readonly HashSet<string> NonVehicleTypes =
         new(StringComparer.OrdinalIgnoreCase)
         {
@@ -35,7 +35,7 @@ public class ExcelImportService
         using var wb = new XLWorkbook(stream);
         var ws = wb.Worksheets.First();
 
-        // Find the actual data start row
+       
         int headerRow = FindHeaderRow(ws);
         if (headerRow == -1)
         {
@@ -43,7 +43,7 @@ public class ExcelImportService
             return result;
         }
 
-        // Get all rows after header
+        
         var allRows = ws.RowsUsed().Skip(headerRow).ToList();
 
         var dataRows = new List<IXLRow>();
@@ -54,14 +54,14 @@ public class ExcelImportService
         {
             var saps = row.Cell(1).GetString().Trim();
 
-            // Skip empty rows or rows with "TOTAL" in SAPS column
+            
             if (string.IsNullOrWhiteSpace(saps) || saps.Equals("TOTAL", StringComparison.OrdinalIgnoreCase))
             {
                 inSummary = true;
                 continue;
             }
 
-            // Check for summary section indicators
+            
             var col7 = row.Cell(8).GetString().Trim();
             var col0 = row.Cell(1).GetString().Trim();
 
@@ -74,7 +74,7 @@ public class ExcelImportService
 
             if (!inSummary)
             {
-                // Skip rows that are part of the summary section
+                
                 if (saps.StartsWith("VICTIMS", StringComparison.OrdinalIgnoreCase) ||
                     saps.StartsWith("AGE", StringComparison.OrdinalIgnoreCase) ||
                     saps.StartsWith("RACE", StringComparison.OrdinalIgnoreCase) ||
@@ -96,14 +96,14 @@ public class ExcelImportService
             }
         }
 
-        // Parse summary section
+        
         result.Demographics = ParseDemographics(summaryRows);
 
-        // Create or get default vehicle for the foreign key constraint
+        
         var defaultVehicle = await GetOrCreateDefaultVehicle();
         var defaultVehicleId = defaultVehicle.VehicleId;
 
-        // Import data rows
+        
         var existingCrNos = await _context.Crashes
             .Select(c => c.CrNo)
             .Where(c => c != null)
@@ -203,7 +203,7 @@ public class ExcelImportService
 
         if (string.IsNullOrEmpty(saps)) return null;
 
-        // Parse date
+       
         DateOnly crashDate = DateOnly.FromDateTime(DateTime.Today);
         if (!string.IsNullOrEmpty(dateRaw))
         {
@@ -222,7 +222,7 @@ public class ExcelImportService
             }
         }
 
-        // Parse time
+        
         TimeOnly? crashTime = null;
         if (!string.IsNullOrEmpty(timeRaw))
         {
@@ -230,7 +230,7 @@ public class ExcelImportService
             if (TimeOnly.TryParse(norm, out var t)) crashTime = t;
         }
 
-        // Injury counts
+        
         int fatalD = IntCell(row, 10);
         int fatalP = IntCell(row, 11);
         int fatalPD = IntCell(row, 12);
@@ -251,7 +251,7 @@ public class ExcelImportService
         // Build CrNo
         var crNo = string.IsNullOrEmpty(arNo) ? saps : $"{saps}-{arNo}";
 
-        // Create Crash object
+        
         var crash = new Crash
         {
             CrNo = crNo,
@@ -266,7 +266,7 @@ public class ExcelImportService
             CreatedAt = DateTime.UtcNow
         };
 
-        // Create Crash Location Record
+       
         if (!string.IsNullOrEmpty(location))
         {
             var crashLocation = new CrashLocation
@@ -281,7 +281,7 @@ public class ExcelImportService
             crash.CrashLocations.Add(crashLocation);
         }
 
-        // ── CREATE CRASH VEHICLE RECORDS ─────────────────────────
+        
         int vehicleSequence = 1;
         foreach (var vehicleEntry in vehicleEntries)
         {
@@ -307,7 +307,7 @@ public class ExcelImportService
             vehicleSequence++;
         }
 
-        // Create Crash Condition Record
+        
         if (!string.IsNullOrEmpty(crashType))
         {
             crash.CrashConditions.Add(new CrashCondition
@@ -316,7 +316,7 @@ public class ExcelImportService
             });
         }
 
-        // Create Crash People (Victims)
+        
         var fatalTotal = fatalD + fatalP + fatalPD + fatalC;
 
         AddPersons(crash, "Driver", "Fatal", fatalD, fatalM, fatalF, fatalTotal);
@@ -344,11 +344,11 @@ public class ExcelImportService
 
         var s = vehiclesStr.Trim();
 
-        // Special case: pedestrian only (no vehicles)
+        
         if (s.Equals("P/D", StringComparison.OrdinalIgnoreCase))
             return entries;
 
-        // Split on '/' to get individual entries
+        
         var parts = s.Split('/')
             .Select(p => p.Trim())
             .Where(p => !string.IsNullOrWhiteSpace(p))
@@ -357,11 +357,11 @@ public class ExcelImportService
         int vehicleIndex = 1;
         foreach (var part in parts)
         {
-            // Skip non-vehicle entries
+            
             if (NonVehicleTypes.Contains(part))
                 continue;
 
-            // Clean up the vehicle type
+            
             var vehicleType = part.Trim();
 
             entries.Add(new VehicleEntry
@@ -385,7 +385,7 @@ public class ExcelImportService
         {
             string? gender = null;
 
-            // Assign gender for fatal victims when gender data is available
+            
             if (severity == "Fatal" && totalFatal > 0 && (maleTotal > 0 || femaleTotal > 0))
             {
                 var assignedFatalMales = crash.CrashPeople
@@ -419,7 +419,7 @@ public class ExcelImportService
                 SeverityOfInjury = severity
             };
 
-            // For drivers, associate with the first vehicle if available
+            
             if (role == "Driver" && crash.CrashVehicles.Any())
             {
                 var firstVehicle = crash.CrashVehicles.First();
@@ -473,7 +473,7 @@ public class ExcelImportService
             "NELSPRUIT", "MALALANE", "SCHOEMANSDAL", "KOMATIPOORT",
             "HAZYVIEW", "SABIE", "ACORNHOEK", "KABOKWENI", "GRASKOP",
             "BUSHBUCKRIDGE", "KAMHLUSHWA"
-        }; // handle later
+        };
 
         foreach (var town in knownTowns)
         {
@@ -596,15 +596,7 @@ public class ExcelImportService
             }
         }
 
-        // Log demographic totals
-        System.Diagnostics.Debug.WriteLine("=== ParseDemographics Results ===");
-        System.Diagnostics.Debug.WriteLine($"  Age      : 0-7={demo.Age0to7}, 8-12={demo.Age8to12}, 13-18={demo.Age13to18}, 19-35={demo.Age19to35}, 36+={demo.Age36Plus}  (total={(demo.Age0to7 + demo.Age8to12 + demo.Age13to18 + demo.Age19to35 + demo.Age36Plus)})");
-        System.Diagnostics.Debug.WriteLine($"  Driver   : M={demo.DriverMale}, F={demo.DriverFemale}  (total={(demo.DriverMale + demo.DriverFemale)})");
-        System.Diagnostics.Debug.WriteLine($"  Passenger: M={demo.PassengerMale}, F={demo.PassengerFemale}  (total={(demo.PassengerMale + demo.PassengerFemale)})");
-        System.Diagnostics.Debug.WriteLine($"  Pedestrian: M={demo.PedestrianMale}, F={demo.PedestrianFemale}  (total={(demo.PedestrianMale + demo.PedestrianFemale)})");
-        System.Diagnostics.Debug.WriteLine($"  Cyclist  : M={demo.CyclistMale}, F={demo.CyclistFemale}  (total={(demo.CyclistMale + demo.CyclistFemale)})");
-        System.Diagnostics.Debug.WriteLine($"  Race     : Black={demo.RaceBlack}, Coloured={demo.RaceColoured}, White={demo.RaceWhite}, Indian={demo.RaceIndian}, Other={demo.RaceOther}  (total={(demo.RaceBlack + demo.RaceColoured + demo.RaceWhite + demo.RaceIndian + demo.RaceOther)})");
-        System.Diagnostics.Debug.WriteLine("=================================");
+       
 
         return demo;
     }
@@ -634,7 +626,7 @@ public class ExcelImportService
     }
 }
 
-// Result classes remain the same
+
 public class ImportResult
 {
     public string FileName { get; set; } = string.Empty;

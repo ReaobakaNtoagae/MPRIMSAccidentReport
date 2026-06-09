@@ -4,10 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CrashReport.Controllers;
 
-/// <summary>
-/// MVC controller for the Lookups management page.
-/// Separate from the API LookupController.
-/// </summary>
+
 public class LookupsController : Controller
 {
     private readonly AppDbContext _context;

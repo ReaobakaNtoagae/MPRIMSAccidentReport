@@ -113,11 +113,11 @@
     <script>
         $(function () {
 
-            // ── Error toast ───────────────────────────────────────────
+            
             var errMsg = $("#errMsg").data("msg");
             if (errMsg) DevExpress.ui.notify(errMsg, "error", 5000);
 
-            // ── Province selector ─────────────────────────────────────
+            
             var provinceItems = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
                             provinces.Select(p => new { text = $"{p.Code} — {p.Name}", value = p.Code })
                     ));
@@ -132,7 +132,7 @@
             }
         });
 
-            // ── File input ────────────────────────────────────────────
+            
             var fileInput  = document.getElementById("fileInput");
             var submitBtn  = document.getElementById("submitBtn");
             var dropZone   = document.getElementById("fileDropZone");
@@ -163,12 +163,12 @@
                 submitBtn.disabled = false;
             }
 
-            // Click to select
+            
             fileInput.addEventListener("change", function () {
                 onFileSelected(this.files[0]);
             });
 
-            // Drag and drop
+           
             dropZone.addEventListener("dragover", function (e) {
                 e.preventDefault();
                 dropZone.style.borderColor  = "#2e7d32";
@@ -186,7 +186,7 @@
                 dropZone.style.background   = "#f9fdf9";
                 var file = e.dataTransfer.files[0];
                 if (file) {
-                    // Assign to the native input so it submits with the form
+                    
                     var dt = new DataTransfer();
                     dt.items.add(file);
                     fileInput.files = dt.files;
@@ -194,7 +194,7 @@
                 }
             });
 
-            // ── Submit feedback ───────────────────────────────────────
+            
             document.getElementById("uploadForm").addEventListener("submit", function () {
                 submitBtn.disabled    = true;
                 submitBtn.textContent = "Importing — please wait...";
@@ -202,7 +202,7 @@
                 DevExpress.ui.notify("Importing workbook — this may take a moment...", "info", 10000);
             });
 
-            // ── Submit button hover ───────────────────────────────────
+           
             submitBtn.addEventListener("mouseover", function () {
                 if (!this.disabled) this.style.background = "#256328";
             });

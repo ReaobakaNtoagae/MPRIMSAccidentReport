@@ -4,15 +4,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CrashReport.Services;
 
-/// <summary>
-/// Queries the database and assembles all the statistics needed
-/// for the Weekly Standby Report document.
-/// </summary>
 public class StandbyReportDataService
 {
     private readonly AppDbContext _context;
 
-    // ── District → SAPS station name prefixes ─────────────────
+
     private static readonly Dictionary<string, HashSet<string>> DistrictStations =
         new(StringComparer.OrdinalIgnoreCase)
         {
@@ -56,7 +52,7 @@ public class StandbyReportDataService
             DayRange = GetDayRange(from, to)
         };
 
-        // ── Current period ─────────────────────────────────────
+
         var current = await LoadPeriodAsync(from, to);
         vm.CurrentProvince = SumAll(current);
         vm.CurrentEhlanzeni = FilterByDistrict(current, "EHLANZENI");
@@ -64,7 +60,7 @@ public class StandbyReportDataService
         vm.CurrentGertSibande = FilterByDistrict(current, "GERT SIBANDE");
         vm.CurrentNkangala = FilterByDistrict(current, "NKANGALA");
 
-        // ── Prior year (same period) ───────────────────────────
+     
         if (priorFrom.HasValue && priorTo.HasValue)
         {
             var prior = await LoadPeriodAsync(priorFrom.Value, priorTo.Value);
@@ -75,37 +71,36 @@ public class StandbyReportDataService
             vm.PriorNkangala = FilterByDistrict(prior, "NKANGALA");
         }
 
-        // ── Problematic routes ─────────────────────────────────
+   
         vm.ProblematicRoutes = await BuildProblematicRoutesAsync(from, to);
 
-        // ── Sub-period (last 3 days or Valentine's weekend) ────
         vm.SubPeriod = await BuildSubPeriodAsync(from, to);
 
-        // ── Victim demographics for sub-period ────────────────
+     
         if (vm.SubPeriod != null)
         {
             vm.Victims = await BuildDemographicsAsync(vm.SubPeriod.From, vm.SubPeriod.To);
         }
         else
         {
-            // Fallback to full period if no sub-period
+            
             vm.Victims = await BuildDemographicsAsync(from, to);
         }
 
         return vm;
     }
 
-    // ── Build sub-period (last 3 days or Valentine's weekend) ──
+  
     private async Task<SubPeriodStats?> BuildSubPeriodAsync(DateOnly from, DateOnly to)
     {
         int daysDiff = to.DayNumber - from.DayNumber;
         if (daysDiff < 3) return null;
 
-        // Default: last 3 days of the week
+       
         DateOnly subFrom = to.AddDays(-2);
         DateOnly subTo = to;
 
-        // Valentine's override: if period spans Feb 14–16 use those dates
+        
         var feb14 = new DateOnly(from.Year, 2, 14);
         var feb16 = new DateOnly(from.Year, 2, 16);
         if (from <= feb14 && to >= feb16)
@@ -129,7 +124,7 @@ public class StandbyReportDataService
         };
     }
 
-    // ── Load all crash data for a date range ──────────────────
+    
     private async Task<List<CrashRow>> LoadPeriodAsync(DateOnly from, DateOnly to)
     {
         var crashes = await _context.Crashes
@@ -165,11 +160,11 @@ public class StandbyReportDataService
         }).ToList();
     }
 
-    // ── Aggregate all crashes into province-level stats ───────
+  
     private static DistrictStats SumAll(List<CrashRow> rows) =>
         Aggregate(rows, "ALL");
 
-    // ── Filter by district and aggregate ─────────────────────
+  
     private static DistrictStats FilterByDistrict(List<CrashRow> rows, string district)
     {
         var filtered = rows.Where(r =>
@@ -179,7 +174,7 @@ public class StandbyReportDataService
 
     private static DistrictStats Aggregate(List<CrashRow> rows, string name)
     {
-        // Build detail list for each crash that has fatalities
+       
         var fatalDetails = rows
             .Where(r => r.Fatalities > 0)
             .OrderBy(r => r.CrashDate)
@@ -213,7 +208,7 @@ public class StandbyReportDataService
         };
     }
 
-    // ── Build problematic routes ──────────────────────────────
+   
     private async Task<List<ProblematicRoute>> BuildProblematicRoutesAsync(
         DateOnly from, DateOnly to)
     {
@@ -258,7 +253,7 @@ public class StandbyReportDataService
         return routes;
     }
 
-    // ── Victim demographics ────────────────────────────────────
+   
     private async Task<VictimDemographics> BuildDemographicsAsync(DateOnly from, DateOnly to)
     {
         var people = await _context.CrashPeople
@@ -311,7 +306,7 @@ public class StandbyReportDataService
         };
     }
 
-    // ── Helpers ───────────────────────────────────────────────
+
     private static string ExtractStation(string? crNo)
     {
         if (string.IsNullOrEmpty(crNo)) return string.Empty;
@@ -331,7 +326,7 @@ public class StandbyReportDataService
         if (!time.HasValue) return false;
         var h = time.Value.Hour;
         if (startH < endH) return h >= startH && h < endH;
-        return h >= startH || h < endH; // wraps midnight (22–06)
+        return h >= startH || h < endH; 
     }
 
     private static string GetDayRange(DateOnly from, DateOnly to)
@@ -340,7 +335,7 @@ public class StandbyReportDataService
         return $"{DayName(from.DayOfWeek)} TO {DayName(to.DayOfWeek)}";
     }
 
-    // ── Internal DTO ─────────────────────────────────────────
+
     private class CrashRow
     {
         public int CrashId { get; set; }

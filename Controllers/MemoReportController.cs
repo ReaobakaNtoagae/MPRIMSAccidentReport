@@ -15,10 +15,10 @@ public class MemoReportController : Controller
         _doc = doc;
     }
 
-    // GET /MemoReport
+  
     public IActionResult Index() => View();
 
-    // POST /MemoReport/Preview
+   
     [HttpPost]
     public async Task<IActionResult> Preview([FromBody] MemoReportRequest req)
     {
@@ -29,7 +29,7 @@ public class MemoReportController : Controller
         return Json(vm);
     }
 
-    // POST /MemoReport/Download
+    
     [HttpPost]
     public async Task<IActionResult> Download([FromBody] MemoReportRequest req)
     {

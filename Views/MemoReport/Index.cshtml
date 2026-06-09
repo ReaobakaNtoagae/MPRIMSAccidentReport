@@ -208,7 +208,7 @@
     }
 </style>
 
-<!-- Loading overlay -->
+
 <div class="loading-overlay" id="loadingOverlay">
     <div class="loading-spinner"></div>
     <div class="loading-text" id="loadingText">Generating report...</div>
@@ -219,7 +219,7 @@
     <!-- ── LEFT PANEL: Controls ──────────────────────────────── -->
     <div>
 
-        <!-- Period Selection -->
+        
         <div class="card">
             <div class="card-header">📅 Report Period</div>
             <div class="card-body">
@@ -245,7 +245,7 @@
             </div>
         </div>
 
-        <!-- Memo Header Fields -->
+       
         <div class="card">
             <div class="card-header collapsible-header" id="hdrToggle">
                 📝 Memo Header <span class="toggle">▼</span>
@@ -285,7 +285,7 @@
             </div>
         </div>
 
-        <!-- Actions -->
+       
         <div class="card">
             <div class="card-body" style="display:flex;flex-direction:column;gap:10px;">
                 <div id="btnPreview"></div>
@@ -295,7 +295,7 @@
 
     </div>
 
-    <!-- ── RIGHT PANEL: Preview ───────────────────────────────── -->
+
     <div>
         <div class="card">
             <div class="card-header">
@@ -319,14 +319,14 @@
 
             var previewData = null;
 
-            // ── Default dates: current month ─────────────────────────
+           
             var today  = new Date();
             var firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
             var lastOfMonth  = new Date(today.getFullYear(), today.getMonth() + 1, 0);
             var compFrom = new Date(firstOfMonth); compFrom.setFullYear(compFrom.getFullYear() - 1);
             var compTo   = new Date(lastOfMonth);  compTo.setFullYear(compTo.getFullYear() - 1);
 
-            // ── Period date pickers ───────────────────────────────────
+       
             var dateFromInst = $("#dateFromBox").dxDateBox({
                 type: "date", displayFormat: "dd/MM/yyyy", value: firstOfMonth,
                 showClearButton: false, max: new Date()
@@ -347,7 +347,7 @@
                 showClearButton: false
             }).dxDateBox("instance");
 
-            // Auto-fill comparison period when report period changes
+          
             dateFromInst.on("valueChanged", function(e) {
                 if (!e.value) return;
                 var d = new Date(e.value);
@@ -361,7 +361,7 @@
                 compToInst.option("value", d);
             });
 
-            // ── Auto-fill button ──────────────────────────────────────
+            
             $("#btnAutoFill").dxButton({
                 text: "Auto-fill prior year", type: "normal",
                 stylingMode: "outlined", icon: "refresh",
@@ -377,7 +377,7 @@
                 }
             });
 
-            // ── Memo header fields ────────────────────────────────────
+            
             function txtBox(id, placeholder, val) {
                 return $(id).dxTextBox({ placeholder: placeholder, value: val || "",
                     showClearButton: true }).dxTextBox("instance");
@@ -393,7 +393,7 @@
             var enqNameInst    = txtBox("#enqNameBox",   "Enquiry name",      "M C Mdhluli");
             var enqTelInst     = txtBox("#enqTelBox",    "Tel number",        "082 802 6966");
 
-            // ── Collapse memo header by default ──────────────────────
+            
             var hdrOpen = true;
             $("#hdrToggle").on("click", function() {
                 hdrOpen = !hdrOpen;
@@ -401,7 +401,7 @@
                 $(this).toggleClass("collapsed", !hdrOpen);
             });
 
-            // ── Build request object ──────────────────────────────────
+       
             function buildRequest() {
                 function fmt(d) {
                     if (!d) return "";
@@ -426,7 +426,7 @@
                 };
             }
 
-            // ── Action buttons ────────────────────────────────────────
+          
             $("#btnPreview").dxButton({
                 text: "Preview Data", type: "normal", icon: "find", width: "100%",
                 onClick: runPreview
@@ -437,7 +437,6 @@
                 onClick: runDownload
             });
 
-            // ── PREVIEW ───────────────────────────────────────────────
             function runPreview() {
                 var req = buildRequest();
                 if (!req.DateFrom || !req.DateTo) {
@@ -465,8 +464,6 @@
                     }
                 });
             }
-
-            // ── DOWNLOAD ──────────────────────────────────────────────
             function runDownload() {
                 var req = buildRequest();
                 if (!req.DateFrom || !req.DateTo) {
@@ -736,7 +733,7 @@
                 $("#loadingOverlay").removeClass("show");
             }
 
-            // ── Auto-preview on load ──────────────────────────────────
+         
             runPreview();
         });
     </script>

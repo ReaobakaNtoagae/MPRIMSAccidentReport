@@ -2,7 +2,7 @@
     ViewData["Title"] = "Dashboard";
 }
 
-<!-- Toast notifications -->
+
 @if (TempData["SuccessMessage"] != null)
 {
     <div id="successMsg" data-message="@TempData["SuccessMessage"]"></div>
@@ -98,7 +98,7 @@
         }
 </style>
 
-<!-- ── Row 1: Total crashes tile only ────────────────────── -->
+
 <div class="stat-grid">
     <div class="stat-card" style="background: linear-gradient(135deg,#1b5e20,#2e7d32);">
         <div class="big-num">@ViewBag.TotalCrashes</div>
@@ -107,7 +107,7 @@
     </div>
 </div>
 
-<!-- ── Row 2: Injury severity breakdown ─────────────────── -->
+
 <div class="stat-row">
     <div class="injury-card" style="background:#ffebee;border-left-color:#b71c1c;">
         <div class="icon">💀</div>
@@ -136,10 +136,10 @@
     </div>
 </div>
 
-<!-- ── Quick actions ─────────────────────────────────────── -->
+
 <div id="quickActions" style="display:flex;gap:10px;margin-bottom:20px;"></div>
 
-<!-- ── Recent crash history ──────────────────────────────── -->
+
 <div style="background:#fff;border-radius:10px;border:1px solid #c8e6c9;
             box-shadow:0 2px 8px rgba(0,0,0,.06);overflow:hidden;">
     <div style="padding:14px 20px;border-bottom:2px solid #e8f5e9;
@@ -150,7 +150,7 @@
     <div id="crashHistoryGrid"></div>
 </div>
 
-<!-- Hidden delete form -->
+
 <form id="deleteForm" method="post" style="display:none;">
     @Html.AntiForgeryToken()
 </form>
@@ -159,13 +159,13 @@
     <script>
         $(function () {
 
-            // ── Toast notifications ───────────────────────────────────
+           
             var successMsg = $("#successMsg").data("message");
             var errorMsg   = $("#errorMsg").data("message");
             if (successMsg) DevExpress.ui.notify(successMsg, "success", 4000);
             if (errorMsg)   DevExpress.ui.notify(errorMsg,   "error",   5000);
 
-            // ── Quick actions ─────────────────────────────────────────
+           
             [
                 { text: "New CR1 Report",    type: "default", icon: "plus",     url: "/Home/Create" },
                 { text: "Search Crashes",    type: "normal",  icon: "find",     url: "/Crashes"     },
@@ -178,7 +178,7 @@
                 });
             });
 
-            // ── Recent crashes grid ───────────────────────────────────
+            
             $("#crashHistoryGrid").dxDataGrid({
                 dataSource: "/Crashes/GetAll",
                 columns: [

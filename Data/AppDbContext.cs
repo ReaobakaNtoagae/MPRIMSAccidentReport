@@ -38,7 +38,7 @@ public class AppDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
-        // ── persons ──────────────────────────────────────────
+        
         modelBuilder.Entity<Person>(e => {
             e.ToTable("persons");
             e.HasKey(p => p.PersonId);
@@ -61,7 +61,7 @@ public class AppDbContext : DbContext
             e.HasIndex(p => p.Surname).HasDatabaseName("idx_persons_surname");
         });
 
-        // ── drivers_licences ─────────────────────────────────
+        
         modelBuilder.Entity<DriversLicence>(e => {
             e.ToTable("drivers_licences");
             e.HasKey(d => d.LicenceId);
@@ -78,7 +78,7 @@ public class AppDbContext : DbContext
                 .HasConstraintName("fk_dl_person");
         });
 
-        // ── vehicles ─────────────────────────────────────────
+       
         modelBuilder.Entity<Vehicle>(e => {
             e.ToTable("vehicles");
             e.HasKey(v => v.VehicleId);
@@ -100,7 +100,7 @@ public class AppDbContext : DbContext
             e.HasIndex(v => v.LicenceDiscNumber).HasDatabaseName("idx_vehicles_disc");
         });
 
-        // ── crashes ──────────────────────────────────────────
+        
         modelBuilder.Entity<Crash>(e => {
             e.ToTable("crashes");
             e.HasKey(c => c.CrashId);
@@ -124,7 +124,7 @@ public class AppDbContext : DbContext
             e.HasIndex(c => c.CasNo).HasDatabaseName("idx_crashes_cas_no");
         });
 
-        // ── crash_locations ──────────────────────────────────
+        
         modelBuilder.Entity<CrashLocation>(e => {
             e.ToTable("crash_locations");
             e.HasKey(l => l.LocationId);
@@ -158,7 +158,7 @@ public class AppDbContext : DbContext
                 .HasConstraintName("fk_cl_crash");
         });
 
-        // ── crash_conditions ─────────────────────────────────
+        
         modelBuilder.Entity<CrashCondition>(e => {
             e.ToTable("crash_conditions");
             e.HasKey(c => c.ConditionId);
@@ -182,7 +182,7 @@ public class AppDbContext : DbContext
                 .HasConstraintName("fk_cc_crash");
         });
 
-        // ── crash_weather (composite PK) ─────────────────────
+        
         modelBuilder.Entity<CrashWeather>(e => {
             e.ToTable("crash_weather");
             e.HasKey(cw => new { cw.CrashId, cw.WeatherCondition });
@@ -194,7 +194,7 @@ public class AppDbContext : DbContext
                 .HasConstraintName("fk_cw_crash");
         });
 
-        // ── crash_vehicles ───────────────────────────────────
+       
         modelBuilder.Entity<CrashVehicle>(e => {
             e.ToTable("crash_vehicles");
             e.HasKey(cv => cv.CrashVehicleId);
@@ -230,7 +230,7 @@ public class AppDbContext : DbContext
         });
 
 
-        // ── vehicle_damage ───────────────────────────────────
+       
         modelBuilder.Entity<VehicleDamage>(e => {
             e.ToTable("vehicle_damage");
             e.HasKey(vd => vd.DamageId);
@@ -243,7 +243,7 @@ public class AppDbContext : DbContext
                 .HasConstraintName("fk_vd_crash_vehicle");
         });
 
-        // ── crash_persons ────────────────────────────────────
+        
         modelBuilder.Entity<CrashPerson>(e => {
             e.ToTable("crash_persons");
             e.HasKey(cp => cp.CrashPersonId);
@@ -279,7 +279,7 @@ public class AppDbContext : DbContext
             e.HasIndex(cp => cp.SeverityOfInjury).HasDatabaseName("idx_cp_injury");
         });
 
-        // ── pedestrian_bicyclist_details ─────────────────────
+       
         modelBuilder.Entity<PedestrianBicyclistDetail>(e => {
             e.ToTable("pedestrian_bicyclist_details");
             e.HasKey(pd => pd.DetailId);
@@ -296,7 +296,7 @@ public class AppDbContext : DbContext
                 .HasConstraintName("fk_pd_cp");
         });
 
-        // ── contributory_factors ─────────────────────────────
+        
         modelBuilder.Entity<ContributoryFactor>(e => {
             e.ToTable("contributory_factors");
             e.HasKey(cf => cf.FactorId);
@@ -313,7 +313,7 @@ public class AppDbContext : DbContext
             e.HasIndex(cf => cf.FactorCategory).HasDatabaseName("idx_cf_category");
         });
 
-        // ── dangerous_goods ──────────────────────────────────
+       
         modelBuilder.Entity<DangerousGood>(e => {
             e.ToTable("dangerous_goods");
             e.HasKey(dg => dg.DgId);
@@ -333,7 +333,7 @@ public class AppDbContext : DbContext
                 .HasConstraintName("fk_dg_crash");
         });
 
-        // ── witnesses ────────────────────────────────────────
+        
         modelBuilder.Entity<Witness>(e => {
             e.ToTable("witnesses");
             e.HasKey(w => w.WitnessId);
@@ -351,7 +351,7 @@ public class AppDbContext : DbContext
                 .HasConstraintName("fk_w_crash");
         });
 
-        // ── official_use ─────────────────────────────────────
+        
         modelBuilder.Entity<OfficialUse>(e => {
             e.ToTable("official_use");
             e.HasKey(o => o.OfficialId);
@@ -386,7 +386,7 @@ public class AppDbContext : DbContext
                 .HasConstraintName("fk_ou_crash");
         });
 
-        // ── crash_sketches ───────────────────────────────────
+      
         modelBuilder.Entity<CrashSketch>(e => {
             e.ToTable("crash_sketches");
             e.HasKey(s => s.SketchId);
@@ -403,7 +403,7 @@ public class AppDbContext : DbContext
                 .HasConstraintName("fk_cs_crash");
         });
 
-        // ── Lookup tables ────────────────────────────────────
+        
         modelBuilder.Entity<SapsStation>().ToTable("lkp_saps_stations");
         modelBuilder.Entity<LookupLocation>().ToTable("lkp_locations");
         modelBuilder.Entity<LookupRoute>().ToTable("lkp_routes");

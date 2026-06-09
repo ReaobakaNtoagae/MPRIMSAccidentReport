@@ -12,9 +12,7 @@ public class LookupController : ControllerBase
     private readonly AppDbContext _context;
     public LookupController(AppDbContext context) => _context = context;
 
-    // ═══════════════════════════════════════════════════════════
-    // SAPS STATIONS
-    // ═══════════════════════════════════════════════════════════
+    
 
     [HttpGet("stations")]
     public async Task<IActionResult> SearchStations(string? q = null)
@@ -56,9 +54,7 @@ public class LookupController : ControllerBase
         return Ok(new { id = station.StationId, text = station.StationName });
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // LOCATIONS
-    // ═══════════════════════════════════════════════════════════
+   
 
     [HttpGet("locations")]
     public async Task<IActionResult> SearchLocations(string? q = null)
@@ -94,9 +90,7 @@ public class LookupController : ControllerBase
         return Ok(new { id = loc.LocationId, text = loc.LocationName });
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // ROUTES
-    // ═══════════════════════════════════════════════════════════
+    
 
     [HttpGet("routes")]
     public async Task<IActionResult> SearchRoutes(string? q = null)
@@ -133,9 +127,6 @@ public class LookupController : ControllerBase
         return Ok(new { id = route.RouteId, text = route.RouteCode });
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // CRASH TYPES
-    // ═══════════════════════════════════════════════════════════
 
     [HttpGet("crashtypes")]
     public async Task<IActionResult> SearchCrashTypes(string? q = null)
@@ -176,9 +167,7 @@ public class LookupController : ControllerBase
         return Ok(new { id = ct.CrashTypeId, text = ct.CrashTypeCode });
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // VEHICLE TYPES
-    // ═══════════════════════════════════════════════════════════
+    
 
     [HttpGet("vehicletypes")]
     public async Task<IActionResult> SearchVehicleTypes(string? q = null)
@@ -219,9 +208,6 @@ public class LookupController : ControllerBase
         return Ok(new { id = vt.VehicleTypeId, text = vt.VehicleTypeCode });
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // MANAGE PAGE (view all / deactivate)
-    // ═══════════════════════════════════════════════════════════
 
     [HttpDelete("{table}/{id}")]
     public async Task<IActionResult> Deactivate(string table, int id)
@@ -261,10 +247,10 @@ public class LookupController : ControllerBase
     }
 }
 
-// ── Shared request DTO ────────────────────────────────────────
+
 public class AddLookupRequest
 {
     public string Text { get; set; } = string.Empty;
     public string? Province { get; set; }
-    public string? Extra { get; set; } // district / description
+    public string? Extra { get; set; } 
 }

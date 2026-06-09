@@ -96,13 +96,13 @@
             ]
         }).dxForm("instance");
 
-        // Sync dxForm values into hidden inputs on submit
+        
         function syncFormToPost() {
             var data = form.option("formData");
             Object.keys(data).forEach(function (key) {
                 var val = data[key];
                 if (val instanceof Date) {
-                    // Format dates as yyyy-MM-dd, times as HH:mm
+                   
                     if (key === "CrashTime") {
                         val = val ? val.getHours().toString().padStart(2,"0") + ":" + val.getMinutes().toString().padStart(2,"0") : "";
                     } else {

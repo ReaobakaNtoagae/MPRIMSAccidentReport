@@ -1,34 +1,29 @@
-﻿/**
- * charts.js — Pure-JS grouped bar chart generator (pngjs only).
- * Corrected 5×7 bitmap font with proper bit patterns.
- */
-'use strict';
+﻿'use strict';
 const { PNG } = require('pngjs');
 
 // ── Colours matching the original document ─────────────────
 const PALETTE = [
-    [68, 114, 196],   // blue       CRASHES
-    [89, 89, 89],   // dark gray  FATALITIES
-    [255, 0, 0],   // red        SERIOUS
-    [0, 176, 80],   // green      SLIGHT
-    [255, 192, 0],   // yellow
-    [112, 173, 71],   // light green
+    [68, 114, 196],   
+    [89, 89, 89],   
+    [255, 0, 0],   
+    [0, 176, 80],   
+    [255, 192, 0],   
+    [112, 173, 71],  
 ];
 
-// ── Route chart colours (more muted, distinguishable) ─────
+
 const ROUTE_PALETTE = [
-    [138, 159, 197],   // periwinkle blue
-    [128, 0, 0],   // dark maroon
-    [173, 216, 230],   // light cyan
-    [255, 255, 153],   // light yellow
-    [144, 238, 144],   // light green
-    [255, 165, 0],   // orange
-    [186, 143, 186],   // plum
-    [255, 160, 122],   // light salmon
+    [138, 159, 197],   
+    [128, 0, 0],   
+    [173, 216, 230],   
+    [255, 255, 153],   
+    [144, 238, 144],   
+    [255, 165, 0],   
+    [186, 143, 186],   
+    [255, 160, 122],  
 ];
 
-// ── 5×7 bitmap font — 5-bit rows, bit4 = leftmost pixel ────
-// Each glyph: 7 rows. bit pattern: 0b10000=col0, 0b01000=col1, etc.
+
 const G = {
     ' ': [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00],
     'A': [0x0E, 0x11, 0x11, 0x1F, 0x11, 0x11, 0x11],
@@ -78,9 +73,9 @@ const G = {
     '&': [0x0C, 0x12, 0x12, 0x0C, 0x15, 0x12, 0x0D],
 };
 
-const GLYPH_W = 5;   // pixels wide
-const GLYPH_H = 7;   // pixels tall
-const GLYPH_GAP = 1; // gap between chars
+const GLYPH_W = 5;   
+const GLYPH_H = 7;   
+const GLYPH_GAP = 1; 
 
 function textWidth(str, scale) {
     return String(str).toUpperCase().length * (GLYPH_W + GLYPH_GAP) * scale;
@@ -133,16 +128,6 @@ function vLine(png, x, y, h, r, g, b) {
     }
 }
 
-/**
- * createGroupedBarChart
- *
- * cfg:
- *   labels         : string[]           X-axis groups (e.g. ["2018","2019"])
- *   datasets       : {label, data}[]    One per bar colour (e.g. CRASHES, FATALITIES…)
- *   title          : string
- *   legendPosition : "right" | "bottom" (default "right")
- *   width, height
- */
 function createGroupedBarChart(cfg) {
     const W = cfg.width || 700;
     const H = cfg.height || 380;
@@ -157,9 +142,9 @@ function createGroupedBarChart(cfg) {
     const legendBoxH = nDS * itemH + 12;
 
     // ── Margins ────────────────────────────────────────────
-    const MT = 36;   // top (title)
-    const MB = 36;   // bottom (x labels)
-    const ML = 48;   // left (y labels)
+    const MT = 36;   
+    const MB = 36;   
+    const ML = 48;   
     const MR = pos === 'right' ? legendBoxW + 14 : 12;
 
     const CW = W - ML - MR;
