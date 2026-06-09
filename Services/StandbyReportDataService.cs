@@ -13,8 +13,6 @@ public class StandbyReportDataService
     private readonly AppDbContext _context;
 
     // ── District → SAPS station name prefixes ─────────────────
-    // Used to filter crashes by district based on the CrNo prefix.
-    // Extend this list as more stations are added to the database.
     private static readonly Dictionary<string, HashSet<string>> DistrictStations =
         new(StringComparer.OrdinalIgnoreCase)
         {
@@ -58,7 +56,24 @@ public class StandbyReportDataService
             DayRange = GetDayRange(from, to)
         };
 
-        // ... existing code ...
+        // ── Current period ─────────────────────────────────────
+        var current = await LoadPeriodAsync(from, to);
+        vm.CurrentProvince = SumAll(current);
+        vm.CurrentEhlanzeni = FilterByDistrict(current, "EHLANZENI");
+        vm.CurrentBohlabelo = FilterByDistrict(current, "BOHLABELO");
+        vm.CurrentGertSibande = FilterByDistrict(current, "GERT SIBANDE");
+        vm.CurrentNkangala = FilterByDistrict(current, "NKANGALA");
+
+        // ── Prior year (same period) ───────────────────────────
+        if (priorFrom.HasValue && priorTo.HasValue)
+        {
+            var prior = await LoadPeriodAsync(priorFrom.Value, priorTo.Value);
+            vm.PriorProvince = SumAll(prior);
+            vm.PriorEhlanzeni = FilterByDistrict(prior, "EHLANZENI");
+            vm.PriorBohlabelo = FilterByDistrict(prior, "BOHLABELO");
+            vm.PriorGertSibande = FilterByDistrict(prior, "GERT SIBANDE");
+            vm.PriorNkangala = FilterByDistrict(prior, "NKANGALA");
+        }
 
         // ── Problematic routes ─────────────────────────────────
         vm.ProblematicRoutes = await BuildProblematicRoutesAsync(from, to);
@@ -140,7 +155,7 @@ public class StandbyReportDataService
                 CrashDate = c.CrashDate,
                 CrashTime = c.CrashTime,
                 Route = c.RoadNumber ?? "",
-                Location = loc?.StreetRoadName ?? loc?.CityTown,
+                Location = loc?.StreetRoadName ?? loc?.CityTown ?? loc?.Suburb,
                 Fatalities = people.Count(p => p.SeverityOfInjury == "Fatal"),
                 Serious = people.Count(p => p.SeverityOfInjury == "Serious"),
                 Slight = people.Count(p => p.SeverityOfInjury == "Slight"),
@@ -164,6 +179,7 @@ public class StandbyReportDataService
 
     private static DistrictStats Aggregate(List<CrashRow> rows, string name)
     {
+        // Build detail list for each crash that has fatalities
         var fatalDetails = rows
             .Where(r => r.Fatalities > 0)
             .OrderBy(r => r.CrashDate)
@@ -172,7 +188,9 @@ public class StandbyReportDataService
             {
                 CrNo = r.CrNo,
                 Date = r.CrashDate.ToString("dd/MM/yyyy"),
-                Time = r.CrashTime.HasValue ? r.CrashTime.Value.ToString("HH:mm") : "Unknown",
+                Time = r.CrashTime.HasValue
+                               ? r.CrashTime.Value.ToString("HH:mm")
+                               : "Unknown",
                 Route = r.Route,
                 Location = r.Location,
                 Count = r.Fatalities
@@ -186,7 +204,7 @@ public class StandbyReportDataService
             Fatalities = rows.Sum(r => r.Fatalities),
             Serious = rows.Sum(r => r.Serious),
             Slight = rows.Sum(r => r.Slight),
-            // FIX: Sum fatalities, not count of crashes with fatalities
+            // Sum fatalities by time slot (not count of crashes)
             FatalTime1 = rows.Where(r => IsInTimeSlot(r.CrashTime, 6, 14)).Sum(r => r.Fatalities),
             FatalTime2 = rows.Where(r => IsInTimeSlot(r.CrashTime, 14, 22)).Sum(r => r.Fatalities),
             FatalTime3 = rows.Where(r => IsInTimeSlot(r.CrashTime, 22, 6)).Sum(r => r.Fatalities),
@@ -194,6 +212,7 @@ public class StandbyReportDataService
             FatalDetails = fatalDetails
         };
     }
+
     // ── Build problematic routes ──────────────────────────────
     private async Task<List<ProblematicRoute>> BuildProblematicRoutesAsync(
         DateOnly from, DateOnly to)
@@ -216,7 +235,7 @@ public class StandbyReportDataService
             .Select(g =>
             {
                 var locs = g
-                    .SelectMany(c => c.CrashLocations.Select(l => l.StreetRoadName ?? l.CityTown))
+                    .SelectMany(c => c.CrashLocations.Select(l => l.StreetRoadName ?? l.CityTown ?? l.Suburb))
                     .Where(l => !string.IsNullOrEmpty(l))
                     .Distinct()
                     .Take(3)
@@ -291,6 +310,7 @@ public class StandbyReportDataService
             FemaleCyclist = people.Count(p => IsFemale(p) && IsRole(p, "Bicyclist"))
         };
     }
+
     // ── Helpers ───────────────────────────────────────────────
     private static string ExtractStation(string? crNo)
     {

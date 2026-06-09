@@ -196,7 +196,6 @@
                 onEnterKey: function () { runSearch(); }
             }).dxTextBox("instance");
 
-            // SAPS — lookup store assigned immediately at creation
             var sapsInst = $("#sapsBox").dxSelectBox({
                 dataSource:   lookupStore("stations"),
                 displayExpr:  "text",
@@ -217,7 +216,6 @@
                 placeholder: "To date", showClearButton: true, max: new Date()
             }).dxDateBox("instance");
 
-            // Route — lookup store assigned immediately at creation
             var routeInst = $("#routeBox").dxSelectBox({
                 dataSource:   lookupStore("routes"),
                 displayExpr:  "text",
@@ -232,7 +230,6 @@
                 dataSource: provinces, placeholder: "Any province", showClearButton: true
             }).dxSelectBox("instance");
 
-            // Crash type — lookup store assigned immediately at creation
             var crashTypeInst = $("#crashTypeBox").dxSelectBox({
                 dataSource:   lookupStore("crashtypes"),
                 displayExpr:  "text",
@@ -294,46 +291,75 @@
                     {
                         caption: "Injuries", width: 180, alignment: "center",
                         allowSorting: false,
+                        // FIX: build DOM nodes instead of parsing HTML strings.
+                        // container.html(htmlString) goes through jQuery's buildFragment
+                        // which calls document.createDocumentFragment() — this fails when
+                        // DevExtreme passes the container before it is attached to the DOM.
+                        // Using $('<span>').text() + .append() avoids that path entirely.
                         cellTemplate: function (container, options) {
-                            var parts = [];
-                            if (options.data.FatalCount > 0)
-                                parts.push('<span style="background:#b71c1c;color:#fff;border-radius:10px;padding:1px 9px;font-size:.72rem;font-weight:700;margin-right:3px">' + options.data.FatalCount + ' fatal</span>');
-                            if (options.data.SeriousCount > 0)
-                                parts.push('<span style="background:#e65100;color:#fff;border-radius:10px;padding:1px 9px;font-size:.72rem;margin-right:3px">' + options.data.SeriousCount + ' serious</span>');
-                            if (options.data.SlightCount > 0)
-                                parts.push('<span style="background:#0277bd;color:#fff;border-radius:10px;padding:1px 9px;font-size:.72rem">' + options.data.SlightCount + ' slight</span>');
-                            if (parts.length === 0)
-                                parts.push('<span style="color:#aaa;font-size:.75rem">None recorded</span>');
-                            container.html(parts.join(""));
+                            var d     = options.data;
+                            var $wrap = $('<div>').css({
+                                display: 'flex', gap: '3px',
+                                flexWrap: 'wrap', alignItems: 'center'
+                            });
+
+                            if (d.FatalCount > 0)
+                                $wrap.append($('<span>').css({
+                                    background: '#b71c1c', color: '#fff',
+                                    borderRadius: '10px', padding: '1px 9px',
+                                    fontSize: '.72rem', fontWeight: '700'
+                                }).text(d.FatalCount + ' fatal'));
+
+                            if (d.SeriousCount > 0)
+                                $wrap.append($('<span>').css({
+                                    background: '#e65100', color: '#fff',
+                                    borderRadius: '10px', padding: '1px 9px',
+                                    fontSize: '.72rem'
+                                }).text(d.SeriousCount + ' serious'));
+
+                            if (d.SlightCount > 0)
+                                $wrap.append($('<span>').css({
+                                    background: '#0277bd', color: '#fff',
+                                    borderRadius: '10px', padding: '1px 9px',
+                                    fontSize: '.72rem'
+                                }).text(d.SlightCount + ' slight'));
+
+                            if (!d.FatalCount && !d.SeriousCount && !d.SlightCount)
+                                $wrap.append($('<span>').css({
+                                    color: '#aaa', fontSize: '.75rem'
+                                }).text('None recorded'));
+
+                            $(container).empty().append($wrap);
                         }
                     },
                     {
-                        caption: "Actions", width: 140, alignment: "center",
-                        allowSorting: false, allowFiltering: false,
+                        caption: "Actions", width: 130, alignment: "center",
+                        allowSorting: false,
                         cellTemplate: function (container, options) {
-                            var id   = options.data.CrashId;
-                            var crNo = options.data.CrNo || "#" + id;
-                            $("<div>").css({ display:"flex", gap:"5px", justifyContent:"center" })
-                                .appendTo(container)
-                                .append(
-                                    $("<div>").dxButton({ icon:"find", hint:"View Details", type:"default", stylingMode:"outlined",
-                                        onClick: function () { window.location.href = "/Crashes/Details/" + id; } }),
-                                    $("<div>").dxButton({ icon:"edit", hint:"Edit Report",  type:"normal",  stylingMode:"outlined",
-                                        onClick: function () { window.location.href = "/Crashes/Edit/" + id; } }),
-                                    $("<div>").dxButton({ icon:"trash", hint:"Delete",      type:"danger",  stylingMode:"outlined",
-                                        onClick: function () {
-                                            DevExpress.ui.dialog.confirm(
-                                                "Permanently delete crash report <b>" + crNo + "</b>?<br/>" +
-                                                "<small style='color:#888'>All linked records will also be removed.</small>",
-                                                "Confirm Delete"
-                                            ).then(function (ok) {
-                                                if (!ok) return;
-                                                $("#deleteForm").attr("action", "/Crashes/Delete/" + id);
-                                                $("#deleteForm").submit();
-                                            });
-                                        }
-                                    })
-                                );
+                            var id    = options.data.CrashId;
+                            var $wrap = $('<div>').css({ display:'flex', gap:'6px', justifyContent:'center' });
+
+                            $('<button>').text('View')
+                                .css({ fontSize:'.72rem', padding:'2px 10px',
+                                       borderRadius:'6px', border:'1px solid #c8e6c9',
+                                       background:'#f1f8f1', color:'#2e7d32',
+                                       cursor:'pointer' })
+                                .on('click', function() {
+                                    window.location.href = '/Home/Details/' + id;
+                                })
+                                .appendTo($wrap);
+
+                            $('<button>').text('Edit')
+                                .css({ fontSize:'.72rem', padding:'2px 10px',
+                                       borderRadius:'6px', border:'1px solid #bbdefb',
+                                       background:'#e3f2fd', color:'#0277bd',
+                                       cursor:'pointer' })
+                                .on('click', function() {
+                                    window.location.href = '/Home/Edit/' + id;
+                                })
+                                .appendTo($wrap);
+
+                            $(container).empty().append($wrap);
                         }
                     }
                 ],

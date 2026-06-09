@@ -1,6 +1,8 @@
 ﻿using ClosedXML.Excel;
 using CrashReport.Data;
 using CrashReport.Models;
+using DocumentFormat.OpenXml.Spreadsheet;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using System.Text.RegularExpressions;
 
@@ -526,12 +528,10 @@ public class ExcelImportService
     private ImportDemographics ParseDemographics(List<IXLRow> summaryRows)
     {
         var demo = new ImportDemographics();
-
         for (int i = 0; i < summaryRows.Count; i++)
         {
             var row = summaryRows[i];
             var label = row.Cell(1).GetString().Trim().ToUpper();
-
             if (label == "AGE")
             {
                 for (int j = i + 1; j < summaryRows.Count; j++)
@@ -542,7 +542,6 @@ public class ExcelImportService
                     var age13_18 = IntCell(valueRow, 4);
                     var age19_35 = IntCell(valueRow, 5);
                     var age36Plus = IntCell(valueRow, 6);
-
                     if (age0_7 + age8_12 + age13_18 + age19_35 + age36Plus > 0)
                     {
                         demo.Age0to7 = age0_7;
@@ -584,7 +583,6 @@ public class ExcelImportService
                     var white = IntCell(valueRow, 4);
                     var indian = IntCell(valueRow, 5);
                     var other = IntCell(valueRow, 6);
-
                     if (black + coloured + white + indian + other > 0)
                     {
                         demo.RaceBlack = black;
@@ -598,9 +596,18 @@ public class ExcelImportService
             }
         }
 
+        // Log demographic totals
+        System.Diagnostics.Debug.WriteLine("=== ParseDemographics Results ===");
+        System.Diagnostics.Debug.WriteLine($"  Age      : 0-7={demo.Age0to7}, 8-12={demo.Age8to12}, 13-18={demo.Age13to18}, 19-35={demo.Age19to35}, 36+={demo.Age36Plus}  (total={(demo.Age0to7 + demo.Age8to12 + demo.Age13to18 + demo.Age19to35 + demo.Age36Plus)})");
+        System.Diagnostics.Debug.WriteLine($"  Driver   : M={demo.DriverMale}, F={demo.DriverFemale}  (total={(demo.DriverMale + demo.DriverFemale)})");
+        System.Diagnostics.Debug.WriteLine($"  Passenger: M={demo.PassengerMale}, F={demo.PassengerFemale}  (total={(demo.PassengerMale + demo.PassengerFemale)})");
+        System.Diagnostics.Debug.WriteLine($"  Pedestrian: M={demo.PedestrianMale}, F={demo.PedestrianFemale}  (total={(demo.PedestrianMale + demo.PedestrianFemale)})");
+        System.Diagnostics.Debug.WriteLine($"  Cyclist  : M={demo.CyclistMale}, F={demo.CyclistFemale}  (total={(demo.CyclistMale + demo.CyclistFemale)})");
+        System.Diagnostics.Debug.WriteLine($"  Race     : Black={demo.RaceBlack}, Coloured={demo.RaceColoured}, White={demo.RaceWhite}, Indian={demo.RaceIndian}, Other={demo.RaceOther}  (total={(demo.RaceBlack + demo.RaceColoured + demo.RaceWhite + demo.RaceIndian + demo.RaceOther)})");
+        System.Diagnostics.Debug.WriteLine("=================================");
+
         return demo;
     }
-
     private static int IntCell(IXLRow row, int col)
     {
         try

@@ -21,6 +21,8 @@ builder.Services.AddScoped<ExcelImportService>();
 builder.Services.AddScoped<WordexportService>();
 builder.Services.AddScoped<StandbyReportDataService>();
 builder.Services.AddScoped<StandbyReportWordService>();
+builder.Services.AddScoped<MonthlyMemoDataService>();
+builder.Services.AddScoped<MonthlyMemoDocService>();
 
 var app = builder.Build();
 

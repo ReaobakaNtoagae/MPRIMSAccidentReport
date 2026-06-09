@@ -63,19 +63,31 @@ public class SubPeriodStats
 public class VictimDemographics
 {
     public int TotalFatalities { get; set; }
+
+    // Age distribution
     public int Age0to7 { get; set; }
     public int Age8to12 { get; set; }
     public int Age13to18 { get; set; }
     public int Age19to35 { get; set; }
     public int Age36Plus { get; set; }
+
+    // Gender totals
     public int MaleTotal { get; set; }
     public int FemaleTotal { get; set; }
+
+    // By role - Drivers
     public int MaleDriver { get; set; }
     public int FemaleDriver { get; set; }
+
+    // By role - Passengers
     public int MalePassenger { get; set; }
     public int FemalePassenger { get; set; }
+
+    // By role - Pedestrians
     public int MalePedestrian { get; set; }
     public int FemalePedestrian { get; set; }
+
+    // By role - Cyclists
     public int MaleCyclist { get; set; }
     public int FemaleCyclist { get; set; }
 }
@@ -87,13 +99,14 @@ public class StandbyReportViewModel
     public DateOnly DateTo { get; set; }
     public string DayRange { get; set; } = string.Empty;  // e.g. "MONDAY TO SUNDAY"
 
-    // ── Full week (current year vs prior year) ────────────────
+    // ── Full week (current year) ────────────────────────────────
     public DistrictStats CurrentProvince { get; set; } = new();
     public DistrictStats CurrentEhlanzeni { get; set; } = new();
     public DistrictStats CurrentBohlabelo { get; set; } = new();
     public DistrictStats CurrentGertSibande { get; set; } = new();
     public DistrictStats CurrentNkangala { get; set; } = new();
 
+    // ── Full week (prior year / same period) ────────────────────
     public DistrictStats PriorProvince { get; set; } = new();
     public DistrictStats PriorEhlanzeni { get; set; } = new();
     public DistrictStats PriorBohlabelo { get; set; } = new();
@@ -106,6 +119,6 @@ public class StandbyReportViewModel
     // ── Sub-period (e.g. Valentine's weekend) ────────────────
     public SubPeriodStats? SubPeriod { get; set; }
 
-    // ── Victim demographics (sub-period or full week) ─────────
+    // ── Victim demographics (for the sub-period or full period) ──
     public VictimDemographics Victims { get; set; } = new();
 }

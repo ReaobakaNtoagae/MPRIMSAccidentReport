@@ -24,6 +24,7 @@ public class AppDbContext : DbContext
     public DbSet<Witness> Witnesses { get; set; }
     public DbSet<OfficialUse> OfficialUses { get; set; }
     public DbSet<CrashSketch> CrashSketches { get; set; }
+    public DbSet<CrashDemographicRecord> CrashDemographics { get; set; }
 
     // ── Lookup DbSets ────────────────────────────────────────
     public DbSet<SapsStation> SapsStations { get; set; }
@@ -31,6 +32,7 @@ public class AppDbContext : DbContext
     public DbSet<LookupRoute> LookupRoutes { get; set; }
     public DbSet<LookupCrashType> LookupCrashTypes { get; set; }
     public DbSet<LookupVehicleType> LookupVehicleTypes { get; set; }
+
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

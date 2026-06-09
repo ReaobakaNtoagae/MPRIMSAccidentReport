@@ -211,6 +211,10 @@ public class CrashesController : Controller
             .FirstOrDefaultAsync(c => c.CrashId == id);
 
         if (crash == null) return NotFound();
+
+        // Debug: Log counts to see if data is loading
+        Console.WriteLine($"Loaded crash {crash.CrashId}: {crash.CrashVehicles?.Count ?? 0} vehicles, {crash.CrashPeople?.Count ?? 0} people");
+
         return View(crash);
     }
 

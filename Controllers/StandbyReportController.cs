@@ -100,7 +100,7 @@ public class StandbyReportController : Controller
         var vm = await _dataService.BuildAsync(dateFrom, dateTo, priorYearFrom, priorYearTo);
 
         // Return the view as HTML but with .docx extension
-        Response.Headers.Append("Content-Disposition", $"attachment; filename=Weekly_Standby_Report_{vm.DateFrom:yyyy-MM-dd}_to_{vm.DateTo:yyyy-MM-dd}.docx");
+        Response.Headers.Add("Content-Disposition", $"attachment; filename=Weekly_Standby_Report_{vm.DateFrom:yyyy-MM-dd}_to_{vm.DateTo:yyyy-MM-dd}.docx");
         Response.ContentType = "application/msword";
 
         return View("SrandbyReport", vm);
