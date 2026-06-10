@@ -28,6 +28,7 @@ public class ExcelImportService
         _logger = logger;
     }
 
+
     public async Task<ImportResult> ImportAsync(Stream stream, string fileName, string province = "MP")
     {
         var result = new ImportResult { FileName = fileName };
@@ -35,6 +36,7 @@ public class ExcelImportService
         using var wb = new XLWorkbook(stream);
         var ws = wb.Worksheets.First();
 
+          DebugFindRaceTable(ws);
        
         int headerRow = FindHeaderRow(ws);
         if (headerRow == -1)
@@ -54,14 +56,17 @@ public class ExcelImportService
         {
             var saps = row.Cell(1).GetString().Trim();
 
-            
+
             if (string.IsNullOrWhiteSpace(saps) || saps.Equals("TOTAL", StringComparison.OrdinalIgnoreCase))
             {
-                inSummary = true;
+                if (inSummary)
+                    summaryRows.Add(row); 
+                else
+                    inSummary = true;
                 continue;
             }
 
-            
+
             var col7 = row.Cell(8).GetString().Trim();
             var col0 = row.Cell(1).GetString().Trim();
 
@@ -96,10 +101,15 @@ public class ExcelImportService
             }
         }
 
-        
-        result.Demographics = ParseDemographics(summaryRows);
 
-        
+        result.Demographics = ParseDemographics(summaryRows, ws);
+
+
+        await SaveDemographicsAsync(result.Demographics, fileName, province);
+
+
+
+
         var defaultVehicle = await GetOrCreateDefaultVehicle();
         var defaultVehicleId = defaultVehicle.VehicleId;
 
@@ -525,81 +535,482 @@ public class ExcelImportService
         return "Unknown";
     }
 
-    private ImportDemographics ParseDemographics(List<IXLRow> summaryRows)
+    private ImportDemographics ParseDemographics(List<IXLRow> summaryRows, IXLWorksheet ws)
     {
         var demo = new ImportDemographics();
-        for (int i = 0; i < summaryRows.Count; i++)
+
+        if (!summaryRows.Any())
         {
-            var row = summaryRows[i];
-            var label = row.Cell(1).GetString().Trim().ToUpper();
-            if (label == "AGE")
+            _logger.LogWarning("No summary rows found to parse demographics");
+            return demo;
+        }
+
+        
+        var data = new List<string[]>();
+        foreach (var row in summaryRows)
+        {
+            var cells = new string[10];
+            for (int col = 1; col <= 9; col++)
             {
-                for (int j = i + 1; j < summaryRows.Count; j++)
-                {
-                    var valueRow = summaryRows[j];
-                    var age0_7 = IntCell(valueRow, 2);
-                    var age8_12 = IntCell(valueRow, 3);
-                    var age13_18 = IntCell(valueRow, 4);
-                    var age19_35 = IntCell(valueRow, 5);
-                    var age36Plus = IntCell(valueRow, 6);
-                    if (age0_7 + age8_12 + age13_18 + age19_35 + age36Plus > 0)
+                var value = row.Cell(col).GetString().Trim();
+                cells[col - 1] = string.IsNullOrEmpty(value) ? "" : value;
+            }
+            data.Add(cells);
+        }
+
+        ParseRaceDataFromWorksheet(ws, demo);
+        DebugRaceNumbers(data);
+
+        _logger.LogInformation("Parsing demographics from {RowCount} summary rows", data.Count);
+
+        _logger.LogError("=== SUMMARY ROW LABELS ===");
+        for (int di = 0; di < data.Count; di++)
+        {
+            _logger.LogError("Row {Index}: Col0='{Col0}' Col1='{Col1}' Col2='{Col2}' Col3='{Col3}'",
+                di, data[di][0], data[di][1], data[di][2], data[di][3]);
+        }
+        _logger.LogError("=== END SUMMARY LABELS ===");
+
+
+        for (int i = 0; i < data.Count; i++)
+        {
+            if (data[i].Length == 0) continue;
+
+            var label = data[i][0].ToUpper();
+
+            switch (label)
+            {
+                case "DRIVER":
+                    int.TryParse(data[i][1], out int driverMale);
+                    demo.DriverMale = driverMale;
+                    _logger.LogInformation("Driver Male: {Male}", driverMale);
+                    break;
+
+                case "PASSENGER":
+                    int.TryParse(data[i][1], out int passengerMale);
+                    int.TryParse(data[i][2], out int passengerFemale);
+                    demo.PassengerMale = passengerMale;
+                    demo.PassengerFemale = passengerFemale;
+                    _logger.LogInformation("Passenger M/F: {Male}/{Female}", passengerMale, passengerFemale);
+                    break;
+
+                case "PEDESTRIAN":
+                    int.TryParse(data[i][1], out int pedestrianMale);
+                    int.TryParse(data[i][2], out int pedestrianFemale);
+                    demo.PedestrianMale = pedestrianMale;
+                    demo.PedestrianFemale = pedestrianFemale;
+                    _logger.LogInformation("Pedestrian M/F: {Male}/{Female}", pedestrianMale, pedestrianFemale);
+                    break;
+
+                case "CYLIST":
+                case "CYCLIST":
+                    int.TryParse(data[i][1], out int cyclistMale);
+                    int.TryParse(data[i][2], out int cyclistFemale);
+                    demo.CyclistMale = cyclistMale;
+                    demo.CyclistFemale = cyclistFemale;
+                    _logger.LogInformation("Cyclist M/F: {Male}/{Female}", cyclistMale, cyclistFemale);
+                    break;
+
+
+                case "AGE":
+                    if (i + 1 < data.Count)
                     {
-                        demo.Age0to7 = age0_7;
-                        demo.Age8to12 = age8_12;
-                        demo.Age13to18 = age13_18;
-                        demo.Age19to35 = age19_35;
-                        demo.Age36Plus = age36Plus;
-                        break;
+                        var ageValueRow = data[i + 1];
+                        for (int col = 1; col <= 5; col++)
+                        {
+                            var ageLabel = data[i][col].Replace(" ", "").Replace("-", "").ToUpper();
+                            int.TryParse(ageValueRow[col], out int val);
+
+                            switch (ageLabel)
+                            {
+                                case "07": demo.Age0to7 = val; break;
+                                case "0812":
+                                case "812": demo.Age8to12 = val; break;
+                                case "1318": demo.Age13to18 = val; break;
+                                case "1935": demo.Age19to35 = val; break;
+                                case "36":
+                                case "36+": demo.Age36Plus = val; break;
+                            }
+                        }
+                        _logger.LogInformation("Age: 0-7={A1}, 8-12={A2}, 13-18={A3}, 19-35={A4}, 36+={A5}",
+                            demo.Age0to7, demo.Age8to12, demo.Age13to18, demo.Age19to35, demo.Age36Plus);
                     }
-                }
-            }
-            else if (label == "DRIVER")
-            {
-                demo.DriverMale = IntCell(row, 2);
-                demo.DriverFemale = IntCell(row, 3);
-            }
-            else if (label == "PASSENGER")
-            {
-                demo.PassengerMale = IntCell(row, 2);
-                demo.PassengerFemale = IntCell(row, 3);
-            }
-            else if (label == "PEDESTRIAN")
-            {
-                demo.PedestrianMale = IntCell(row, 2);
-                demo.PedestrianFemale = IntCell(row, 3);
-            }
-            else if (label == "CYLIST" || label == "CYCLIST")
-            {
-                demo.CyclistMale = IntCell(row, 2);
-                demo.CyclistFemale = IntCell(row, 3);
-            }
-            else if (label == "RACE")
-            {
-                for (int j = i + 1; j < summaryRows.Count; j++)
-                {
-                    var valueRow = summaryRows[j];
-                    var black = IntCell(valueRow, 2);
-                    var coloured = IntCell(valueRow, 3);
-                    var white = IntCell(valueRow, 4);
-                    var indian = IntCell(valueRow, 5);
-                    var other = IntCell(valueRow, 6);
-                    if (black + coloured + white + indian + other > 0)
+                    break;
+
+                case "RACE":
+                    _logger.LogInformation("Found RACE row at index {RowIndex}", i);
+
+                    // The race labels are in this row (B, C, W, I, O)
+                    // The actual numbers are likely in the NEXT row (i + 1)
+                    if (i + 1 < data.Count)
                     {
+                        var raceDataRow = data[i + 1];
+
+                        // Try to parse race numbers from the next row
+                        int black = 0, coloured = 0, white = 0, indian = 0, other = 0;
+
+                        // Numbers should be in columns 1-5 of the next row
+                        int.TryParse(raceDataRow[1], out black);
+                        int.TryParse(raceDataRow[2], out coloured);
+                        int.TryParse(raceDataRow[3], out white);
+                        int.TryParse(raceDataRow[4], out indian);
+                        int.TryParse(raceDataRow[5], out other);
+
+                        // If no numbers in next row, maybe numbers are in the same row after labels
+                        if (black == 0 && coloured == 0 && white == 0 && indian == 0 && other == 0)
+                        {
+                            // Try same row, but skip the label columns
+                            int.TryParse(data[i][6], out black);  // Column G might have numbers
+                            int.TryParse(data[i][7], out coloured);
+                            int.TryParse(data[i][8], out white);
+                        }
+
                         demo.RaceBlack = black;
                         demo.RaceColoured = coloured;
                         demo.RaceWhite = white;
                         demo.RaceIndian = indian;
                         demo.RaceOther = other;
-                        break;
+
+                        _logger.LogInformation("Race data parsed - B:{B}, C:{C}, W:{W}, I:{I}, O:{O}",
+                            demo.RaceBlack, demo.RaceColoured, demo.RaceWhite, demo.RaceIndian, demo.RaceOther);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("No data row found after RACE header");
+                    }
+                    break;
+
+            }
+        }
+
+        _logger.LogInformation("Demographics Complete - Age Total: {AgeTotal}, Gender Total: {GenderTotal}, Race Total: {RaceTotal}",
+            demo.AgeTotal, demo.GenderTotal, demo.RaceTotal);
+
+        return demo;
+    }
+
+    private void ParseRaceDataFromWorksheet(IXLWorksheet ws, ImportDemographics demo)
+    {
+        _logger.LogInformation("Searching entire worksheet for race data...");
+
+        
+        var allRows = ws.RowsUsed().ToList();
+
+        for (int rowIdx = 0; rowIdx < allRows.Count; rowIdx++)
+        {
+            var row = allRows[rowIdx];
+
+            
+            for (int col = 1; col <= 20; col++) 
+            {
+                var cellValue = row.Cell(col).GetString().Trim().ToUpper();
+
+                if (cellValue == "RACE")
+                {
+                    _logger.LogInformation($"Found RACE at Excel Row {row.RowNumber()}, Column {col}");
+
+                    
+                    int raceBCol = -1, raceCCol = -1, raceWCol = -1, raceICol = -1, raceOCol = -1;
+
+                    for (int searchCol = col + 1; searchCol <= col + 10; searchCol++)
+                    {
+                        var headerValue = row.Cell(searchCol).GetString().Trim().ToUpper();
+                        switch (headerValue)
+                        {
+                            case "B": raceBCol = searchCol; break;
+                            case "C": raceCCol = searchCol; break;
+                            case "W": raceWCol = searchCol; break;
+                            case "I": raceICol = searchCol; break;
+                            case "O": raceOCol = searchCol; break;
+                        }
+                    }
+
+                    
+                    if (rowIdx + 1 < allRows.Count)
+                    {
+                        var dataRow = allRows[rowIdx + 1];
+
+                        if (raceBCol != -1)
+                        {
+                            int.TryParse(dataRow.Cell(raceBCol).GetString().Trim(), out int black);
+                            demo.RaceBlack = black;
+                            _logger.LogInformation($"Race B (Black): {black} at column {raceBCol}");
+                        }
+
+                        if (raceCCol != -1)
+                        {
+                            int.TryParse(dataRow.Cell(raceCCol).GetString().Trim(), out int coloured);
+                            demo.RaceColoured = coloured;
+                            _logger.LogInformation($"Race C (Coloured): {coloured} at column {raceCCol}");
+                        }
+
+                        if (raceWCol != -1)
+                        {
+                            int.TryParse(dataRow.Cell(raceWCol).GetString().Trim(), out int white);
+                            demo.RaceWhite = white;
+                            _logger.LogInformation($"Race W (White): {white} at column {raceWCol}");
+                        }
+
+                        if (raceICol != -1)
+                        {
+                            int.TryParse(dataRow.Cell(raceICol).GetString().Trim(), out int indian);
+                            demo.RaceIndian = indian;
+                            _logger.LogInformation($"Race I (Indian): {indian} at column {raceICol}");
+                        }
+
+                        if (raceOCol != -1)
+                        {
+                            int.TryParse(dataRow.Cell(raceOCol).GetString().Trim(), out int other);
+                            demo.RaceOther = other;
+                            _logger.LogInformation($"Race O (Other): {other} at column {raceOCol}");
+                        }
+                    }
+
+                    return; 
+                }
+            }
+        }
+
+        _logger.LogWarning("Could not find RACE data in worksheet");
+    }
+
+    private void DebugFindRaceTable(IXLWorksheet ws)
+    {
+        _logger.LogError("=== SEARCHING FOR RACE TABLE ===");
+
+        var allRows = ws.RowsUsed().ToList();
+
+        for (int rowIdx = 0; rowIdx < Math.Min(allRows.Count, 50); rowIdx++)
+        {
+            var row = allRows[rowIdx];
+
+            for (int col = 1; col <= 60; col++)
+            {
+                var cellValue = row.Cell(col).GetString().Trim().ToUpper();
+
+                if (cellValue == "RACE")
+                {
+                    _logger.LogError($"Found 'RACE' at Row {row.RowNumber()}, Col {col}");
+
+                    
+                    _logger.LogError($"Row {row.RowNumber()} (RACE row):");
+                    for (int c = col; c <= col + 10; c++)
+                    {
+                        var val = row.Cell(c).GetString().Trim();
+                        if (!string.IsNullOrEmpty(val))
+                        {
+                            _logger.LogError($"  Col{c}: '{val}'");
+                        }
+                    }
+
+                 
+                    if (rowIdx + 1 < allRows.Count)
+                    {
+                        var nextRow = allRows[rowIdx + 1];
+                        _logger.LogError($"Row {nextRow.RowNumber()} (data row):");
+                        for (int c = col; c <= col + 10; c++)
+                        {
+                            var val = nextRow.Cell(c).GetString().Trim();
+                            if (!string.IsNullOrEmpty(val))
+                            {
+                                _logger.LogError($"  Col{c}: '{val}'");
+                            }
+                        }
                     }
                 }
             }
         }
 
-       
-
-        return demo;
+        _logger.LogError("=== END SEARCH ===");
     }
+
+
+    private void DebugRaceNumbers(List<string[]> data)
+    {
+        _logger.LogError("=== FINDING RACE NUMBERS ===");
+
+        // First, find the RACE row
+        int raceRowIndex = -1;
+        for (int i = 0; i < data.Count; i++)
+        {
+            if (data[i][0].Equals("RACE", StringComparison.OrdinalIgnoreCase))
+            {
+                raceRowIndex = i;
+                _logger.LogError($"RACE row found at index {raceRowIndex}");
+                break;
+            }
+        }
+
+        if (raceRowIndex != -1)
+        {
+            // Log the RACE row and surrounding rows
+            for (int offset = -2; offset <= 3; offset++)
+            {
+                int rowIndex = raceRowIndex + offset;
+                if (rowIndex >= 0 && rowIndex < data.Count)
+                {
+                    _logger.LogError($"Row {rowIndex} (offset {offset}):");
+                    for (int col = 0; col < data[rowIndex].Length; col++)
+                    {
+                        if (!string.IsNullOrEmpty(data[rowIndex][col]))
+                        {
+                            _logger.LogError($"  Col{col}: '{data[rowIndex][col]}'");
+                        }
+                    }
+                }
+            }
+        }
+
+        // Also search for any numbers near the race labels
+        _logger.LogError("Searching for numbers near race labels:");
+        for (int i = 0; i < data.Count; i++)
+        {
+            for (int col = 0; col < data[i].Length; col++)
+            {
+                string value = data[i][col];
+                if (!string.IsNullOrEmpty(value) && int.TryParse(value, out int num))
+                {
+                    // Check if this is near a race label
+                    bool nearRaceLabel = false;
+
+                    // Check same row for race labels
+                    if (data[i][0] == "B" || data[i][0] == "C" || data[i][0] == "W" ||
+                        data[i][0] == "I" || data[i][0] == "O")
+                    {
+                        nearRaceLabel = true;
+                    }
+
+                    // Check previous row for RACE header
+                    if (i > 0 && data[i - 1][0] == "RACE")
+                    {
+                        nearRaceLabel = true;
+                    }
+
+                    // Check next row for race labels
+                    if (i + 1 < data.Count && (data[i + 1][0] == "B" || data[i + 1][0] == "C"))
+                    {
+                        nearRaceLabel = true;
+                    }
+
+                    if (nearRaceLabel)
+                    {
+                        _logger.LogError($"Found number {num} at Row {i}, Col {col} - near race data");
+                    }
+                }
+            }
+        }
+
+        _logger.LogError("=== END RACE SEARCH ===");
+    }
+
+    private (DateOnly From, DateOnly To) ExtractPeriodFromFileName(string fileName, string province)
+    {
+        // Try to extract date from filename like "EHL Acc Data 18.02.2025.xlsx"
+        var match = Regex.Match(fileName, @"(\d{1,2})\.(\d{1,2})\.(\d{4})");
+
+        if (match.Success)
+        {
+            int day = int.Parse(match.Groups[1].Value);
+            int month = int.Parse(match.Groups[2].Value);
+            int year = int.Parse(match.Groups[3].Value);
+
+            var fromDate = new DateOnly(year, month, 1);
+            var toDate = fromDate.AddMonths(1).AddDays(-1);
+
+            _logger.LogInformation("Extracted period from filename: {From} to {To}", fromDate, toDate);
+            return (fromDate, toDate);
+        }
+
+        // Default to current month if no date found
+        var today = DateOnly.FromDateTime(DateTime.Now);
+        var defaultFrom = new DateOnly(today.Year, today.Month, 1);
+        var defaultTo = defaultFrom.AddMonths(1).AddDays(-1);
+
+        _logger.LogWarning("No date found in filename, using current period: {From} to {To}", defaultFrom, defaultTo);
+        return (defaultFrom, defaultTo);
+    }
+
+    private async Task SaveDemographicsAsync(ImportDemographics demographics, string fileName, string province)
+    {
+        if (!demographics.HasAgeData && !demographics.HasGenderData && !demographics.HasRaceData)
+        {
+            _logger.LogInformation("No demographics data to save");
+            return;
+        }
+
+        var (periodFrom, periodTo) = ExtractPeriodFromFileName(fileName, province);
+
+        // Check if record already exists for this period and province
+        var existingRecord = await _context.CrashDemographics
+            .FirstOrDefaultAsync(d => d.PeriodFrom == periodFrom &&
+                                      d.PeriodTo == periodTo &&
+                                      d.ProvinceCode == province);
+
+        if (existingRecord != null)
+        {
+            // Update existing record
+            existingRecord.Age0to7 = demographics.Age0to7;
+            existingRecord.Age8to12 = demographics.Age8to12;
+            existingRecord.Age13to18 = demographics.Age13to18;
+            existingRecord.Age19to35 = demographics.Age19to35;
+            existingRecord.Age36Plus = demographics.Age36Plus;
+            existingRecord.DriverMale = demographics.DriverMale;
+            existingRecord.DriverFemale = demographics.DriverFemale;
+            existingRecord.PassengerMale = demographics.PassengerMale;
+            existingRecord.PassengerFemale = demographics.PassengerFemale;
+            existingRecord.PedestrianMale = demographics.PedestrianMale;
+            existingRecord.PedestrianFemale = demographics.PedestrianFemale;
+            existingRecord.CyclistMale = demographics.CyclistMale;
+            existingRecord.CyclistFemale = demographics.CyclistFemale;
+            existingRecord.RaceBlack = demographics.RaceBlack;
+            existingRecord.RaceColoured = demographics.RaceColoured;
+            existingRecord.RaceWhite = demographics.RaceWhite;
+            existingRecord.RaceIndian = demographics.RaceIndian;
+            existingRecord.RaceOther = demographics.RaceOther;
+            existingRecord.CreatedAt = DateTime.UtcNow;
+
+            _logger.LogInformation("Updated existing demographics record for {Province} - Period: {PeriodFrom} to {PeriodTo}",
+                province, periodFrom, periodTo);
+        }
+        else
+        {
+            // Create new record
+            var record = new CrashDemographicRecord
+            {
+                PeriodFrom = periodFrom,
+                PeriodTo = periodTo,
+                ProvinceCode = province,
+                Age0to7 = demographics.Age0to7,
+                Age8to12 = demographics.Age8to12,
+                Age13to18 = demographics.Age13to18,
+                Age19to35 = demographics.Age19to35,
+                Age36Plus = demographics.Age36Plus,
+                DriverMale = demographics.DriverMale,
+                DriverFemale = demographics.DriverFemale,
+                PassengerMale = demographics.PassengerMale,
+                PassengerFemale = demographics.PassengerFemale,
+                PedestrianMale = demographics.PedestrianMale,
+                PedestrianFemale = demographics.PedestrianFemale,
+                CyclistMale = demographics.CyclistMale,
+                CyclistFemale = demographics.CyclistFemale,
+                RaceBlack = demographics.RaceBlack,
+                RaceColoured = demographics.RaceColoured,
+                RaceWhite = demographics.RaceWhite,
+                RaceIndian = demographics.RaceIndian,
+                RaceOther = demographics.RaceOther,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _context.CrashDemographics.Add(record);
+            _logger.LogInformation("Added new demographics record for {Province} - Period: {PeriodFrom} to {PeriodTo}",
+                province, periodFrom, periodTo);
+        }
+
+        await _context.SaveChangesAsync();
+        _logger.LogInformation("Demographics saved successfully for {Province}", province);
+    }
+ 
+  
     private static int IntCell(IXLRow row, int col)
     {
         try
@@ -617,6 +1028,9 @@ public class ExcelImportService
         catch { }
         return 0;
     }
+
+ 
+
 
     private class VehicleEntry
     {

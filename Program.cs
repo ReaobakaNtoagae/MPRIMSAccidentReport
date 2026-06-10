@@ -6,6 +6,9 @@ using Newtonsoft.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Logging.AddConsole();
+builder.Logging.AddDebug();
+builder.Logging.AddConfiguration(builder.Configuration.GetSection("Logging"));
 
 builder.Services.AddControllersWithViews()
     .AddNewtonsoftJson(options =>
