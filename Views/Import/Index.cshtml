@@ -13,202 +13,216 @@
     };
 }
 
-<div style="max-width:620px;">
+<style>
+    .imp-wrap {
+        max-width: 560px;
+    }
+
+    .imp-card {
+        background: #fff;
+        border-radius: 10px;
+        border: 1px solid #c8e6c9;
+        box-shadow: 0 2px 8px rgba(0,0,0,.06);
+        overflow: hidden;
+        margin-bottom: 14px;
+    }
+
+    .imp-card-head {
+        padding: 11px 20px;
+        border-bottom: 2px solid #e8f5e9;
+        font-size: .72rem;
+        text-transform: uppercase;
+        letter-spacing: .8px;
+        color: #2e7d32;
+        font-weight: 700;
+    }
+
+    .imp-card-body {
+        padding: 20px;
+    }
+
+    .imp-field {
+        margin-bottom: 16px;
+    }
+
+        .imp-field:last-child {
+            margin-bottom: 0;
+        }
+
+    .imp-field-label {
+        font-size: .72rem;
+        font-weight: 600;
+        color: #444;
+        display: block;
+        margin-bottom: 5px;
+    }
+
+    /* Guide */
+    .imp-guide-row {
+        display: grid;
+        grid-template-columns: 80px 1fr;
+        gap: 4px 14px;
+        padding: 7px 0;
+        border-bottom: 1px solid #e8f5e9;
+        align-items: start;
+    }
+
+        .imp-guide-row:last-child {
+            border-bottom: none;
+        }
+
+    .imp-guide-key {
+        font-size: .70rem;
+        color: #888;
+        font-weight: 600;
+        padding-top: 2px;
+    }
+
+    .imp-guide-val {
+        font-size: .79rem;
+        color: #333;
+        line-height: 1.5;
+    }
+</style>
+
+<div class="imp-wrap">
 
     @if (TempData["ImportError"] != null)
     {
         <div id="errMsg" data-msg="@TempData["ImportError"]"></div>
     }
 
-    <div style="background:#fff;border-radius:10px;border:1px solid #c8e6c9;
-                box-shadow:0 2px 8px rgba(0,0,0,.06);padding:28px 32px;margin-bottom:20px;">
+    <div class="imp-card">
+        <div class="imp-card-head">Upload Accident Report Workbook</div>
+        <div class="imp-card-body">
 
-        <div style="font-size:.78rem;text-transform:uppercase;letter-spacing:.7px;
-                    color:#2e7d32;font-weight:700;margin-bottom:18px;">
-            Upload Accident Report Workbook
-        </div>
-
-        <form method="post"
-              asp-controller="Import"
-              asp-action="Upload"
-              enctype="multipart/form-data"
-              id="uploadForm">
-            @Html.AntiForgeryToken()
-
-            
-            <div style="margin-bottom:16px;">
-                <div style="font-size:.75rem;color:#555;margin-bottom:6px;font-weight:600;">
-                    Province (applied to all imported records)
-                </div>
-                <div id="provinceSelect"></div>
+            <form method="post"
+                  asp-controller="Import"
+                  asp-action="Upload"
+                  enctype="multipart/form-data"
+                  id="uploadForm">
+                @Html.AntiForgeryToken()
                 <input type="hidden" id="provinceHidden" name="province" value="MP" />
-            </div>
 
-            <div style="margin-bottom:20px;">
-                <div style="font-size:.75rem;color:#555;margin-bottom:6px;font-weight:600;">
-                    Excel File (.xlsx)
+                <div class="imp-field">
+                    <label class="imp-field-label">Province — applied to all imported records</label>
+                    <div id="provinceSelect"></div>
                 </div>
-                <label for="fileInput" id="fileDropZone"
-                       style="display:flex;flex-direction:column;align-items:center;justify-content:center;
-                              gap:8px;padding:28px 20px;border:2px dashed #a5d6a7;border-radius:8px;
-                              background:#f9fdf9;cursor:pointer;transition:all .2s;">
-                    <span style="font-size:1.6rem;">📂</span>
-                    <span style="font-size:.84rem;color:#555;">
-                        Click to select or drop an Excel workbook here
-                    </span>
-                    <span id="fileNameDisplay"
-                          style="font-size:.78rem;color:#888;font-style:italic;">
-                        No file selected
-                    </span>
-                </label>
-                <input type="file"
-                       id="fileInput"
-                       name="file"
-                       accept=".xlsx,.xls"
-                       style="display:none;"
-                       required />
-            </div>
 
-          
-            <button type="submit"
-                    id="submitBtn"
-                    disabled
-                    style="width:100%;padding:11px 0;background:#2e7d32;color:#fff;
-                           border:none;border-radius:7px;font-size:.88rem;font-weight:600;
-                           cursor:pointer;transition:background .2s;letter-spacing:.2px;">
-                Import Accidents
-            </button>
-        </form>
+                <div class="imp-field">
+                    <label class="imp-field-label">Excel File (.xlsx / .xls — maximum 10 MB)</label>
+                    <div id="fileUploader"></div>
+                </div>
+
+                <div class="imp-field">
+                    <div id="btnSubmit"></div>
+                </div>
+
+            </form>
+        </div>
     </div>
 
-    <!-- Format guide -->
-    <div style="background:#f1f8f1;border-radius:10px;border:1px solid #c8e6c9;
-                padding:20px 24px;">
-        <div style="font-size:.78rem;text-transform:uppercase;letter-spacing:.7px;
-                    color:#2e7d32;font-weight:700;margin-bottom:12px;">
-            Expected Workbook Format
-        </div>
-        <div style="font-size:.82rem;color:#444;line-height:1.7;">
-            <div style="display:grid;grid-template-columns:120px 1fr;gap:4px 16px;">
-                <div style="color:#888;font-size:.76rem;">Row 1</div>
-                <div>Report title &amp; period (e.g. ACCIDENT REPORT: 01 – 28 FEBRUARY 2025)</div>
-                <div style="color:#888;font-size:.76rem;">Row 3</div>
-                <div>District name (e.g. EHLANZENI)</div>
-                <div style="color:#888;font-size:.76rem;">Row 6</div>
-                <div>Column headers: SAPS | AR NO | CAS | DATE | DAY | TIME | ROUTE | LOCATION | TYPE | …</div>
-                <div style="color:#888;font-size:.76rem;">Row 7+</div>
-                <div>One accident per row</div>
-                <div style="color:#888;font-size:.76rem;">Cols J–W</div>
-                <div>Fatal / Serious / Slight injury counts (D=Driver, P=Passenger, PD=Pedestrian, C=Cyclist)</div>
-                <div style="color:#888;font-size:.76rem;">Col X</div>
-                <div>Vehicles involved (e.g. SED / TAXI)</div>
-                <div style="color:#888;font-size:.76rem;">Stop row</div>
-                <div>Row starting with TOTAL or GRAND TOTAL — import stops here</div>
+    <div class="imp-card">
+        <div class="imp-card-head">Expected Workbook Format</div>
+        <div class="imp-card-body">
+            <div class="imp-guide-row">
+                <div class="imp-guide-key">Row 1</div>
+                <div class="imp-guide-val">Report title and period (e.g. ACCIDENT REPORT: 01 – 28 FEBRUARY 2025)</div>
+            </div>
+            <div class="imp-guide-row">
+                <div class="imp-guide-key">Row 3</div>
+                <div class="imp-guide-val">District name (e.g. EHLANZENI)</div>
+            </div>
+            <div class="imp-guide-row">
+                <div class="imp-guide-key">Row 6</div>
+                <div class="imp-guide-val">Headers: SAPS | AR NO | CAS | DATE | DAY | TIME | ROUTE | LOCATION | TYPE | …</div>
+            </div>
+            <div class="imp-guide-row">
+                <div class="imp-guide-key">Row 7+</div>
+                <div class="imp-guide-val">One accident per row</div>
+            </div>
+            <div class="imp-guide-row">
+                <div class="imp-guide-key">Cols J – W</div>
+                <div class="imp-guide-val">Injury counts (Fatal / Serious / Slight) by role — Driver, Passenger, Pedestrian, Cyclist</div>
+            </div>
+            <div class="imp-guide-row">
+                <div class="imp-guide-key">Col X</div>
+                <div class="imp-guide-val">Vehicles involved (e.g. SED / TAXI)</div>
+            </div>
+            <div class="imp-guide-row">
+                <div class="imp-guide-key">Stop row</div>
+                <div class="imp-guide-val">Row beginning with TOTAL or GRAND TOTAL — import stops here</div>
             </div>
         </div>
     </div>
+
 </div>
 
 @section Scripts {
     <script>
         $(function () {
 
-            
+            // ── Error from previous attempt ───────────────────────────
             var errMsg = $("#errMsg").data("msg");
             if (errMsg) DevExpress.ui.notify(errMsg, "error", 5000);
 
-            
+            // ── Province select ───────────────────────────────────────
             var provinceItems = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
                             provinces.Select(p => new { text = $"{p.Code} — {p.Name}", value = p.Code })
                     ));
 
         $("#provinceSelect").dxSelectBox({
-            items:       provinceItems,
-            displayExpr: "text",
-            valueExpr:   "value",
-            value:       "MP",
+            items:          provinceItems,
+            displayExpr:    "text",
+            valueExpr:      "value",
+            value:          "MP",
+            width:          "100%",
             onValueChanged: function (e) {
                 $("#provinceHidden").val(e.value);
             }
         });
 
-            
-            var fileInput  = document.getElementById("fileInput");
-            var submitBtn  = document.getElementById("submitBtn");
-            var dropZone   = document.getElementById("fileDropZone");
-            var nameDisplay= document.getElementById("fileNameDisplay");
-
-            function onFileSelected(file) {
-                if (!file) return;
-                var ext = file.name.split('.').pop().toLowerCase();
-                if (ext !== "xlsx" && ext !== "xls") {
-                    DevExpress.ui.notify("Only .xlsx and .xls files are supported.", "error", 4000);
-                    fileInput.value = "";
-                    nameDisplay.textContent = "No file selected";
-                    submitBtn.disabled = true;
-                    return;
+            // ── File uploader ─────────────────────────────────────────
+            // uploadMode:"useForm" means the widget does NOT upload
+            // automatically — it just holds the file for the form POST.
+            // The name "file" matches ImportController.Upload(IFormFile file).
+            var fileUploaderInst = $("#fileUploader").dxFileUploader({
+                name:             "file",
+                uploadMode:       "useForm",
+                accept:           ".xlsx,.xls",
+                multiple:         false,
+                selectButtonText: "Select Excel file",
+                labelText:        "or drop it here",
+                allowedFileExtensions: [".xlsx", ".xls"],
+                maxFileSize:      10 * 1024 * 1024,   // 10 MB
+                invalidFileExtensionMessage: "Only .xlsx and .xls files are supported.",
+                invalidMaxFileSizeMessage:   "File size must not exceed 10 MB.",
+                onValueChanged: function (e) {
+                    var hasFile = e.value && e.value.length > 0;
+                    submitBtnInst.option("disabled", !hasFile);
                 }
-                if (file.size > 10 * 1024 * 1024) {
-                    DevExpress.ui.notify("File too large. Maximum 10 MB.", "error", 4000);
-                    fileInput.value = "";
-                    nameDisplay.textContent = "No file selected";
-                    submitBtn.disabled = true;
-                    return;
+            }).dxFileUploader("instance");
+
+            // ── Submit button ─────────────────────────────────────────
+            var submitBtnInst = $("#btnSubmit").dxButton({
+                text:          "Import Records",
+                type:          "default",
+                icon:          "upload",
+                width:         "100%",
+                disabled:      true,
+                onClick: function () {
+                    var files = fileUploaderInst.option("value");
+                    if (!files || files.length === 0) {
+                        DevExpress.ui.notify("Please select an Excel file first.", "warning", 3000);
+                        return;
+                    }
+                    submitBtnInst.option("text",     "Importing — please wait…");
+                    submitBtnInst.option("disabled", true);
+                    DevExpress.ui.notify("Importing workbook. This may take a moment.", "info", 10000);
+                    document.getElementById("uploadForm").submit();
                 }
-                nameDisplay.textContent = file.name;
-                nameDisplay.style.color = "#2e7d32";
-                nameDisplay.style.fontStyle = "normal";
-                dropZone.style.borderColor = "#2e7d32";
-                dropZone.style.background  = "#f1f8f1";
-                submitBtn.disabled = false;
-            }
+            }).dxButton("instance");
 
-            
-            fileInput.addEventListener("change", function () {
-                onFileSelected(this.files[0]);
-            });
-
-           
-            dropZone.addEventListener("dragover", function (e) {
-                e.preventDefault();
-                dropZone.style.borderColor  = "#2e7d32";
-                dropZone.style.background   = "#e8f5e9";
-            });
-
-            dropZone.addEventListener("dragleave", function () {
-                dropZone.style.borderColor  = "#a5d6a7";
-                dropZone.style.background   = "#f9fdf9";
-            });
-
-            dropZone.addEventListener("drop", function (e) {
-                e.preventDefault();
-                dropZone.style.borderColor  = "#a5d6a7";
-                dropZone.style.background   = "#f9fdf9";
-                var file = e.dataTransfer.files[0];
-                if (file) {
-                    
-                    var dt = new DataTransfer();
-                    dt.items.add(file);
-                    fileInput.files = dt.files;
-                    onFileSelected(file);
-                }
-            });
-
-            
-            document.getElementById("uploadForm").addEventListener("submit", function () {
-                submitBtn.disabled    = true;
-                submitBtn.textContent = "Importing — please wait...";
-                submitBtn.style.background = "#4a8554";
-                DevExpress.ui.notify("Importing workbook — this may take a moment...", "info", 10000);
-            });
-
-           
-            submitBtn.addEventListener("mouseover", function () {
-                if (!this.disabled) this.style.background = "#256328";
-            });
-            submitBtn.addEventListener("mouseout", function () {
-                if (!this.disabled) this.style.background = "#2e7d32";
-            });
         });
     </script>
 }

@@ -4,13 +4,13 @@
 }
 
 <style>
-    
+
     .sr-page {
         max-width: 620px;
         padding-bottom: 40px;
     }
 
-  
+
     .sr-page-header {
         display: flex;
         align-items: center;
@@ -44,7 +44,7 @@
         margin: 0;
     }
 
- 
+
     .sr-card {
         background: #fff;
         border: 1px solid #dde8dd;
@@ -95,7 +95,7 @@
         padding: 18px 18px 20px;
     }
 
-   
+
     .sr-date-row {
         display: grid;
         grid-template-columns: 1fr auto 1fr;
@@ -111,7 +111,7 @@
         white-space: nowrap;
     }
 
-   
+
     .sr-label {
         display: block;
         font-size: .74rem;
@@ -122,7 +122,7 @@
         margin-bottom: 5px;
     }
 
-   
+
     .sr-input {
         width: 100%;
         height: 38px;
@@ -149,14 +149,14 @@
             cursor: not-allowed;
         }
 
- 
+
     .sr-toggle-row {
         display: flex;
         align-items: center;
         gap: 10px;
         margin-bottom: 16px;
     }
-  
+
 
     .sr-toggle-wrap {
         position: relative;
@@ -209,7 +209,7 @@
         user-select: none;
     }
 
-  
+
     .sr-submit-row {
         display: flex;
         align-items: center;
@@ -249,14 +249,14 @@
             height: 16px;
         }
 
-    
+
     .sr-hint {
         font-size: .75rem;
         color: #888;
         margin-top: 10px;
     }
 
- 
+
     .sr-quickpick {
         display: flex;
         gap: 6px;
@@ -377,7 +377,7 @@
 
         <div class="sr-submit-row">
             <button type="submit" class="sr-btn-generate">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <svg viewBox="0 0 24 24" fill="#FFFFF" stroke="currentColor" stroke-width="2.2">
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                     <polyline points="14 2 14 8 20 8" />
                     <line x1="16" y1="13" x2="8" y2="13" />
@@ -400,7 +400,7 @@
             const toggle     = document.getElementById('priorToggle');
             const priorFields= document.getElementById('priorFields');
 
-            
+
             function syncToggle() {
                 const on = toggle.checked;
                 priorFields.style.display  = on ? '' : 'none';
@@ -411,7 +411,7 @@
             toggle.addEventListener('change', syncToggle);
             syncToggle();
 
-          
+
             function shiftYear(val, delta) {
                 if (!val) return '';
                 const d = new Date(val);
@@ -425,10 +425,10 @@
                 if (toggle.checked) pToInput.value = shiftYear(toInput.value, -1);
             });
 
-           
+
             function getMondayOf(offset) {
                 const today = new Date();
-                const dow   = today.getDay() || 7; 
+                const dow   = today.getDay() || 7;
                 const mon   = new Date(today);
                 mon.setDate(today.getDate() - (dow - 1) + offset * 7);
                 mon.setHours(0, 0, 0, 0);
@@ -448,13 +448,13 @@
                         pFromInput.value = fmt(new Date(mon.setFullYear(mon.getFullYear() - 1)));
                         pToInput.value   = fmt(new Date(sun.setFullYear(sun.getFullYear() - 1)));
                     }
-                  
+
                     document.querySelectorAll('.sr-qp-btn').forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
                 });
             });
 
-            
+
             const currentFrom = fromInput.value;
             document.querySelectorAll('.sr-qp-btn').forEach(btn => {
                 const { mon } = getMondayOf(parseInt(btn.dataset.offset, 10));

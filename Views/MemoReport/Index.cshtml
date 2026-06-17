@@ -5,289 +5,351 @@
 <style>
     .memo-layout {
         display: grid;
-        grid-template-columns: 340px 1fr;
+        grid-template-columns: 320px 1fr;
         gap: 20px;
         align-items: start;
     }
 
-    .card {
+    /* ── Shared card ── */
+    .memo-card {
         background: #fff;
         border-radius: 10px;
         border: 1px solid #c8e6c9;
         box-shadow: 0 2px 8px rgba(0,0,0,.06);
-        margin-bottom: 16px;
+        margin-bottom: 14px;
         overflow: hidden;
     }
 
-    .card-header {
-        padding: 12px 18px;
+    .memo-card-head {
+        padding: 11px 18px;
         border-bottom: 2px solid #e8f5e9;
-        font-size: .75rem;
+        font-size: .72rem;
         text-transform: uppercase;
-        letter-spacing: .7px;
+        letter-spacing: .8px;
         color: #2e7d32;
         font-weight: 700;
         display: flex;
         align-items: center;
         justify-content: space-between;
+        cursor: pointer;
+        user-select: none;
     }
 
-    .card-body {
+    .memo-card-head-badge {
+        font-size: .68rem;
+        text-transform: none;
+        letter-spacing: 0;
+        color: #999;
+        font-weight: 400;
+    }
+
+    .memo-card-body {
         padding: 18px;
     }
 
-    .field-label {
-        font-size: .72rem;
-        color: #555;
-        font-weight: 600;
-        margin-bottom: 4px;
-        margin-top: 10px;
+    .memo-field {
+        margin-bottom: 12px;
     }
 
-        .field-label:first-child {
-            margin-top: 0;
+        .memo-field:last-child {
+            margin-bottom: 0;
         }
 
-    .two-col {
+        .memo-field label {
+            display: block;
+            font-size: .71rem;
+            font-weight: 600;
+            color: #444;
+            margin-bottom: 4px;
+        }
+
+    .memo-two-col {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 10px;
     }
 
-    /* Preview sections */
-    .preview-section {
-        margin-bottom: 20px;
+    .memo-divider {
+        border: none;
+        border-top: 1px solid #e8f5e9;
+        margin: 14px 0;
     }
 
-    .preview-section-title {
-        font-size: .75rem;
+    /* ── Preview panel ── */
+    .pv-empty {
+        padding: 60px 20px;
+        text-align: center;
+        color: #bbb;
+        font-size: .85rem;
+    }
+
+        .pv-empty i {
+            font-size: 2rem;
+            display: block;
+            margin-bottom: 10px;
+        }
+
+    .pv-section {
+        margin-bottom: 24px;
+    }
+
+    .pv-section-title {
+        font-size: .68rem;
         text-transform: uppercase;
-        letter-spacing: .6px;
-        color: #2e7d32;
+        letter-spacing: .9px;
+        color: #999;
         font-weight: 700;
-        margin-bottom: 8px;
+        margin-bottom: 10px;
         padding-bottom: 6px;
-        border-bottom: 1px solid #e8f5e9;
+        border-bottom: 1px solid #f0f0f0;
     }
 
-    .stats-grid {
+    /* Stat tiles — minimal */
+    .pv-tiles {
         display: grid;
         grid-template-columns: repeat(4, 1fr);
-        gap: 10px;
-        margin-bottom: 12px;
+        gap: 8px;
+        margin-bottom: 4px;
     }
 
-    .stat-tile {
-        background: #f1f8f1;
-        border-radius: 8px;
-        padding: 10px 12px;
+    .pv-tile {
+        border: 1px solid #ebebeb;
+        border-radius: 7px;
+        padding: 10px 10px 8px;
         text-align: center;
-        border: 1px solid #c8e6c9;
     }
 
-        .stat-tile .st-label {
-            font-size: .68rem;
-            color: #666;
-            font-weight: 600;
-            text-transform: uppercase;
-            margin-bottom: 4px;
-        }
-
-        .stat-tile .st-prev {
-            font-size: .8rem;
-            color: #999;
-        }
-
-        .stat-tile .st-curr {
-            font-size: 1.3rem;
-            font-weight: 700;
-            color: #1b5e20;
-        }
-
-        .stat-tile .st-var {
-            font-size: .72rem;
-            font-weight: 700;
-            margin-top: 2px;
-        }
-
-    .var-up {
-        color: #b71c1c;
+    .pv-tile-label {
+        font-size: .65rem;
+        text-transform: uppercase;
+        letter-spacing: .5px;
+        color: #aaa;
+        font-weight: 600;
+        margin-bottom: 6px;
     }
 
-    .var-down {
-        color: #2e7d32;
+    .pv-tile-prev {
+        font-size: .72rem;
+        color: #ccc;
+        margin-bottom: 2px;
     }
 
-    .preview-table {
+    .pv-tile-curr {
+        font-size: 1.4rem;
+        font-weight: 500;
+        color: #222;
+        line-height: 1;
+    }
+
+    .pv-tile-var {
+        font-size: .68rem;
+        font-weight: 700;
+        margin-top: 4px;
+        letter-spacing: .2px;
+    }
+
+    .pv-up {
+        color: #c0392b;
+    }
+
+    .pv-down {
+        color: #27ae60;
+    }
+
+    .pv-flat {
+        color: #aaa;
+    }
+
+    /* Minimal tables */
+    .pv-table {
         width: 100%;
         border-collapse: collapse;
         font-size: .78rem;
-        margin-bottom: 8px;
     }
 
-        .preview-table th {
-            background: #1F3864;
-            color: #fff;
+        .pv-table thead tr {
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .pv-table th {
+            font-size: .67rem;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            font-weight: 600;
+            color: #999;
+            padding: 5px 10px 7px;
+            text-align: right;
+        }
+
+            .pv-table th:first-child {
+                text-align: left;
+            }
+
+        .pv-table td {
             padding: 6px 10px;
-            text-align: center;
-            font-size: .72rem;
+            text-align: right;
+            color: #444;
+            border-bottom: 1px solid #f5f5f5;
         }
 
-            .preview-table th:first-child {
+            .pv-table td:first-child {
                 text-align: left;
+                color: #222;
+                font-weight: 500;
             }
 
-        .preview-table td {
-            padding: 5px 10px;
-            text-align: center;
-            border-bottom: 1px solid #f0f0f0;
-        }
-
-            .preview-table td:first-child {
-                text-align: left;
-                font-weight: 600;
-                color: #333;
+            .pv-table td.pv-prev {
+                color: #ccc;
             }
 
-        .preview-table tr:nth-child(even) td {
-            background: #f8f9ff;
-        }
+            .pv-table td.pv-var {
+                font-weight: 700;
+            }
 
-    .collapsible-header {
-        cursor: pointer;
-        user-select: none;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
+    .pv-summary {
+        background: #fafafa;
+        border: 1px solid #f0f0f0;
+        border-radius: 7px;
+        padding: 14px 16px;
     }
 
-        .collapsible-header .toggle {
-            font-size: .8rem;
-            transition: transform .2s;
-        }
+    .pv-summary-row {
+        display: flex;
+        align-items: baseline;
+        gap: 6px;
+        font-size: .81rem;
+        color: #444;
+        padding: 3px 0;
+    }
 
-        .collapsible-header.collapsed .toggle {
-            transform: rotate(-90deg);
-        }
+    .pv-summary-key {
+        color: #aaa;
+        min-width: 80px;
+        font-size: .73rem;
+    }
 
-    .loading-overlay {
+    .pv-summary-val {
+        font-weight: 600;
+        color: #222;
+    }
+
+    /* Loading overlay */
+    .memo-loading {
         display: none;
         position: fixed;
         inset: 0;
-        background: rgba(0,0,0,.35);
+        background: rgba(0,0,0,.32);
         z-index: 9999;
         align-items: center;
         justify-content: center;
         flex-direction: column;
-        gap: 16px;
+        gap: 14px;
     }
 
-        .loading-overlay.show {
+        .memo-loading.show {
             display: flex;
         }
 
-    .loading-spinner {
-        width: 52px;
-        height: 52px;
-        border: 5px solid rgba(255,255,255,.3);
+    .memo-spinner {
+        width: 44px;
+        height: 44px;
+        border: 4px solid rgba(255,255,255,.25);
         border-top-color: #fff;
         border-radius: 50%;
-        animation: spin .8s linear infinite;
+        animation: memo-spin .75s linear infinite;
     }
 
-    @@keyframes spin {
+    .memo-loading-text {
+        color: #fff;
+        font-size: .9rem;
+        font-weight: 500;
+    }
+
+    @@keyframes memo-spin {
         to {
             transform: rotate(360deg);
         }
     }
-
-    .loading-text {
-        color: #fff;
-        font-size: 1rem;
-        font-weight: 600;
-    }
 </style>
 
-
-<div class="loading-overlay" id="loadingOverlay">
-    <div class="loading-spinner"></div>
-    <div class="loading-text" id="loadingText">Generating report...</div>
+<div class="memo-loading" id="loadingOverlay">
+    <div class="memo-spinner"></div>
+    <div class="memo-loading-text" id="loadingText">Loading…</div>
 </div>
 
 <div class="memo-layout">
 
-    <!-- ── LEFT PANEL: Controls ──────────────────────────────── -->
+    <!-- ── LEFT: Controls ─────────────────────────────────────── -->
     <div>
 
-        
-        <div class="card">
-            <div class="card-header">📅 Report Period</div>
-            <div class="card-body">
-                <div class="field-label">Report Period — From</div>
-                <div id="dateFromBox"></div>
-                <div class="field-label">Report Period — To</div>
-                <div id="dateToBox"></div>
+        <!-- Period -->
+        <div class="memo-card">
+            <div class="memo-card-head" style="cursor:default;">Report Period</div>
+            <div class="memo-card-body">
+                <div class="memo-field">
+                    <label>From</label>
+                    <div id="dateFromBox"></div>
+                </div>
+                <div class="memo-field">
+                    <label>To</label>
+                    <div id="dateToBox"></div>
+                </div>
 
-                <div style="margin:14px 0 8px;padding-top:12px;border-top:1px solid #e8f5e9;
-                            font-size:.72rem;color:#888;font-weight:600;text-transform:uppercase;
-                            letter-spacing:.5px;">
+                <hr class="memo-divider" />
+
+                <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.6px;
+                            color:#aaa;font-weight:700;margin-bottom:10px;">
                     Comparison Period
                 </div>
-
-                <div class="field-label">Compare Against — From</div>
-                <div id="compFromBox"></div>
-                <div class="field-label">Compare Against — To</div>
-                <div id="compToBox"></div>
-
-                <div style="margin-top:14px;">
-                    <div id="btnAutoFill"></div>
+                <div class="memo-field">
+                    <label>Compare From</label>
+                    <div id="compFromBox"></div>
                 </div>
+                <div class="memo-field" style="margin-bottom:14px;">
+                    <label>Compare To</label>
+                    <div id="compToBox"></div>
+                </div>
+                <div id="btnAutoFill"></div>
             </div>
         </div>
 
-       
-        <div class="card">
-            <div class="card-header collapsible-header" id="hdrToggle">
-                📝 Memo Header <span class="toggle">▼</span>
+        <!-- Memo Header -->
+        <div class="memo-card">
+            <div class="memo-card-head" id="hdrToggle">
+                <span>Memo Header</span>
+                <i class="ti ti-chevron-down" id="hdrChevron" style="font-size:13px;transition:transform .2s;" aria-hidden="true"></i>
             </div>
-            <div class="card-body" id="hdrBody">
-                <div class="two-col">
-                    <div>
-                        <div class="field-label">Report Date</div>
+            <div class="memo-card-body" id="hdrBody">
+                <div class="memo-two-col" style="margin-bottom:12px;">
+                    <div class="memo-field" style="margin-bottom:0;">
+                        <label>Report Date</label>
                         <div id="reportDateBox"></div>
                     </div>
-                    <div>
-                        <div class="field-label">Reference No.</div>
+                    <div class="memo-field" style="margin-bottom:0;">
+                        <label>Reference No.</label>
                         <div id="refNumBox"></div>
                     </div>
                 </div>
-
-                <div class="field-label">To — Name</div>
-                <div id="toNameBox"></div>
-                <div class="field-label">To — Title</div>
-                <div id="toTitleBox"></div>
-
-                <div class="field-label">From — Name</div>
-                <div id="fromNameBox"></div>
-                <div class="field-label">From — Title</div>
-                <div id="fromTitleBox"></div>
-
-                <div class="two-col" style="margin-top:0;">
-                    <div>
-                        <div class="field-label">Enquiry Name</div>
+                <div class="memo-field"><label>To — Name</label><div id="toNameBox"></div></div>
+                <div class="memo-field"><label>To — Title</label><div id="toTitleBox"></div></div>
+                <div class="memo-field"><label>From — Name</label><div id="fromNameBox"></div></div>
+                <div class="memo-field"><label>From — Title</label><div id="fromTitleBox"></div></div>
+                <div class="memo-two-col">
+                    <div class="memo-field" style="margin-bottom:0;">
+                        <label>Enquiry Name</label>
                         <div id="enqNameBox"></div>
                     </div>
-                    <div>
-                        <div class="field-label">Enquiry Tel</div>
+                    <div class="memo-field" style="margin-bottom:0;">
+                        <label>Enquiry Tel</label>
                         <div id="enqTelBox"></div>
                     </div>
                 </div>
             </div>
         </div>
 
-       
-        <div class="card">
-            <div class="card-body" style="display:flex;flex-direction:column;gap:10px;">
+        <!-- Actions -->
+        <div class="memo-card">
+            <div class="memo-card-body" style="display:flex;flex-direction:column;gap:8px;">
                 <div id="btnPreview"></div>
                 <div id="btnDownload"></div>
             </div>
@@ -295,18 +357,16 @@
 
     </div>
 
-
-    <div>
-        <div class="card">
-            <div class="card-header">
-                <span>Data Preview</span>
-                <span id="previewPeriodLabel" style="font-size:.72rem;color:#888;font-weight:400;text-transform:none;letter-spacing:0;"></span>
-            </div>
-            <div id="previewArea" style="padding:20px;">
-                <div style="text-align:center;padding:50px 20px;color:#aaa;">
-                    <div style="font-size:2rem;margin-bottom:12px;">📊</div>
-                    <div style="font-size:.9rem;">Select a period and click <strong>Preview</strong> to see the data.</div>
-                </div>
+    <!-- ── RIGHT: Preview ─────────────────────────────────────── -->
+    <div class="memo-card">
+        <div class="memo-card-head" style="cursor:default;">
+            <span>Data Preview</span>
+            <span id="previewPeriodLabel" class="memo-card-head-badge"></span>
+        </div>
+        <div id="previewArea" style="padding:20px;">
+            <div class="pv-empty">
+                <i class="ti ti-chart-bar" aria-hidden="true"></i>
+                Select a period and click Preview to see the data.
             </div>
         </div>
     </div>
@@ -319,96 +379,86 @@
 
             var previewData = null;
 
-           
-            var today  = new Date();
-            var firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+            // ── Defaults ───────────────────────────────────────────────
+            var today        = new Date();
+            var firstOfMonth = new Date(today.getFullYear(), today.getMonth(),     1);
             var lastOfMonth  = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-            var compFrom = new Date(firstOfMonth); compFrom.setFullYear(compFrom.getFullYear() - 1);
-            var compTo   = new Date(lastOfMonth);  compTo.setFullYear(compTo.getFullYear() - 1);
+            var compFrom     = new Date(firstOfMonth); compFrom.setFullYear(compFrom.getFullYear() - 1);
+            var compTo       = new Date(lastOfMonth);  compTo.setFullYear(compTo.getFullYear() - 1);
 
-       
+            // ── Date pickers ───────────────────────────────────────────
             var dateFromInst = $("#dateFromBox").dxDateBox({
                 type: "date", displayFormat: "dd/MM/yyyy", value: firstOfMonth,
-                showClearButton: false, max: new Date()
+                max: new Date(),
+                onValueChanged: function (e) {
+                    var d = new Date(e.value); d.setFullYear(d.getFullYear() - 1);
+                    compFromInst.option("value", d);
+                }
             }).dxDateBox("instance");
 
             var dateToInst = $("#dateToBox").dxDateBox({
                 type: "date", displayFormat: "dd/MM/yyyy", value: lastOfMonth,
-                showClearButton: false, max: new Date()
+                max: new Date(),
+                onValueChanged: function (e) {
+                    var d = new Date(e.value); d.setFullYear(d.getFullYear() - 1);
+                    compToInst.option("value", d);
+                }
             }).dxDateBox("instance");
 
             var compFromInst = $("#compFromBox").dxDateBox({
-                type: "date", displayFormat: "dd/MM/yyyy", value: compFrom,
-                showClearButton: false
+                type: "date", displayFormat: "dd/MM/yyyy", value: compFrom
             }).dxDateBox("instance");
 
             var compToInst = $("#compToBox").dxDateBox({
-                type: "date", displayFormat: "dd/MM/yyyy", value: compTo,
-                showClearButton: false
+                type: "date", displayFormat: "dd/MM/yyyy", value: compTo
             }).dxDateBox("instance");
 
-          
-            dateFromInst.on("valueChanged", function(e) {
-                if (!e.value) return;
-                var d = new Date(e.value);
-                d.setFullYear(d.getFullYear() - 1);
-                compFromInst.option("value", d);
-            });
-            dateToInst.on("valueChanged", function(e) {
-                if (!e.value) return;
-                var d = new Date(e.value);
-                d.setFullYear(d.getFullYear() - 1);
-                compToInst.option("value", d);
-            });
-
-            
             $("#btnAutoFill").dxButton({
-                text: "Auto-fill prior year", type: "normal",
-                stylingMode: "outlined", icon: "refresh",
-                onClick: function() {
-                    var from = dateFromInst.option("value");
-                    var to   = dateToInst.option("value");
-                    if (!from || !to) return;
-                    var cf = new Date(from); cf.setFullYear(cf.getFullYear() - 1);
-                    var ct = new Date(to);   ct.setFullYear(ct.getFullYear() - 1);
-                    compFromInst.option("value", cf);
-                    compToInst.option("value", ct);
-                    DevExpress.ui.notify("Comparison period set to prior year.", "success", 2000);
+                text: "Auto-fill prior year", type: "normal", stylingMode: "outlined",
+                icon: "refresh", width: "100%",
+                onClick: function () {
+                    var f = new Date(dateFromInst.option("value")),
+                        t = new Date(dateToInst.option("value"));
+                    f.setFullYear(f.getFullYear() - 1);
+                    t.setFullYear(t.getFullYear() - 1);
+                    compFromInst.option("value", f);
+                    compToInst.option("value",   t);
+                    DevExpress.ui.notify("Comparison period updated.", "success", 2000);
                 }
             });
 
-            
-            function txtBox(id, placeholder, val) {
-                return $(id).dxTextBox({ placeholder: placeholder, value: val || "",
-                    showClearButton: true }).dxTextBox("instance");
+            // ── Memo header fields ────────────────────────────────────
+            function tb(id, ph, val) {
+                return $(id).dxTextBox({ placeholder: ph, value: val || "", showClearButton: true })
+                            .dxTextBox("instance");
             }
 
-            var reportDateInst = txtBox("#reportDateBox", "e.g. 03 MAY 2019",
+            var reportDateInst = tb("#reportDateBox", "e.g. 03 MAY 2025",
                 new Date().toLocaleDateString("en-ZA",{day:"2-digit",month:"long",year:"numeric"}).toUpperCase());
-            var refNumInst     = txtBox("#refNumBox",    "e.g. 16/9/4",       "16/9/4");
-            var toNameInst     = txtBox("#toNameBox",    "MEC name",          "MR P NGOMANE (MPL)");
-            var toTitleInst    = txtBox("#toTitleBox",   "MEC title",         "MEMBER OF THE EXECUTIVE COUNCIL");
-            var fromNameInst   = txtBox("#fromNameBox",  "HOD name",          "MR W MTHOMBOTHI");
-            var fromTitleInst  = txtBox("#fromTitleBox", "HOD title",         "HEAD OF DEPARTMENT");
-            var enqNameInst    = txtBox("#enqNameBox",   "Enquiry name",      "M C Mdhluli");
-            var enqTelInst     = txtBox("#enqTelBox",    "Tel number",        "082 802 6966");
+            var refNumInst   = tb("#refNumBox",    "e.g. 16/9/4",                   "16/9/4");
+            var toNameInst   = tb("#toNameBox",    "MEC name",                      "MR P NGOMANE (MPL)");
+            var toTitleInst  = tb("#toTitleBox",   "MEC title",                     "MEMBER OF THE EXECUTIVE COUNCIL");
+            var fromNameInst = tb("#fromNameBox",  "HOD name",                      "MR W MTHOMBOTHI");
+            var fromTitleInst= tb("#fromTitleBox", "HOD title",                     "HEAD OF DEPARTMENT");
+            var enqNameInst  = tb("#enqNameBox",   "Enquiry name",                  "M C Mdhluli");
+            var enqTelInst   = tb("#enqTelBox",    "Tel number",                    "082 802 6966");
 
-            
+            // ── Collapsible header section ────────────────────────────
             var hdrOpen = true;
-            $("#hdrToggle").on("click", function() {
+            $("#hdrToggle").on("click", function () {
                 hdrOpen = !hdrOpen;
-                $("#hdrBody").slideToggle(200);
-                $(this).toggleClass("collapsed", !hdrOpen);
+                $("#hdrBody").slideToggle(180);
+                $("#hdrChevron").css("transform", hdrOpen ? "" : "rotate(-90deg)");
             });
 
-       
+            // ── Build request ─────────────────────────────────────────
             function buildRequest() {
                 function fmt(d) {
                     if (!d) return "";
                     var dt = new Date(d);
                     return dt.getFullYear() + "-" +
-                        String(dt.getMonth()+1).padStart(2,"0") + "-" +
-                        String(dt.getDate()).padStart(2,"0");
+                           String(dt.getMonth() + 1).padStart(2, "0") + "-" +
+                           String(dt.getDate()).padStart(2, "0");
                 }
                 return {
                     DateFrom:    fmt(dateFromInst.option("value")),
@@ -426,7 +476,7 @@
                 };
             }
 
-          
+            // ── Buttons ───────────────────────────────────────────────
             $("#btnPreview").dxButton({
                 text: "Preview Data", type: "normal", icon: "find", width: "100%",
                 onClick: runPreview
@@ -440,300 +490,253 @@
             function runPreview() {
                 var req = buildRequest();
                 if (!req.DateFrom || !req.DateTo) {
-                    DevExpress.ui.notify("Select a report period.", "warning", 2500);
-                    return;
+                    DevExpress.ui.notify("Select a report period.", "warning", 2500); return;
                 }
-
-                showLoading("Loading data...");
+                showLoading("Loading data…");
                 $.ajax({
-                    url: "/MemoReport/Preview",
-                    method: "POST",
-                    contentType: "application/json",
-                    data: JSON.stringify(req),
-                    success: function(vm) {
+                    url: "/MemoReport/Preview", method: "POST",
+                    contentType: "application/json", data: JSON.stringify(req),
+                    success: function (vm) {
                         hideLoading();
                         previewData = vm;
                         renderPreview(vm);
                         DevExpress.ui.notify("Preview loaded for " + vm.MonthYear, "success", 2500);
                     },
-                    error: function(xhr) {
+                    error: function (xhr) {
                         hideLoading();
                         DevExpress.ui.notify(
-                            (xhr.responseJSON && xhr.responseJSON.error) || "Preview failed.",
-                            "error", 3000);
+                            (xhr.responseJSON && xhr.responseJSON.error) || "Preview failed.", "error", 3000);
                     }
                 });
             }
+
             function runDownload() {
                 var req = buildRequest();
                 if (!req.DateFrom || !req.DateTo) {
-                    DevExpress.ui.notify("Select a report period.", "warning", 2500);
-                    return;
+                    DevExpress.ui.notify("Select a report period.", "warning", 2500); return;
                 }
-
-                showLoading("Generating Word memo (this may take ~30 seconds for charts)...");
-
+                showLoading("Generating Word memo — this may take ~30 seconds…");
                 $.ajax({
-                    url: "/MemoReport/Download",
-                    method: "POST",
-                    contentType: "application/json",
-                    data: JSON.stringify(req),
+                    url: "/MemoReport/Download", method: "POST",
+                    contentType: "application/json", data: JSON.stringify(req),
                     xhrFields: { responseType: "blob" },
-                    success: function(blob, status, xhr) {
+                    success: function (blob, status, xhr) {
                         hideLoading();
                         var cd   = xhr.getResponseHeader("Content-Disposition") || "";
                         var name = "Monthly_Memo.docx";
                         var m    = cd.match(/filename=([^;]+)/);
                         if (m) name = m[1].replace(/"/g, "");
-                        var url  = window.URL.createObjectURL(blob);
-                        var a    = document.createElement("a");
-                        a.href   = url; a.download = name; a.click();
+                        var url = window.URL.createObjectURL(blob);
+                        var a   = document.createElement("a");
+                        a.href = url; a.download = name; a.click();
                         window.URL.revokeObjectURL(url);
                         DevExpress.ui.notify("Download started.", "success", 2500);
                     },
-                    error: function(xhr) {
+                    error: function (xhr) {
                         hideLoading();
-                        var msg = "Download failed.";
-                        try {
-                            var reader = new FileReader();
-                            reader.onload = function() {
-                                try { msg = JSON.parse(reader.result).error || msg; } catch(e) {}
-                                DevExpress.ui.notify(msg, "error", 4000);
-                            };
-                            reader.readAsText(xhr.responseText instanceof Blob
-                                ? xhr.responseText : new Blob([xhr.responseText]));
-                        } catch(e) { DevExpress.ui.notify(msg, "error", 4000); }
+                        DevExpress.ui.notify("Download failed.", "error", 4000);
                     }
                 });
             }
 
-            // ── RENDER PREVIEW ────────────────────────────────────────
+            // ── Preview renderer ──────────────────────────────────────
             function renderPreview(vm) {
-                var p   = vm.Provincial || {};
-                var c   = p.Current    || {};
-                var pr  = p.Prior      || {};
-                var cy  = vm.CurrentYear, py = vm.PriorYear;
+                var p  = vm.Provincial || {};
+                var c  = p.Current     || {};
+                var pr = p.Prior       || {};
+                var cy = vm.CurrentYear, py = vm.PriorYear;
 
                 $("#previewPeriodLabel").text(vm.PeriodFrom + " – " + vm.PeriodTo);
 
-                var html = "";
+                var h = "";
 
-                // ── Provincial summary tiles
-                html += '<div class="preview-section">';
-                html += '<div class="preview-section-title">Provincial Overview</div>';
-                html += '<div class="stats-grid">';
-                [
-                    ["Crashes",          c.Crashes,    pr.Crashes    ],
-                    ["Fatalities",       c.Fatalities, pr.Fatalities ],
-                    ["Serious Injuries", c.Serious,    pr.Serious    ],
-                    ["Slight Injuries",  c.Slight,     pr.Slight     ]
-                ].forEach(function(s) {
-                    var vr = pct(s[2], s[1]);
-                    var up = parseFloat(vr) > 0;
-                    html += '<div class="stat-tile">' +
-                        '<div class="st-label">' + s[0] + '</div>' +
-                        '<div class="st-prev">' + py + ': ' + (s[2]||0) + '</div>' +
-                        '<div class="st-curr">' + (s[1]||0) + '</div>' +
-                        '<div class="st-var ' + (up?"var-up":"var-down") + '">' +
-                        (up?'▲':'▼') + ' ' + vr + '</div>' +
-                        '</div>';
+                // ── Tiles
+                h += '<div class="pv-section"><div class="pv-section-title">Provincial overview</div>';
+                h += '<div class="pv-tiles">';
+                [["Crashes", c.Crashes, pr.Crashes],
+                 ["Fatalities", c.Fatalities, pr.Fatalities],
+                 ["Serious", c.Serious, pr.Serious],
+                 ["Slight", c.Slight, pr.Slight]].forEach(function (s) {
+                    var vr  = variance(s[2], s[1]);
+                    var cls = parseFloat(vr) > 0 ? "pv-up" : (parseFloat(vr) < 0 ? "pv-down" : "pv-flat");
+                    var arrow = parseFloat(vr) > 0 ? "▲" : (parseFloat(vr) < 0 ? "▼" : "–");
+                    h += '<div class="pv-tile">' +
+                         '<div class="pv-tile-label">' + s[0] + '</div>' +
+                         '<div class="pv-tile-prev">' + (s[2] || 0) + '</div>' +
+                         '<div class="pv-tile-curr">' + (s[1] || 0) + '</div>' +
+                         '<div class="pv-tile-var ' + cls + '">' + arrow + ' ' + vr + '</div>' +
+                         '</div>';
                 });
-                html += '</div></div>';
+                h += '</div></div>';
 
-                // ── Month-to-month table
-                html += '<div class="preview-section">';
-                html += '<div class="preview-section-title">Month-to-Month Comparison</div>';
-                html += compTable([
-                    ["CRASHES",          pr.Crashes,    c.Crashes   ],
-                    ["FATALITIES",       pr.Fatalities, c.Fatalities],
-                    ["SERIOUS INJURIES", pr.Serious,    c.Serious   ],
-                    ["SLIGHT INJURIES",  pr.Slight,     c.Slight    ]
-                ], py, cy);
-                html += '</div>';
-
-                // ── Average per day
-                var days = vm.DaysInPeriod || 30;
-                html += '<div class="preview-section">';
-                html += '<div class="preview-section-title">Daily Averages</div>';
-                html += '<table class="preview-table"><thead><tr>' +
-                    '<th>Metric</th><th>Average / Day</th></tr></thead><tbody>';
-                [["Crashes", c.Crashes],["Fatalities",c.Fatalities],
-                 ["Serious", c.Serious],["Slight",    c.Slight    ]].forEach(function(r) {
-                    html += '<tr><td>' + r[0] + '</td><td>' + (r[1]/days).toFixed(1) + '</td></tr>';
-                });
-                html += '</tbody></table></div>';
+                // ── Comparison table
+                h += '<div class="pv-section"><div class="pv-section-title">Month comparison</div>';
+                h += minTable([
+                    ["Crashes",          pr.Crashes,    c.Crashes   ],
+                    ["Fatalities",       pr.Fatalities, c.Fatalities],
+                    ["Serious injuries", pr.Serious,    c.Serious   ],
+                    ["Slight injuries",  pr.Slight,     c.Slight    ]
+                ], py, cy) + '</div>';
 
                 // ── 5-year history
                 if (vm.FiveYearHistory && vm.FiveYearHistory.length > 0) {
-                    html += '<div class="preview-section">';
-                    html += '<div class="preview-section-title">5-Year History (' + vm.MonthName + ')</div>';
-                    html += '<table class="preview-table"><thead><tr><th>Metric</th>';
-                    vm.FiveYearHistory.forEach(function(h) { html += '<th>' + h.Year + '</th>'; });
-                    html += '<th>Avg</th></tr></thead><tbody>';
-                    ["crashes","fatalities"].forEach(function(key) {
-                        var vals = vm.FiveYearHistory.map(function(h){ return h[key.charAt(0).toUpperCase()+key.slice(1)]||0; });
-                        var avg  = (vals.reduce(function(a,b){return a+b;},0)/vals.length).toFixed(1);
-                        html += '<tr><td>' + key.toUpperCase() + '</td>';
-                        vals.forEach(function(v) { html += '<td>' + v + '</td>'; });
-                        html += '<td><strong>' + avg + '</strong></td></tr>';
+                    h += '<div class="pv-section"><div class="pv-section-title">5-year history (' + vm.MonthName + ')</div>';
+                    h += '<table class="pv-table"><thead><tr><th></th>';
+                    vm.FiveYearHistory.forEach(function (yr) { h += '<th>' + yr.Year + '</th>'; });
+                    h += '<th>Avg</th></tr></thead><tbody>';
+                    ["Crashes", "Fatalities"].forEach(function (key) {
+                        var vals = vm.FiveYearHistory.map(function (yr) { return yr[key] || 0; });
+                        var avg  = (vals.reduce(function (a, b) { return a + b; }, 0) / vals.length).toFixed(1);
+                        h += '<tr><td>' + key + '</td>';
+                        vals.forEach(function (v) { h += '<td>' + v + '</td>'; });
+                        h += '<td><strong>' + avg + '</strong></td></tr>';
                     });
-                    html += '</tbody></table></div>';
+                    h += '</tbody></table></div>';
                 }
 
-                // ── Victims by category
-                html += '<div class="preview-section">';
-                html += '<div class="preview-section-title">Victims by Category (Fatalities)</div>';
-                html += compTable([
-                    ["DRIVERS",     pr.FatalDrivers,     c.FatalDrivers     ],
-                    ["PASSENGERS",  pr.FatalPassengers,  c.FatalPassengers  ],
-                    ["PEDESTRIANS", pr.FatalPedestrians, c.FatalPedestrians ],
-                    ["CYCLISTS",    pr.FatalCyclists,    c.FatalCyclists    ]
-                ], py, cy);
-                html += '</div>';
+                // ── Victims
+                h += '<div class="pv-section"><div class="pv-section-title">Fatal victims by category</div>';
+                h += minTable([
+                    ["Drivers",     pr.FatalDrivers,     c.FatalDrivers    ],
+                    ["Passengers",  pr.FatalPassengers,  c.FatalPassengers ],
+                    ["Pedestrians", pr.FatalPedestrians, c.FatalPedestrians],
+                    ["Cyclists",    pr.FatalCyclists,    c.FatalCyclists   ]
+                ], py, cy) + '</div>';
 
                 // ── Serious injuries
-                html += '<div class="preview-section">';
-                html += '<div class="preview-section-title">Serious Injuries by Category</div>';
-                html += compTable([
-                    ["DRIVERS",     pr.SeriousDrivers,     c.SeriousDrivers     ],
-                    ["PASSENGERS",  pr.SeriousPassengers,  c.SeriousPassengers  ],
-                    ["PEDESTRIANS", pr.SeriousPedestrians, c.SeriousPedestrians ],
-                    ["CYCLISTS",    pr.SeriousCyclists,    c.SeriousCyclists    ]
-                ], py, cy);
-                html += '</div>';
+                h += '<div class="pv-section"><div class="pv-section-title">Serious injuries by category</div>';
+                h += minTable([
+                    ["Drivers",     pr.SeriousDrivers,     c.SeriousDrivers    ],
+                    ["Passengers",  pr.SeriousPassengers,  c.SeriousPassengers ],
+                    ["Pedestrians", pr.SeriousPedestrians, c.SeriousPedestrians],
+                    ["Cyclists",    pr.SeriousCyclists,    c.SeriousCyclists   ]
+                ], py, cy) + '</div>';
 
                 // ── Districts
                 if (vm.Districts && vm.Districts.length > 0) {
-                    html += '<div class="preview-section">';
-                    html += '<div class="preview-section-title">Comparison by District</div>';
-                    html += '<table class="preview-table"><thead><tr><th>District</th>';
-                    vm.Districts.forEach(function(d) {
-                        html += '<th colspan="2" style="background:#1F3864;">' + d.Name + '</th>';
+                    h += '<div class="pv-section"><div class="pv-section-title">By district</div>';
+                    h += '<table class="pv-table"><thead><tr><th></th>';
+                    vm.Districts.forEach(function (d) {
+                        h += '<th colspan="2">' + d.Name + '</th>';
                     });
-                    html += '</tr><tr><th></th>';
-                    vm.Districts.forEach(function() {
-                        html += '<th>' + py + '</th><th>' + cy + '</th>';
-                    });
-                    html += '</tr></thead><tbody>';
-                    [["CRASHES","Crashes"],["FATAL","Fatalities"],
-                     ["SERIOUS","Serious"],["SLIGHT","Slight"]].forEach(function(m) {
-                        html += '<tr><td>' + m[0] + '</td>';
-                        vm.Districts.forEach(function(d) {
-                            var pv = d.Prior?.[m[1]]||0, cv = d.Current?.[m[1]]||0;
-                            html += '<td style="color:#999;">' + pv + '</td><td><strong>' + cv + '</strong></td>';
+                    h += '</tr><tr><th></th>';
+                    vm.Districts.forEach(function () { h += '<th>' + py + '</th><th>' + cy + '</th>'; });
+                    h += '</tr></thead><tbody>';
+                    [["Crashes","Crashes"],["Fatal","Fatalities"],["Serious","Serious"],["Slight","Slight"]].forEach(function (m) {
+                        h += '<tr><td>' + m[0] + '</td>';
+                        vm.Districts.forEach(function (d) {
+                            var pv = (d.Prior  && d.Prior[m[1]])   || 0;
+                            var cv = (d.Current && d.Current[m[1]]) || 0;
+                            h += '<td class="pv-prev">' + pv + '</td><td>' + cv + '</td>';
                         });
-                        html += '</tr>';
+                        h += '</tr>';
                     });
-                    html += '</tbody></table></div>';
+                    h += '</tbody></table></div>';
                 }
 
-                // ── Provincial routes
+                // ── Routes
                 if (vm.ProvincialRoutes && vm.ProvincialRoutes.length > 0) {
-                    html += '<div class="preview-section">';
-                    html += '<div class="preview-section-title">Provincial Problematic Routes</div>';
-                    html += '<table class="preview-table"><thead><tr>' +
-                        '<th>Route</th><th>Crashes ' + py + '</th><th>Crashes ' + cy + '</th>' +
-                        '<th>Fatal ' + py + '</th><th>Fatal ' + cy + '</th>' +
-                        '</tr></thead><tbody>';
-                    vm.ProvincialRoutes.forEach(function(r) {
-                        html += '<tr><td>' + r.Route + '</td>' +
-                            '<td>' + (r.CrashesPrev||0) + '</td><td><strong>' + (r.CrashesCurr||0) + '</strong></td>' +
-                            '<td>' + (r.FatalPrev||0) + '</td><td><strong style="color:#b71c1c;">' + (r.FatalCurr||0) + '</strong></td></tr>';
+                    h += '<div class="pv-section"><div class="pv-section-title">Provincial routes</div>';
+                    h += '<table class="pv-table"><thead><tr><th>Route</th>' +
+                         '<th>Crashes ' + py + '</th><th>Crashes ' + cy + '</th>' +
+                         '<th>Fatal ' + py + '</th><th>Fatal ' + cy + '</th></tr></thead><tbody>';
+                    vm.ProvincialRoutes.forEach(function (r) {
+                        h += '<tr><td>' + r.Route + '</td>' +
+                             '<td class="pv-prev">' + (r.CrashesPrev||0) + '</td><td>' + (r.CrashesCurr||0) + '</td>' +
+                             '<td class="pv-prev">' + (r.FatalPrev||0)   + '</td><td>' + (r.FatalCurr||0)   + '</td></tr>';
                     });
-                    html += '</tbody></table></div>';
+                    h += '</tbody></table></div>';
                 }
 
                 // ── Crash types
                 if (vm.CrashTypes && vm.CrashTypes.length > 0) {
-                    html += '<div class="preview-section">';
-                    html += '<div class="preview-section-title">Crash Types</div>';
-                    html += '<table class="preview-table"><thead><tr>' +
-                        '<th>Type</th><th>Crashes ' + py + '</th><th>Crashes ' + cy + '</th>' +
-                        '<th>Fatal ' + py + '</th><th>Fatal ' + cy + '</th></tr></thead><tbody>';
-                    vm.CrashTypes.forEach(function(ct) {
-                        html += '<tr><td>' + ct.Type + '</td>' +
-                            '<td>' + (ct.CrashesPrev||0) + '</td><td>' + (ct.CrashesCurr||0) + '</td>' +
-                            '<td>' + (ct.FatalPrev||0) + '</td><td><strong>' + (ct.FatalCurr||0) + '</strong></td></tr>';
+                    h += '<div class="pv-section"><div class="pv-section-title">Crash types</div>';
+                    h += '<table class="pv-table"><thead><tr><th>Type</th>' +
+                         '<th>Crashes ' + py + '</th><th>Crashes ' + cy + '</th>' +
+                         '<th>Fatal ' + py + '</th><th>Fatal ' + cy + '</th></tr></thead><tbody>';
+                    vm.CrashTypes.forEach(function (ct) {
+                        h += '<tr><td>' + ct.Type + '</td>' +
+                             '<td class="pv-prev">' + (ct.CrashesPrev||0) + '</td><td>' + (ct.CrashesCurr||0) + '</td>' +
+                             '<td class="pv-prev">' + (ct.FatalPrev||0)   + '</td><td>' + (ct.FatalCurr||0)   + '</td></tr>';
                     });
-                    html += '</tbody></table></div>';
+                    h += '</tbody></table></div>';
                 }
 
                 // ── Time slots
                 if (vm.TimeSlots && vm.TimeSlots.length > 0) {
-                    html += '<div class="preview-section">';
-                    html += '<div class="preview-section-title">Prevalent Times</div>';
-                    html += compTable(
-                        vm.TimeSlots.map(function(t) {
-                            return [t.Slot, t.CrashesPrev, t.CrashesCurr];
-                        }), py, cy);
-                    html += '</div>';
+                    h += '<div class="pv-section"><div class="pv-section-title">Prevalent times</div>';
+                    h += minTable(
+                        vm.TimeSlots.map(function (t) { return [t.Slot, t.CrashesPrev, t.CrashesCurr]; }),
+                        py, cy) + '</div>';
                 }
 
-                // ── Days of week (provincial)
+                // ── Days of week
                 var dow = (vm.DaysOfWeek || {}).Provincial || [];
                 if (dow.length > 0) {
-                    html += '<div class="preview-section">';
-                    html += '<div class="preview-section-title">Days of the Week (Provincial)</div>';
-                    html += compTable(
-                        dow.map(function(d) { return [d.Day, d.CrashesPrev, d.CrashesCurr]; }),
-                        py, cy);
-                    html += '</div>';
+                    h += '<div class="pv-section"><div class="pv-section-title">Days of the week</div>';
+                    h += minTable(
+                        dow.map(function (d) { return [d.Day, d.CrashesPrev, d.CrashesCurr]; }),
+                        py, cy) + '</div>';
                 }
 
-                // ── Summary stats
-                html += '<div class="preview-section" style="background:#f1f8f1;border-radius:8px;padding:14px;border:1px solid #c8e6c9;">';
-                html += '<div class="preview-section-title">Summary</div>';
-                html += '<div style="font-size:.82rem;line-height:1.7;">';
+                // ── Summary
+                h += '<div class="pv-section"><div class="pv-section-title">Summary</div>';
+                h += '<div class="pv-summary">';
                 [["Crashes",    pr.Crashes,    c.Crashes   ],
                  ["Fatalities", pr.Fatalities, c.Fatalities],
                  ["Serious",    pr.Serious,    c.Serious   ],
-                 ["Slight",     pr.Slight,     c.Slight    ]].forEach(function(r) {
-                    var v = pct(r[1], r[2]);
-                    var up = parseFloat(v) > 0;
-                    html += '<div>' + r[0] + ': <strong>' + r[2] + '</strong> ' +
-                        '(vs ' + r[1] + ' prior year) — ' +
-                        '<span style="color:' + (up?"#b71c1c":"#2e7d32") + ';font-weight:700;">' +
-                        (up?'▲':'▼') + ' ' + v + '</span></div>';
+                 ["Slight",     pr.Slight,     c.Slight    ]].forEach(function (r) {
+                    var vr  = variance(r[1], r[2]);
+                    var cls = parseFloat(vr) > 0 ? "pv-up" : (parseFloat(vr) < 0 ? "pv-down" : "pv-flat");
+                    var arrow = parseFloat(vr) > 0 ? "▲" : "▼";
+                    h += '<div class="pv-summary-row">' +
+                         '<span class="pv-summary-key">' + r[0] + '</span>' +
+                         '<span class="pv-summary-val">' + (r[2]||0) + '</span>' +
+                         '<span style="color:#ccc;font-size:.72rem;">vs ' + (r[1]||0) + ' prior</span>' +
+                         '<span class="pv-tile-var ' + cls + '" style="margin-left:auto;">' + arrow + ' ' + vr + '</span>' +
+                         '</div>';
                 });
-                html += '</div></div>';
+                h += '</div></div>';
 
-                $("#previewArea").html(html);
+                $("#previewArea").html(h);
             }
 
-            // ── Helper: comparison table HTML ────────────────────────
-            function compTable(rows, py, cy) {
-                var h = '<table class="preview-table"><thead><tr>' +
-                    '<th></th><th>' + py + '</th><th>' + cy + '</th><th>Variation</th>' +
-                    '</tr></thead><tbody>';
-                rows.forEach(function(r, i) {
-                    var v = pct(r[1], r[2]);
-                    var up = parseFloat(v) > 0;
-                    var bg = i % 2 === 0 ? "" : "background:#f8f9ff;";
-                    h += '<tr style="' + bg + '"><td>' + r[0] + '</td>' +
-                        '<td style="color:#999;">' + (r[1]||0) + '</td>' +
-                        '<td><strong>' + (r[2]||0) + '</strong></td>' +
-                        '<td style="font-weight:700;color:' + (up?"#b71c1c":"#2e7d32") + ';">' +
-                        (up?"▲":"▼") + " " + v + '</td></tr>';
+            // ── Minimal table helper ──────────────────────────────────
+            function minTable(rows, py, cy) {
+                var h = '<table class="pv-table"><thead><tr>' +
+                        '<th></th><th>' + py + '</th><th>' + cy + '</th><th>Var</th>' +
+                        '</tr></thead><tbody>';
+                rows.forEach(function (r) {
+                    var vr  = variance(r[1], r[2]);
+                    var cls = parseFloat(vr) > 0 ? "pv-up" : (parseFloat(vr) < 0 ? "pv-down" : "pv-flat");
+                    var arrow = parseFloat(vr) > 0 ? "▲" : (parseFloat(vr) < 0 ? "▼" : "–");
+                    h += '<tr>' +
+                         '<td>' + r[0] + '</td>' +
+                         '<td class="pv-prev">' + (r[1]||0) + '</td>' +
+                         '<td>' + (r[2]||0) + '</td>' +
+                         '<td class="pv-var ' + cls + '">' + arrow + ' ' + vr + '</td>' +
+                         '</tr>';
                 });
                 return h + '</tbody></table>';
             }
 
-            function pct(prev, curr) {
-                if (!prev || prev === 0) return curr === 0 ? "0%" : "N/A";
-                var v = ((curr - prev) / prev * 100).toFixed(2);
+            function variance(prev, curr) {
+                prev = prev || 0; curr = curr || 0;
+                if (prev === 0) return curr === 0 ? "0%" : "N/A";
+                var v = ((curr - prev) / prev * 100).toFixed(1);
                 return (curr >= prev ? "+" : "") + v + "%";
             }
 
             // ── Loading helpers ───────────────────────────────────────
             function showLoading(msg) {
-                $("#loadingText").text(msg || "Loading...");
+                $("#loadingText").text(msg || "Loading…");
                 $("#loadingOverlay").addClass("show");
             }
             function hideLoading() {
                 $("#loadingOverlay").removeClass("show");
             }
 
-         
+            // Auto-preview on load
             runPreview();
         });
     </script>

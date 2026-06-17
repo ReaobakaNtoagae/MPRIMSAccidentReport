@@ -8,7 +8,6 @@ namespace CrashReport.Controllers;
 public class CrashesController : Controller
 {
     private readonly AppDbContext _context;
-
     public CrashesController(AppDbContext context)
     {
         _context = context;
