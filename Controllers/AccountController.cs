@@ -1,12 +1,12 @@
 ﻿using CrashReport.Models;
-using CrashReport.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace CrashReport.Controllers;
 
-[AllowAnonymous]   // Login page is accessible without being logged in
+[AllowAnonymous]
 public class AccountController : Controller
 {
     private readonly SignInManager<ApplicationUser> _signIn;
@@ -59,8 +59,28 @@ public class AccountController : Controller
 
         if (result.Succeeded)
         {
+            // ── Add FullName as a claim so the layout can display it
+            //    without a database hit on every request.
+            var existingClaims = await _users.GetClaimsAsync(user);
+            if (!existingClaims.Any(c => c.Type == "FullName"))
+                await _users.AddClaimAsync(user, new Claim("FullName", user.FullName));
+            else
+            {
+                // Keep the claim value in sync if the name was updated
+                var existing = existingClaims.First(c => c.Type == "FullName");
+                if (existing.Value != user.FullName)
+                {
+                    await _users.RemoveClaimAsync(user, existing);
+                    await _users.AddClaimAsync(user, new Claim("FullName", user.FullName));
+                }
+            }
+
+            // Re-sign so the new claim is in the cookie immediately
+            await _signIn.RefreshSignInAsync(user);
+
             if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
                 return Redirect(returnUrl);
+
             return RedirectToAction("Index", "Home");
         }
 
