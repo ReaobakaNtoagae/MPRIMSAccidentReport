@@ -485,6 +485,23 @@
                 </a>
             </div>
 
+            @if(User.IsInRole("Administrator"))
+            {
+                 <div class="nav-item" data-label="Manage Users">
+                    <a class="nav-link" asp-controller="Users" asp-action="Index">
+                        <span class="nav-dot"></span>
+                        <span class="nav-label">Manage Users</span>
+                    </a>
+                </div>
+
+                <div class="nav-item" data-label="Manage Roles">
+                    <a class="nav-link" asp-controller="Roles" asp-action="Index">
+                        <span class="nav-dot"></span>
+                        <span class="nav-label">Manage Roles</span>
+                    </a>
+                </div>
+            })
+
         </nav>
     </aside>
 

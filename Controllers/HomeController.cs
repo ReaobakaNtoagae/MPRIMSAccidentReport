@@ -1,6 +1,8 @@
 ﻿using CrashReport.Data;
 using CrashReport.Models;
+using CrashReport.Security;
 using CrashReport.ViewModels;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
@@ -62,6 +64,7 @@ public class HomeController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [Authorize(Policy = Privileges.Crashes.Edit)]
     public async Task<IActionResult> Edit(int id,
         [Bind("CrashId,CasNo,CrNo,IncidentReportNo,CapturingNumber,CrashDate,CrashTime," +
               "NoOfAppendices,NoOfVehiclesInvolved,ProvinceCode,SpeedLimitKmh," +
@@ -85,6 +88,7 @@ public class HomeController : Controller
     
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [Authorize(Policy = Privileges.Crashes.Delete)]
     public async Task<IActionResult> Delete(int id)
     {
         var crash = await _context.Crashes
@@ -137,6 +141,7 @@ public class HomeController : Controller
     
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [Authorize(Policy = Privileges.Crashes.Create)]
     public async Task<IActionResult> Submit([FromForm] string formJson)
     {
         if (string.IsNullOrEmpty(formJson))

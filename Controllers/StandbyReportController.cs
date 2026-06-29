@@ -1,5 +1,7 @@
-﻿using CrashReport.Services;
+﻿using CrashReport.Security;
+using CrashReport.Services;
 using CrashReport.ViewModels;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Mvc.ViewEngines;
@@ -22,6 +24,7 @@ public class StandbyReportController : Controller
 
     // GET: /StandbyReport - Shows the form
     [HttpGet("/StandbyReport")]
+    [Authorize(Policy = Privileges.Reports.Standby)]
     public IActionResult Index()
     {
         // Default: current Mon–Sun week, prior year auto-calculated

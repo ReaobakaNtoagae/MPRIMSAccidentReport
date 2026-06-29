@@ -1,0 +1,292 @@
+﻿@{
+    ViewData["Title"] = "Roles & Privileges";
+}
+
+<style>
+    .rm-card {
+        background: #fff;
+        border-radius: 10px;
+        border: 1px solid #c8e6c9;
+        box-shadow: 0 2px 8px rgba(0,0,0,.06);
+        overflow: hidden;
+        margin-bottom: 20px;
+    }
+    .rm-card-head {
+        padding: 11px 20px;
+        border-bottom: 2px solid #e8f5e9;
+        font-size: .72rem;
+        text-transform: uppercase;
+        letter-spacing: .8px;
+        color: #2e7d32;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .rm-card-body { padding: 18px; }
+    .rm-note { font-size: .8rem; color: #888; margin-top: 12px; }
+
+    /* Privilege matrix */
+    .priv-matrix { width: 100%; border-collapse: collapse; font-size: .85rem; }
+    .priv-matrix th {
+        background: #2b2b2b; color: #fff; padding: 8px 12px;
+        text-align: left; font-weight: 600; white-space: nowrap;
+    }
+    .priv-matrix th.role-col { text-align: center; min-width: 100px; }
+    .priv-matrix td { padding: 6px 12px; border-bottom: 1px solid #f0f0f0; }
+    .priv-matrix tr:hover td { background: #f9fdf9; }
+    .priv-matrix .group-header td {
+        background: #e8f5e9; font-weight: 700;
+        font-size: .7rem; text-transform: uppercase;
+        letter-spacing: .6px; color: #2e7d32;
+        padding: 5px 12px;
+    }
+    .priv-matrix td.check-cell { text-align: center; }
+    .priv-matrix input[type=checkbox] {
+        width: 16px; height: 16px; cursor: pointer;
+        accent-color: #2e7d32;
+    }
+    .priv-matrix input[type=checkbox]:disabled {
+        opacity: 0.4; cursor: not-allowed;
+    }
+    .save-btn-row { margin-top: 14px; display: flex; gap: 10px; align-items: center; }
+    .save-note { font-size: .78rem; color: #888; }
+    .role-name-th { font-size: .75rem; }
+</style>
+
+@* ── Role list card ─────────────────────────────────────────── *@
+<div class="rm-card">
+    <div class="rm-card-head">
+        <span>Roles</span>
+        <div id="btnAddRole"></div>
+    </div>
+    <div class="rm-card-body">
+        <div id="rolesGrid"></div>
+        <p class="rm-note">Administrator, Supervisor, and DataCapturer are core system roles. Their privilege defaults are set during setup and can be adjusted in the privilege matrix below.</p>
+    </div>
+</div>
+
+@* ── Privilege matrix card ──────────────────────────────────── *@
+<div class="rm-card">
+    <div class="rm-card-head">
+        <span>Privilege assignment</span>
+        <div id="matrixStatus" style="font-size:.78rem;color:#888;text-transform:none;letter-spacing:0;font-weight:400;"></div>
+    </div>
+    <div class="rm-card-body">
+        <p style="font-size:.85rem;color:#555;margin-bottom:14px;">
+            Tick or untick privileges per role. Click <strong>Save changes</strong> when done.
+            Changes take effect the next time users in that role log in.
+        </p>
+        <div id="matrixWrap"><em style="color:#aaa;">Loading&#8230;</em></div>
+        <div class="save-btn-row">
+            <div id="btnSaveMatrix"></div>
+            <span class="save-note" id="saveNote"></span>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+$(function () {
+    var allPrivileges = [];
+    var allRoles      = [];
+
+    // ── Load both datasets in parallel ────────────────────────
+    $.when(
+        $.getJSON('/Roles/GetPrivileges'),
+        $.getJSON('/Roles/GetAll')
+    ).done(function (privRes, roleRes) {
+        allPrivileges = privRes[0];
+        allRoles      = roleRes[0];
+        renderRolesGrid();
+        renderMatrix();
+    });
+
+    // ── Roles grid ────────────────────────────────────────────
+    function renderRolesGrid() {
+        $("#rolesGrid").dxDataGrid({
+            dataSource: allRoles,
+            paging: { pageSize: 20 },
+            filterRow: { visible: false },
+            columns: [
+                { dataField: "Name", caption: "Role name", width: 220 },
+                {
+                    caption: "Type", width: 120,
+                    cellTemplate: function (el, info) {
+                        $('<span>').text(info.data.IsCore ? "System role" : "Custom")
+                                   .css("color", info.data.IsCore ? "#2e7d32" : "#666")
+                                   .appendTo(el);
+                    }
+                },
+                {
+                    caption: "Privileges assigned", 
+                    cellTemplate: function (el, info) {
+                        $('<span>').text(info.data.Privileges.length + " of " + allPrivileges.length)
+                                   .css("color", "#555")
+                                   .appendTo(el);
+                    }
+                },
+                {
+                    caption: "Actions", width: 110, allowSorting: false,
+                    cellTemplate: function (el, info) {
+                        if (info.data.IsCore) return;
+                        $('<div>').appendTo(el).dxButton({
+                            text: "Delete", type: "danger", stylingMode: "outlined",
+                            onClick: function () { deleteRole(info.data.Id, info.data.Name); }
+                        });
+                    }
+                }
+            ]
+        });
+    }
+
+    // ── Privilege matrix ──────────────────────────────────────
+    function renderMatrix() {
+        var groups    = [...new Set(allPrivileges.map(p => p.Group))];
+        var roleNames = allRoles.map(r => r.Name);
+
+        // Build a map: roleName → Set of privileges
+        var rolePrivMap = {};
+        allRoles.forEach(function (r) {
+            rolePrivMap[r.Name] = new Set(r.Privileges);
+        });
+
+        var table = $('<table class="priv-matrix">');
+
+        // Header row
+        var thead = $('<thead>');
+        var hrow  = $('<tr>');
+        hrow.append($('<th>').text('Privilege'));
+        roleNames.forEach(function (rn) {
+            hrow.append($('<th class="role-col">').html('<span class="role-name-th">' + rn + '</span>'));
+        });
+        thead.append(hrow);
+        table.append(thead);
+
+        var tbody = $('<tbody>');
+        groups.forEach(function (group) {
+            // Group header row
+            var grow = $('<tr class="group-header">');
+            var gtd  = $('<td>').attr('colspan', roleNames.length + 1).text(group);
+            grow.append(gtd);
+            tbody.append(grow);
+
+            // Privilege rows in this group
+            allPrivileges.filter(p => p.Group === group).forEach(function (priv) {
+                var row = $('<tr>');
+                row.append($('<td>').text(priv.Label));
+                roleNames.forEach(function (rn) {
+                    var checked = rolePrivMap[rn].has(priv.Value);
+                    var cb = $('<input type="checkbox">')
+                        .attr('data-role', rn)
+                        .attr('data-priv', priv.Value)
+                        .prop('checked', checked);
+                    var td = $('<td class="check-cell">').append(cb);
+                    row.append(td);
+                });
+                tbody.append(row);
+            });
+        });
+        table.append(tbody);
+
+        $('#matrixWrap').empty().append(table);
+
+        // Track changes
+        $('#matrixWrap').on('change', 'input[type=checkbox]', function () {
+            $('#saveNote').text('Unsaved changes');
+            $('#saveNote').css('color', '#e65100');
+        });
+    }
+
+    // ── Save matrix ───────────────────────────────────────────
+    $("#btnSaveMatrix").dxButton({
+        text: "Save changes", type: "default", icon: "save",
+        onClick: function () { saveMatrix(); }
+    });
+
+    function saveMatrix() {
+        var token = $('input[name="__RequestVerificationToken"]').first().val();
+        var saves = allRoles.map(function (role) {
+            var privs = [];
+            $('input[data-role="' + role.Name + '"]:checked').each(function () {
+                privs.push($(this).data('priv'));
+            });
+            return $.post('/Roles/SetPrivileges', {
+                __RequestVerificationToken: token,
+                roleId: role.Id,
+                privileges: privs
+            });
+        });
+
+        $.when.apply($, saves).done(function () {
+            $('#saveNote').text('Saved successfully').css('color', '#2e7d32');
+            setTimeout(function () { $('#saveNote').text(''); }, 3000);
+            // Reload to refresh privilege counts in the grid
+            $.getJSON('/Roles/GetAll', function (data) {
+                allRoles = data;
+                renderRolesGrid();
+            });
+        }).fail(function () {
+            $('#saveNote').text('Something went wrong — please try again.').css('color', '#c62828');
+        });
+    }
+
+    // ── Add role button ───────────────────────────────────────
+    $("#btnAddRole").dxButton({
+        text: "Add role", icon: "plus", type: "default", stylingMode: "outlined",
+        onClick: function () {
+            DevExpress.ui.dialog.custom({
+                title: "New role",
+                messageHtml: "<div id='roleNameBox'></div>",
+                buttons: [
+                    { text: "Create", type: "default", onClick: function () {
+                        var name = $("#roleNameBox").dxTextBox("instance").option("value");
+                        if (!name) return;
+                        $.post("/Roles/Create", {
+                            __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').first().val(),
+                            roleName: name
+                        })
+                        .done(function (res) {
+                            if (res.success) {
+                                DevExpress.ui.notify(res.message, "success", 2500);
+                                location.reload();
+                            } else {
+                                DevExpress.ui.notify(res.message, "error", 3000);
+                            }
+                        });
+                    }},
+                    { text: "Cancel" }
+                ]
+            }).show().done(function () {
+                setTimeout(function () {
+                    $("#roleNameBox").dxTextBox({ placeholder: "Role name..." });
+                }, 50);
+            });
+        }
+    });
+
+    // ── Delete role ───────────────────────────────────────────
+    function deleteRole(id, name) {
+        DevExpress.ui.dialog.confirm(
+            "Delete role '" + name + "'? Users assigned this role will lose it.",
+            "Confirm delete"
+        ).done(function (yes) {
+            if (!yes) return;
+            $.post("/Roles/Delete", {
+                __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').first().val(),
+                id: id
+            })
+            .done(function (res) {
+                if (res.success) {
+                    DevExpress.ui.notify(res.message, "success", 2500);
+                    location.reload();
+                } else {
+                    DevExpress.ui.notify(res.message, "error", 3000);
+                }
+            });
+        });
+    }
+});
+</script>
+@Html.AntiForgeryToken()
+}

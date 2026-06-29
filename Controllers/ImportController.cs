@@ -1,4 +1,6 @@
-﻿using CrashReport.Services;
+﻿using CrashReport.Security;
+using CrashReport.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CrashReport.Controllers;
@@ -13,7 +15,7 @@ public class ImportController : Controller
         _logger = logger;
     }
 
-
+    [Authorize(Policy = Privileges.Import.Excel)]
     public IActionResult Index() => View();
 
    

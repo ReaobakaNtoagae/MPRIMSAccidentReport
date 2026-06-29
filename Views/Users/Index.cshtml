@@ -1,0 +1,217 @@
+﻿@{
+    ViewData["Title"] = "User Management";
+}
+
+<style>
+    .um-card {
+        background: #fff;
+        border-radius: 10px;
+        border: 1px solid #c8e6c9;
+        box-shadow: 0 2px 8px rgba(0,0,0,.06);
+        overflow: hidden;
+        margin-bottom: 16px;
+    }
+
+    .um-card-head {
+        padding: 11px 20px;
+        border-bottom: 2px solid #e8f5e9;
+        font-size: .72rem;
+        text-transform: uppercase;
+        letter-spacing: .8px;
+        color: #2e7d32;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .um-card-body {
+        padding: 18px;
+    }
+</style>
+
+<div class="um-card">
+    <div class="um-card-head">
+        <span>User Management</span>
+        <div id="btnAddUser"></div>
+    </div>
+    <div class="um-card-body">
+        <div id="usersGrid"></div>
+    </div>
+</div>
+
+@* Create user form (popup) *@
+<div id="createUserPopup"></div>
+<div id="resetPasswordPopup"></div>
+
+@section Scripts {
+    <script>
+        $(function () {
+            var roles = ["Administrator", "Supervisor", "DataCapturer"];
+
+            // ── Add user button ────────────────────────────────────────
+            $("#btnAddUser").dxButton({
+                text: "Add user", icon: "plus", type: "default", stylingMode: "outlined",
+                onClick: function () { createPopupInst.option("visible", true); }
+            });
+
+            // ── Users grid ────────────────────────────────────────────
+            $("#usersGrid").dxDataGrid({
+                dataSource: {
+                    load: function () { return $.getJSON("/Users/GetAll"); }
+                },
+                remoteOperations: false,
+                paging:   { pageSize: 20 },
+                sorting:  { mode: "single" },
+                filterRow:{ visible: true },
+                columns: [
+                    { dataField: "FullName",  caption: "Name",     width: 180 },
+                    { dataField: "Email",     caption: "Email",    width: 220 },
+                    { dataField: "Station",   caption: "Station",  width: 130 },
+                    { dataField: "District",  caption: "District", width: 130 },
+                    { dataField: "Roles",     caption: "Role",     width: 140 },
+                    {
+                        dataField: "IsActive", caption: "Active", width: 80,
+                        cellTemplate: function (el, info) {
+                            $('<span>').text(info.value ? "Yes" : "No")
+                                       .css("color", info.value ? "#2e7d32" : "#c62828")
+                                       .css("fontWeight", "600")
+                                       .appendTo(el);
+                        }
+                    },
+                    {
+                        caption: "Actions", width: 220, allowSorting: false,
+                        cellTemplate: function (el, info) {
+                            var wrap = $('<div>').css("display","flex").css("gap","6px");
+
+                            // Toggle active
+                            $('<div>').appendTo(wrap).dxButton({
+                                text: info.data.IsActive ? "Deactivate" : "Activate",
+                                type: info.data.IsActive ? "danger" : "success",
+                                stylingMode: "outlined",
+                                onClick: function () { toggleActive(info.data.Id); }
+                            });
+
+                            // Change role
+                            $('<div>').appendTo(wrap).dxButton({
+                                text: "Role", icon: "group", stylingMode: "outlined",
+                                onClick: function () { showRoleDialog(info.data); }
+                            });
+
+                            // Reset password
+                            $('<div>').appendTo(wrap).dxButton({
+                                text: "Password", icon: "key", stylingMode: "outlined",
+                                onClick: function () { showPasswordReset(info.data.Id, info.data.FullName); }
+                            });
+
+                            wrap.appendTo(el);
+                        }
+                    }
+                ]
+            });
+
+            // ── Create user popup ──────────────────────────────────────
+            var createForm;
+            var createPopupInst = $("#createUserPopup").dxPopup({
+                title: "Add new user",
+                width: 480, height: "auto",
+                showCloseButton: true,
+                contentTemplate: function (content) {
+                    var form = $("<div>").appendTo(content);
+                    createForm = form.dxForm({
+                        colCount: 2,
+                        items: [
+                            { dataField: "FullName",  label:{text:"Full name"},    colSpan:2, isRequired:true },
+                            { dataField: "Email",     label:{text:"Email address"}, colSpan:2, isRequired:true,
+                              editorOptions:{ mode:"email" } },
+                            { dataField: "Station",   label:{text:"Station"},      isRequired:true },
+                            { dataField: "District",  label:{text:"District"},     isRequired:true },
+                            { dataField: "Role", label:{text:"Role"}, isRequired:true,
+                              editorType:"dxSelectBox", editorOptions:{ items: roles, placeholder:"Select..." } },
+                            { dataField: "Password", label:{text:"Password"}, colSpan:2, isRequired:true,
+                              editorOptions:{ mode:"password", placeholder:"Min 8 chars, upper, digit, symbol" } },
+                        ]
+                    }).dxForm("instance");
+
+                    $("<div>").css("margin-top","16px").appendTo(content).dxButton({
+                        text: "Create user", type: "default", icon: "save", width:"100%",
+                        onClick: function () {
+                            var result = createForm.validate();
+                            if (!result.isValid) return;
+                            var data = createForm.option("formData");
+                            $.post("/Users/Create", {
+                                __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').first().val(),
+                                fullName: data.FullName, email: data.Email,
+                                station:  data.Station,  district: data.District,
+                                role:     data.Role,     password: data.Password
+                            }).done(function () {
+                                createPopupInst.option("visible", false);
+                                location.reload();
+                            });
+                        }
+                    });
+                }
+            }).dxPopup("instance");
+
+            // ── Toggle active ──────────────────────────────────────────
+            function toggleActive(id) {
+                DevExpress.ui.dialog.confirm("Are you sure?", "Confirm").done(function(yes) {
+                    if (!yes) return;
+                    $.post("/Users/ToggleActive", {
+                        __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').first().val(),
+                        id: id
+                    }).done(function () { location.reload(); });
+                });
+            }
+
+            // ── Change role dialog ─────────────────────────────────────
+            function showRoleDialog(user) {
+                var current = user.Roles ? user.Roles.split(", ")[0] : null;
+                DevExpress.ui.dialog.custom({
+                    title: "Change role for " + user.FullName,
+                    messageHtml: "<div id='roleSelect'></div>",
+                    buttons: [
+                        { text: "Save", type: "default", onClick: function () {
+                            var role = $("#roleSelect").dxSelectBox("instance").option("value");
+                            $.post("/Users/UpdateRole", {
+                                __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').first().val(),
+                                id: user.Id, newRole: role
+                            }).done(function () { location.reload(); });
+                        }},
+                        { text: "Cancel" }
+                    ]
+                }).show().done(function () {
+                    setTimeout(function () {
+                        $("#roleSelect").dxSelectBox({ items: roles, value: current });
+                    }, 50);
+                });
+            }
+
+            // ── Reset password dialog ──────────────────────────────────
+            function showPasswordReset(id, name) {
+                DevExpress.ui.dialog.custom({
+                    title: "Reset password for " + name,
+                    messageHtml: "<div id='newPassBox'></div>",
+                    buttons: [
+                        { text: "Reset", type: "default", onClick: function () {
+                            var pass = $("#newPassBox").dxTextBox("instance").option("value");
+                            if (!pass) return;
+                            $.post("/Users/ResetPassword", {
+                                __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').first().val(),
+                                id: id, newPassword: pass
+                            }).done(function () {
+                                DevExpress.ui.notify("Password reset successfully.", "success", 2500);
+                            });
+                        }},
+                        { text: "Cancel" }
+                    ]
+                }).show().done(function () {
+                    setTimeout(function () {
+                        $("#newPassBox").dxTextBox({ mode:"password", placeholder:"New password" });
+                    }, 50);
+                });
+            }
+        });
+    </script>
+    @Html.AntiForgeryToken()
+}

@@ -1,0 +1,182 @@
+﻿@{
+    ViewData["Title"] = "Sign in";
+    Layout = null;   // login page has its own layout — no nav, no sidebar
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sign in — SAPS Crash Registry</title>
+    <link rel="stylesheet"
+          href="https://cdn3.devexpress.com/jslib/25.2.7/css/dx.light.css" />
+    <style>
+            *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+            body {
+                font-family: "Segoe UI", Calibri, sans-serif;
+                background: #f1f8f1;
+                min-height: 100vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .login-card {
+                background: #fff;
+                border-radius: 12px;
+                border: 1px solid #c8e6c9;
+                box-shadow: 0 4px 24px rgba(0,0,0,.08);
+                width: 100%;
+                max-width: 400px;
+                padding: 40px 36px 36px;
+            }
+
+            .login-brand {
+                text-align: center;
+                margin-bottom: 28px;
+            }
+
+            .login-brand-title {
+                font-size: 1.25rem;
+                font-weight: 700;
+                color: #2e7d32;
+                letter-spacing: -.3px;
+            }
+
+            .login-brand-sub {
+                font-size: .8rem;
+                color: #888;
+                margin-top: 4px;
+            }
+
+            .login-divider {
+                border: none;
+                border-top: 1px solid #e8f5e9;
+                margin-bottom: 24px;
+            }
+
+            .login-field { margin-bottom: 16px; }
+
+            .login-field label {
+                display: block;
+                font-size: .72rem;
+                font-weight: 600;
+                color: #444;
+                margin-bottom: 5px;
+                text-transform: uppercase;
+                letter-spacing: .4px;
+            }
+
+            .login-btn-wrap { margin-top: 8px; }
+
+            .login-error {
+                background: #fdecea;
+                border: 1px solid #f5c6cb;
+                border-radius: 6px;
+                padding: 10px 14px;
+                font-size: .82rem;
+                color: #c62828;
+                margin-bottom: 16px;
+            }
+
+            .login-footer {
+                text-align: center;
+                margin-top: 20px;
+                font-size: .72rem;
+                color: #aaa;
+            }
+    </style>
+</head>
+<body>
+
+    <div class="login-card">
+        <div class="login-brand">
+            <div class="login-brand-title">SAPS Crash Registry</div>
+            <div class="login-brand-sub">Mpumalanga Province Traffic Management Unit</div>
+        </div>
+        <hr class="login-divider" />
+
+        @if (TempData["LoginError"] != null)
+        {
+            <div class="login-error" id="loginErr" data-msg="@TempData["LoginError"]">
+                @TempData["LoginError"]
+            </div>
+        }
+
+        <form method="post" action="/Account/Login" id="loginForm">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="returnUrl" value="@ViewBag.ReturnUrl" />
+
+            <div class="login-field">
+                <label>Email address</label>
+                <div id="emailBox"></div>
+                <input type="hidden" id="emailVal" name="email" />
+            </div>
+
+            <div class="login-field">
+                <label>Password</label>
+                <div id="passwordBox"></div>
+                <input type="hidden" id="passwordVal" name="password" />
+            </div>
+
+            <div class="login-btn-wrap">
+                <div id="btnLogin"></div>
+            </div>
+        </form>
+
+        <div class="login-footer">
+            Having trouble signing in? Contact your system administrator.
+        </div>
+    </div>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="https://cdn3.devexpress.com/jslib/25.2.7/js/dx.all.js"></script>
+    <script>
+        $(function () {
+        var emailInst = $("#emailBox").dxTextBox({
+        placeholder: "you@saps.local",
+        mode: "email",
+        showClearButton: true,
+        onValueChanged: function (e) { $("#emailVal").val(e.value); }
+        }).dxTextBox("instance");
+
+        var passInst = $("#passwordBox").dxTextBox({
+        placeholder: "Password",
+        mode: "password",
+        showClearButton: false,
+        onValueChanged: function (e) { $("#passwordVal").val(e.value); },
+        onEnterKey: function () { submit(); }
+        }).dxTextBox("instance");
+
+        $("#btnLogin").dxButton({
+        text: "Sign in",
+        type: "default",
+        icon: "key",
+        width: "100%",
+        onClick: function () { submit(); }
+        });
+
+        function submit() {
+        var email = emailInst.option("value");
+        var pass  = passInst.option("value");
+
+        if (!email) {
+        DevExpress.ui.notify("Please enter your email address.", "warning", 2500);
+        emailInst.focus();
+        return;
+        }
+        if (!pass) {
+        DevExpress.ui.notify("Please enter your password.", "warning", 2500);
+        passInst.focus();
+        return;
+        }
+
+        $("#emailVal").val(email);
+        $("#passwordVal").val(pass);
+        document.getElementById("loginForm").submit();
+        }
+        });
+    </script>
+</body>
+</html>

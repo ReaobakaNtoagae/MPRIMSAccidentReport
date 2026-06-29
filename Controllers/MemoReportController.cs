@@ -1,5 +1,7 @@
-﻿using CrashReport.Services;
+﻿using CrashReport.Security;
+using CrashReport.Services;
 using CrashReport.ViewModels;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CrashReport.Controllers;
@@ -15,7 +17,7 @@ public class MemoReportController : Controller
         _doc = doc;
     }
 
-  
+    [Authorize(Policy = Privileges.Reports.Monthly)]
     public IActionResult Index() => View();
 
    

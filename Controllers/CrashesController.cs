@@ -1,5 +1,7 @@
 ﻿using CrashReport.Data;
 using CrashReport.Models;
+using CrashReport.Security;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,7 +15,8 @@ public class CrashesController : Controller
         _context = context;
     }
 
-    
+
+    [Authorize(Policy = Privileges.Crashes.View)]
     public IActionResult Index() => View();
 
     
