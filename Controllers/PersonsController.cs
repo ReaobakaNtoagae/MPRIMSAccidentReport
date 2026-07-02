@@ -1,11 +1,10 @@
 ﻿using CrashReport.Data;
 using CrashReport.Models;
-
-
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace CrashReport.Controllers;
+
 
 public class PersonsController : Controller
 {
@@ -23,6 +22,7 @@ public class PersonsController : Controller
                 p.PersonId,
                 p.Surname,
                 p.FullNames,
+
                 p.IdNumber,
                 p.IdType,
                 p.Gender,

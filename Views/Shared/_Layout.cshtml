@@ -491,7 +491,11 @@
                 </a>
             </div>
 
-            <div class="nav-section-label"><span>Admin</span></div>
+          
+
+            @if (User.IsInRole("Administrator"))
+            {
+                  <div class="nav-section-label"><span>Admin</span></div>
 
             <div class="nav-item" data-label="Manage Lookups">
                 <a class="nav-link" asp-controller="Lookups" asp-action="Index">
@@ -500,8 +504,6 @@
                 </a>
             </div>
 
-            @if (User.IsInRole("Administrator"))
-            {
                 <div class="nav-item" data-label="Manage Users">
                     <a class="nav-link" asp-controller="Users" asp-action="Index">
                         <span class="nav-dot"></span>

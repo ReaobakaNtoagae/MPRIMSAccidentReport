@@ -20,7 +20,7 @@ public class AccountController : Controller
         _users = users;
     }
 
-    // GET: /Account/Login
+   
     [HttpGet]
     public IActionResult Login(string? returnUrl = null)
     {
@@ -31,7 +31,6 @@ public class AccountController : Controller
         return View();
     }
 
-    // POST: /Account/Login
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Login(
@@ -59,14 +58,13 @@ public class AccountController : Controller
 
         if (result.Succeeded)
         {
-            // ── Add FullName as a claim so the layout can display it
-            //    without a database hit on every request.
+
             var existingClaims = await _users.GetClaimsAsync(user);
             if (!existingClaims.Any(c => c.Type == "FullName"))
                 await _users.AddClaimAsync(user, new Claim("FullName", user.FullName));
             else
             {
-                // Keep the claim value in sync if the name was updated
+
                 var existing = existingClaims.First(c => c.Type == "FullName");
                 if (existing.Value != user.FullName)
                 {
@@ -75,7 +73,6 @@ public class AccountController : Controller
                 }
             }
 
-            // Re-sign so the new claim is in the cookie immediately
             await _signIn.RefreshSignInAsync(user);
 
             if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
@@ -96,7 +93,6 @@ public class AccountController : Controller
         return View();
     }
 
-    // POST: /Account/Logout
     [HttpPost]
     [ValidateAntiForgeryToken]
     [Authorize]
@@ -106,7 +102,7 @@ public class AccountController : Controller
         return RedirectToAction(nameof(Login));
     }
 
-    // GET: /Account/AccessDenied
+   
     [HttpGet]
     public IActionResult AccessDenied() => View();
 }
