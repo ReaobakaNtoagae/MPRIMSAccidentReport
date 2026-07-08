@@ -6,9 +6,10 @@ namespace CrashReport.Services;
 
 public class MonthlyMemoDataService
 {
-    private readonly AppDbContext _context;
+    //changed from private to protected so that QuarterlyReportDataService can inherit from this class and reuse the exact same queries and aggregation logic instead code
+    protected readonly AppDbContext _context;
 
-    private static readonly (string key, string name, HashSet<string> stations)[] Districts =
+    protected static readonly (string key, string name, HashSet<string> stations)[] Districts =
     [
         ("EhlanzeniSouth", "EHLANZENI SOUTH", new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
@@ -130,7 +131,7 @@ public class MonthlyMemoDataService
     }
 
   
-    private async Task<List<Row>> LoadAsync(DateOnly from, DateOnly to)
+    protected async Task<List<Row>> LoadAsync(DateOnly from, DateOnly to)
     {
         var crashes = await _context.Crashes
             .Include(c => c.CrashConditions)
@@ -186,7 +187,7 @@ public class MonthlyMemoDataService
         }).ToList();
     }
 
-    private static PeriodStatsBlock Agg(List<Row> r) => new()
+    protected static PeriodStatsBlock Agg(List<Row> r) => new()
     {
         Crashes = r.Count,
         Fatalities = r.Sum(x => x.Fatalities),
@@ -206,7 +207,7 @@ public class MonthlyMemoDataService
         SlightCyclists = r.Sum(x => x.SlightCyclists)
     };
 
-    private static List<RouteStats> BuildRoutes(List<Row> curr, List<Row> prior)
+    protected static List<RouteStats> BuildRoutes(List<Row> curr, List<Row> prior)
     {
         var c = curr.Where(r => !string.IsNullOrEmpty(r.Route))
                     .GroupBy(r => r.Route)
@@ -236,7 +237,7 @@ public class MonthlyMemoDataService
             .ToList();
     }
 
-    private static List<CrashTypeStats> BuildCrashTypes(List<Row> curr, List<Row> prior)
+    protected static List<CrashTypeStats> BuildCrashTypes(List<Row> curr, List<Row> prior)
     {
         var types = new[]
         {
@@ -260,7 +261,7 @@ public class MonthlyMemoDataService
         .OrderByDescending(x => x.FatalCurr).ToList();
     }
 
-    private static List<VehicleCategoryStats> BuildVehicleCats(List<Row> curr, List<Row> prior)
+    protected static List<VehicleCategoryStats> BuildVehicleCats(List<Row> curr, List<Row> prior)
     {
         var cats = new[]
         {
@@ -286,7 +287,7 @@ public class MonthlyMemoDataService
         .Where(x => x.CrashesCurr > 0 || x.CrashesPrev > 0).ToList();
     }
 
-    private static List<TimeSlotStats> BuildTimeSlots(List<Row> curr, List<Row> prior)
+    protected static List<TimeSlotStats> BuildTimeSlots(List<Row> curr, List<Row> prior)
     {
         var slots = new[]
         {
@@ -309,7 +310,7 @@ public class MonthlyMemoDataService
         }).ToList();
     }
 
-    private static List<DayStats> BuildDays(List<Row> curr, List<Row> prior)
+    protected static List<DayStats> BuildDays(List<Row> curr, List<Row> prior)
     {
         var days = new[]
         {
@@ -333,25 +334,25 @@ public class MonthlyMemoDataService
         }).ToList();
     }
 
-    private static bool InSlot(TimeOnly? t, int start, int end)
+    protected static bool InSlot(TimeOnly? t, int start, int end)
     {
         if (!t.HasValue) return false;
         var h = t.Value.Hour;
         return start < end ? h >= start && h < end : h >= start || h < end;
     }
 
-    private static string ExtractStation(string? crNo)
+    protected static string ExtractStation(string? crNo)
         => string.IsNullOrEmpty(crNo) ? "" :
            crNo.Contains('-') ? crNo.Split('-')[0].Trim() : crNo.Trim();
 
-    private static string FormatDate(DateOnly d)
+    protected static string FormatDate(DateOnly d)
     {
         var months = new[] { "","JANUARY","FEBRUARY","MARCH","APRIL","MAY","JUNE",
                              "JULY","AUGUST","SEPTEMBER","OCTOBER","NOVEMBER","DECEMBER" };
         return $"{d.Day} {months[d.Month]} {d.Year}";
     }
 
-    private static string FormatPeriodLabel(DateOnly from, DateOnly to)
+    protected static string FormatPeriodLabel(DateOnly from, DateOnly to)
     {
         var months = new[] { "","January","February","March","April","May","June",
                              "July","August","September","October","November","December" };
@@ -360,7 +361,7 @@ public class MonthlyMemoDataService
             : $"{months[from.Month]}–{months[to.Month]} {to.Year}";
     }
 
-    private class Row
+    protected class Row
     {
         public string Station { get; set; } = "";
         public DateOnly Date { get; set; }

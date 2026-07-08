@@ -1,0 +1,347 @@
+﻿@{
+    ViewData["Title"] = "Quarterly Report";
+}
+
+<style>
+    .qr-card {
+        background: #fff;
+        border-radius: 10px;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 1px 4px rgba(0,0,0,.06);
+        overflow: hidden;
+        margin-bottom: 20px;
+    }
+
+    .qr-card-head {
+        padding: 14px 20px;
+        border-bottom: 1px solid #f0f4f0;
+    }
+
+    .qr-head-label {
+        font-size: .72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .9px;
+        color: #2e7d32;
+    }
+
+    .qr-head-meta {
+        font-size: .75rem;
+        color: #9ca3af;
+        margin-top: 2px;
+    }
+
+    .qr-card-body {
+        padding: 20px;
+    }
+
+    .qr-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+    }
+
+    .qr-field-label {
+        font-size: .72rem;
+        font-weight: 600;
+        color: #374151;
+        text-transform: uppercase;
+        letter-spacing: .4px;
+        margin-bottom: 5px;
+    }
+
+    .qr-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
+        padding-top: 16px;
+        border-top: 1px solid #f0f4f0;
+    }
+
+    .qr-stat-row {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+        margin-bottom: 16px;
+    }
+
+    .qr-stat {
+        border-radius: 8px;
+        padding: 14px 16px;
+        border: 1px solid #e5e7eb;
+    }
+
+        .qr-stat .num {
+            font-size: 1.5rem;
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        .qr-stat .lbl {
+            font-size: .72rem;
+            color: #6b7280;
+            margin-top: 4px;
+        }
+
+        .qr-stat .cmp {
+            font-size: .68rem;
+            color: #9ca3af;
+            margin-top: 6px;
+        }
+
+    .qr-empty {
+        text-align: center;
+        padding: 40px 20px;
+        color: #9ca3af;
+        font-size: .85rem;
+    }
+</style>
+
+<div class="qr-card">
+    <div class="qr-card-head">
+        <div class="qr-head-label">Quarterly Report</div>
+        <div class="qr-head-meta">Same format as the monthly memorandum, spanning three months</div>
+    </div>
+    <div class="qr-card-body">
+        <div class="qr-grid">
+            <div>
+                <div class="qr-field-label">Quarter</div>
+                <div id="quarterBox"></div>
+            </div>
+            <div>
+                <div class="qr-field-label">Year</div>
+                <div id="yearBox"></div>
+            </div>
+        </div>
+
+        <div class="qr-grid" style="margin-top:16px;">
+            <div>
+                <div class="qr-field-label">Report date</div>
+                <div id="reportDateBox"></div>
+            </div>
+            <div>
+                <div class="qr-field-label">Reference number</div>
+                <div id="refNumberBox"></div>
+            </div>
+            <div>
+                <div class="qr-field-label">Enquiries — name</div>
+                <div id="enquiryNameBox"></div>
+            </div>
+            <div>
+                <div class="qr-field-label">Enquiries — telephone</div>
+                <div id="enquiryTelBox"></div>
+            </div>
+            <div>
+                <div class="qr-field-label">To (name)</div>
+                <div id="toNameBox"></div>
+            </div>
+            <div>
+                <div class="qr-field-label">To (title)</div>
+                <div id="toTitleBox"></div>
+            </div>
+            <div>
+                <div class="qr-field-label">From (name)</div>
+                <div id="fromNameBox"></div>
+            </div>
+            <div>
+                <div class="qr-field-label">From (title)</div>
+                <div id="fromTitleBox"></div>
+            </div>
+        </div>
+
+        <div class="qr-actions">
+            <div id="btnPreview"></div>
+            <div id="btnDownload"></div>
+        </div>
+    </div>
+</div>
+
+<div class="qr-card">
+    <div class="qr-card-head">
+        <div class="qr-head-label">Preview</div>
+        <div class="qr-head-meta">Provincial figures for the selected quarter versus the same quarter last year</div>
+    </div>
+    <div class="qr-card-body" id="previewBody">
+        <div class="qr-empty">Select a quarter and year, then click Preview.</div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(function () {
+
+            var currentYear = new Date().getFullYear();
+            var currentQuarter = Math.floor(new Date().getMonth() / 3) + 1;
+
+            var quarters = [
+                { value: 1, text: "Q1 — January to March" },
+                { value: 2, text: "Q2 — April to June" },
+                { value: 3, text: "Q3 — July to September" },
+                { value: 4, text: "Q4 — October to December" }
+            ];
+
+            var years = [];
+            for (var y = currentYear; y >= currentYear - 7; y--) years.push(y);
+
+            var quarterBox = $("#quarterBox").dxSelectBox({
+                items: quarters,
+                displayExpr: "text",
+                valueExpr: "value",
+                value: currentQuarter
+            }).dxSelectBox("instance");
+
+            var yearBox = $("#yearBox").dxSelectBox({
+                items: years,
+                value: currentYear
+            }).dxSelectBox("instance");
+
+            var reportDateBox = $("#reportDateBox").dxTextBox({
+                value: new Date().toLocaleDateString("en-ZA", { day: "2-digit", month: "long", year: "numeric" }).toUpperCase()
+            }).dxTextBox("instance");
+
+            var refNumberBox    = $("#refNumberBox").dxTextBox({ value: "16/9/4" }).dxTextBox("instance");
+            var enquiryNameBox  = $("#enquiryNameBox").dxTextBox({ value: "M C Mdhluli" }).dxTextBox("instance");
+            var enquiryTelBox   = $("#enquiryTelBox").dxTextBox({ value: "082 802 6966" }).dxTextBox("instance");
+            var toNameBox       = $("#toNameBox").dxTextBox({ value: "MR P NGOMANE (MPL)" }).dxTextBox("instance");
+            var toTitleBox      = $("#toTitleBox").dxTextBox({ value: "MEMBER OF THE EXECUTIVE COUNCIL" }).dxTextBox("instance");
+            var fromNameBox     = $("#fromNameBox").dxTextBox({ value: "MR W MTHOMBOTHI" }).dxTextBox("instance");
+            var fromTitleBox    = $("#fromTitleBox").dxTextBox({ value: "HEAD OF DEPARTMENT" }).dxTextBox("instance");
+
+            function buildRequest() {
+                return {
+                    Quarter:     quarterBox.option("value"),
+                    Year:        yearBox.option("value"),
+                    ReportDate:  reportDateBox.option("value"),
+                    RefNumber:   refNumberBox.option("value"),
+                    EnquiryName: enquiryNameBox.option("value"),
+                    EnquiryTel:  enquiryTelBox.option("value"),
+                    ToName:      toNameBox.option("value"),
+                    ToTitle:     toTitleBox.option("value"),
+                    FromName:    fromNameBox.option("value"),
+                    FromTitle:   fromTitleBox.option("value")
+                };
+            }
+
+            // ── Preview ────────────────────────────────────────────────
+            var previewBtn = $("#btnPreview").dxButton({
+                text: "Preview", icon: "preview", type: "normal", stylingMode: "outlined",
+                onClick: function () { runPreview(); }
+            }).dxButton("instance");
+
+            function runPreview() {
+                previewBtn.option("disabled", true);
+                $("#previewBody").html('<div class="qr-empty">Loading…</div>');
+
+                fetch("/QuarterlyReport/Preview", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(buildRequest())
+                })
+                .then(function (res) {
+                    if (!res.ok) return res.json().then(function (e) { throw new Error(e.error || "Request failed."); });
+                    return res.json();
+                })
+                .then(function (vm) { renderPreview(vm); })
+                .catch(function (err) {
+                    $("#previewBody").html('<div class="qr-empty">' + err.message + '</div>');
+                    DevExpress.ui.notify(err.message, "error", 4000);
+                })
+                .finally(function () { previewBtn.option("disabled", false); });
+            }
+
+            function renderPreview(vm) {
+                var c = vm.Provincial.Current;
+                var p = vm.Provincial.Prior;
+
+                function pctChange(curr, prior) {
+                    if (prior === 0) return curr === 0 ? "no change" : "new";
+                    var pct = Math.round(((curr - prior) / prior) * 100);
+                    return (pct > 0 ? "+" : "") + pct + "% vs " + vm.PriorYear;
+                }
+
+                var stats = [
+                    { label: "Crashes",    curr: c.Crashes,    prior: p.Crashes,    color: "#2E5FA3" },
+                    { label: "Fatalities", curr: c.Fatalities, prior: p.Fatalities, color: "#000000" },
+                    { label: "Serious",    curr: c.Serious,    prior: p.Serious,    color: "#C00000" },
+                    { label: "Slight",     curr: c.Slight,     prior: p.Slight,     color: "#00B050" }
+                ];
+
+                var html = '<div style="font-size:.85rem;color:#555;margin-bottom:14px;">' +
+                           '<strong>' + vm.MonthYear + '</strong> &nbsp;·&nbsp; ' +
+                           vm.PeriodFrom + ' to ' + vm.PeriodTo +
+                           '</div>';
+
+                html += '<div class="qr-stat-row">';
+                stats.forEach(function (s) {
+                    html += '<div class="qr-stat">' +
+                                '<div class="num" style="color:' + s.color + '">' + s.curr + '</div>' +
+                                '<div class="lbl">' + s.label + '</div>' +
+                                '<div class="cmp">' + pctChange(s.curr, s.prior) + '</div>' +
+                            '</div>';
+                });
+                html += '</div>';
+
+                html += '<div id="districtGrid"></div>';
+
+                $("#previewBody").html(html);
+
+                $("#districtGrid").dxDataGrid({
+                    dataSource: vm.Districts,
+                    showBorders: false,
+                    rowAlternationEnabled: true,
+                    columns: [
+                        { dataField: "Name", caption: "District" },
+                        { dataField: "Current.Crashes",    caption: "Crashes" },
+                        { dataField: "Current.Fatalities", caption: "Fatalities" },
+                        { dataField: "Current.Serious",    caption: "Serious" },
+                        { dataField: "Current.Slight",     caption: "Slight" }
+                    ]
+                });
+            }
+
+            // ── Download ───────────────────────────────────────────────
+            // Download takes a JSON body and returns a .docx byte stream, so a
+            // plain <form> POST won't work here — fetch + blob triggers the
+            // browser's file save the same way a form submission would.
+            var downloadBtn = $("#btnDownload").dxButton({
+                text: "Download Word report", icon: "download", type: "default",
+                onClick: function () { runDownload(); }
+            }).dxButton("instance");
+
+            function runDownload() {
+                var req = buildRequest();
+                downloadBtn.option("disabled", true);
+                DevExpress.ui.notify(
+                    "Generating report — this can take up to 30 seconds…", "info", 4000);
+
+                fetch("/QuarterlyReport/Download", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(req)
+                })
+                .then(function (res) {
+                    if (!res.ok) return res.json().then(function (e) { throw new Error(e.error || "Request failed."); });
+                    return res.blob();
+                })
+                .then(function (blob) {
+                    var url = URL.createObjectURL(blob);
+                    var a = document.createElement("a");
+                    a.href = url;
+                    a.download = "Quarterly_Report_Q" + req.Quarter + "_" + req.Year + ".docx";
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    URL.revokeObjectURL(url);
+                    DevExpress.ui.notify("Report downloaded.", "success", 3000);
+                })
+                .catch(function (err) {
+                    DevExpress.ui.notify("Could not generate the report: " + err.message, "error", 5000);
+                })
+                .finally(function () {
+                    downloadBtn.option("disabled", false);
+                });
+            }
+
+        });
+    </script>
+}

@@ -1,6 +1,5 @@
 ﻿namespace CrashReport.ViewModels;
 
-
 public class CrashInfoViewModel
 {
     public string? CasNo { get; set; }

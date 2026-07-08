@@ -16,7 +16,7 @@ builder.Logging.AddConfiguration(builder.Configuration.GetSection("Logging"));
 
 builder.Services.AddControllersWithViews(options =>
 {
-    // Add global authorization filter
+    
     var policy = new AuthorizationPolicyBuilder()
                      .RequireAuthenticatedUser()
                      .Build();
@@ -26,7 +26,7 @@ builder.Services.AddControllersWithViews(options =>
     options.SerializerSettings.ContractResolver =
         new DefaultContractResolver());
 
-// **ADD THIS BACK - Register your DbContext**
+
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
@@ -36,6 +36,7 @@ builder.Services.AddScoped<StandbyReportDataService>();
 builder.Services.AddScoped<StandbyReportWordService>();
 builder.Services.AddScoped<MonthlyMemoDataService>();
 builder.Services.AddScoped<MonthlyMemoDocService>();
+builder.Services.AddScoped<QuarterlyReportDataService>();
 
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 {
