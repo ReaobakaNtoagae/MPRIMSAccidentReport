@@ -37,6 +37,9 @@ builder.Services.AddScoped<StandbyReportWordService>();
 builder.Services.AddScoped<MonthlyMemoDataService>();
 builder.Services.AddScoped<MonthlyMemoDocService>();
 builder.Services.AddScoped<QuarterlyReportDataService>();
+builder.Services.AddScoped<QuarterlyReportDocService>();
+builder.Services.AddScoped<FiveYearReportDataService>();
+builder.Services.AddScoped<FiveYearReportDocService>();
 
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 {
