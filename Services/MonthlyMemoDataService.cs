@@ -4,9 +4,18 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CrashReport.Services;
 
+// ── UPDATED for the core/summary split ────────────────────────
+// LoadAsync now merges two data sources into the same Row shape:
+//   1. crashes graph        — real CR1 form captures (the wizard)
+//   2. crash_summaries      — Excel-imported summary rows
+// deduplicated by CrNo with form captures taking precedence.
+// Because Quarterly and Five-Year data services inherit this method,
+// all reports automatically see the union of both sources.
+//
+// Members remain `protected` (not private) so QuarterlyReportDataService
+// and FiveYearReportDataService can reuse the queries and helpers.
 public class MonthlyMemoDataService
 {
-    //changed from private to protected so that QuarterlyReportDataService can inherit from this class and reuse the exact same queries and aggregation logic instead code
     protected readonly AppDbContext _context;
 
     protected static readonly (string key, string name, HashSet<string> stations)[] Districts =
@@ -32,7 +41,6 @@ public class MonthlyMemoDataService
             "CAROLINA","LEANDRA","KWAMHLANGA","BRONKHORSTSPRUIT"
         })
     ];
-
     public MonthlyMemoDataService(AppDbContext context) => _context = context;
 
     public async Task<MonthlyMemoViewModel> BuildAsync(MemoReportRequest req)
@@ -130,9 +138,23 @@ public class MonthlyMemoDataService
         return vm;
     }
 
-  
+
+    // ── LoadAsync — merges TWO data sources into the same Row shape ──
+    //
+    //   1. The core crashes graph: real CR1 form captures (the wizard).
+    //   2. crash_summaries: Excel-imported summary rows.
+    //
+    // Dedup rule: if the same CrNo exists in both stores, the FORM
+    // capture wins — the detailed record is strictly more trustworthy
+    // than the spreadsheet line. The importer also blocks this overlap
+    // at import time; this is defence-in-depth.
+    //
+    // Monthly, Quarterly, and Five-Year data services all reach their
+    // data exclusively through this one method (via inheritance), so
+    // all three reports automatically see the union of both sources.
     protected async Task<List<Row>> LoadAsync(DateOnly from, DateOnly to)
     {
+        // ── Source 1: real CR1 form captures ─────────────────────
         var crashes = await _context.Crashes
             .Include(c => c.CrashConditions)
             .Include(c => c.CrashVehicles).ThenInclude(cv => cv.Vehicle)
@@ -140,18 +162,13 @@ public class MonthlyMemoDataService
             .Where(c => c.CrashDate >= from && c.CrashDate <= to)
             .ToListAsync();
 
-        return crashes.Select(c =>
+        var formRows = crashes.Select(c =>
         {
             var people = c.CrashPeople.ToList();
             var cond = c.CrashConditions.FirstOrDefault();
             var vCats = c.CrashVehicles
                             .Select(v => v.Vehicle?.VehicleCategory ?? "")
                             .ToList();
-
-            bool Has(string role, string sev) =>
-                people.Any(p =>
-                    string.Equals(p.Role, role, StringComparison.OrdinalIgnoreCase) &&
-                    string.Equals(p.SeverityOfInjury, sev, StringComparison.OrdinalIgnoreCase));
 
             int Count(string role, string sev) =>
                 people.Count(p =>
@@ -160,6 +177,7 @@ public class MonthlyMemoDataService
 
             return new Row
             {
+                CrNo = c.CrNo ?? "",
                 Station = ExtractStation(c.CrNo),
                 Date = c.CrashDate,
                 Time = c.CrashTime,
@@ -185,6 +203,83 @@ public class MonthlyMemoDataService
                 SlightCyclists = Count("Bicyclist", "Slight"),
             };
         }).ToList();
+
+        // ── Source 2: Excel-imported summaries ────────────────────
+        var summaries = await _context.CrashSummaries
+            .Where(s => s.CrashDate >= from && s.CrashDate <= to)
+            .ToListAsync();
+
+        var formCrNos = formRows
+            .Where(r => !string.IsNullOrEmpty(r.CrNo))
+            .Select(r => r.CrNo)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var summaryRows = summaries
+            .Where(s => !formCrNos.Contains(s.CrNo))
+            .Select(s => new Row
+            {
+                CrNo = s.CrNo,
+                Station = s.Station,
+                Date = s.CrashDate,
+                Time = s.CrashTime,
+                Route = s.Route ?? "",
+                CrashType = s.CrashType ?? "",
+                VehicleCats = MapVehicleCodes(s.VehiclesString),
+
+                Fatalities = s.Fatalities,
+                Serious = s.Serious,
+                Slight = s.Slight,
+
+                FatalDrivers = s.FatalDrivers,
+                FatalPassengers = s.FatalPassengers,
+                FatalPedestrians = s.FatalPedestrians,
+                FatalCyclists = s.FatalCyclists,
+                SeriousDrivers = s.SeriousDrivers,
+                SeriousPassengers = s.SeriousPassengers,
+                SeriousPedestrians = s.SeriousPedestrians,
+                SeriousCyclists = s.SeriousCyclists,
+                SlightDrivers = s.SlightDrivers,
+                SlightPassengers = s.SlightPassengers,
+                SlightPedestrians = s.SlightPedestrians,
+                SlightCyclists = s.SlightCyclists,
+            });
+
+        formRows.AddRange(summaryRows);
+        return formRows;
+    }
+
+    /// <summary>
+    /// Maps the Excel INVOLVED string's vehicle codes ("SED / LDV / M/C")
+    /// onto the same VehicleCategory names used by form-captured vehicles,
+    /// so BuildVehicleCats counts both sources identically. Unrecognised
+    /// codes pass through unchanged (they simply won't match any report
+    /// category — same behaviour as before the split).
+    /// </summary>
+    protected static List<string> MapVehicleCodes(string? involved)
+    {
+        if (string.IsNullOrWhiteSpace(involved)) return new List<string>();
+
+        var codeMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["SED"] = "Passenger", ["SEDAN"] = "Passenger", ["SUV"] = "Passenger",
+            ["LDV"] = "Goods", ["BAKKIE"] = "Goods",
+            ["TAXI"] = "Taxi",
+            ["TRUCK"] = "Truck",
+            ["M/C"] = "Motorcycle", ["MC"] = "Motorcycle",
+            ["BUS"] = "Bus",
+            ["ARTIC"] = "Articulated",
+            ["CYCLE"] = "Bicycle", ["BICYCLE"] = "Bicycle",
+        };
+
+        return involved
+            .Split('/')
+            .Select(p => p.Trim())
+            .Where(p => !string.IsNullOrWhiteSpace(p)
+                        && !p.Equals("P/D", StringComparison.OrdinalIgnoreCase)
+                        && !p.Equals("HIT N RUN", StringComparison.OrdinalIgnoreCase)
+                        && !p.Equals("HIT & RUN", StringComparison.OrdinalIgnoreCase))
+            .Select(p => codeMap.TryGetValue(p, out var mapped) ? mapped : p)
+            .ToList();
     }
 
     protected static PeriodStatsBlock Agg(List<Row> r) => new()
@@ -363,6 +458,7 @@ public class MonthlyMemoDataService
 
     protected class Row
     {
+        public string CrNo { get; set; } = "";
         public string Station { get; set; } = "";
         public DateOnly Date { get; set; }
         public TimeOnly? Time { get; set; }

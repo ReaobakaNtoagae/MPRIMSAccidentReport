@@ -6,21 +6,11 @@ using static CrashReport.ViewModels.FiveYearReportRequest;
 
 namespace CrashReport.Services;
 
-/// <summary>
-/// Generates the Five Year Report .docx using the OpenXML SDK directly
-/// — no Node.js pipeline, since this report is tables-only (confirmed
-/// against the department's reference document, which has zero embedded
-/// charts). Every one of the 26 tables in the source document reduces to
-/// exactly one of three shapes, so this builds 3 reusable table helpers
-/// rather than 26 bespoke ones:
-///
-///   1. Region summary table   (Tables 0–4)   — label, years, TOTAL, AVERAGE
-///   2. Ranked breakdown table (Tables 5–22)  — label, years, TOTAL, AVERAGE, %
-///   3. Demographic table      (Tables 23–25) — label, years (may have gaps), TOTAL
-/// </summary>
 public class FiveYearReportDocService
 {
     private const string FontName = "Arial";
+
+    private const int PageWidthDxa = 9026;
 
     public Task<byte[]> GenerateAsync(FiveYearReportViewModel vm)
     {
@@ -37,11 +27,11 @@ public class FiveYearReportDocService
             body.AppendChild(Heading($"{vm.StartYear} \u2013 {vm.EndYear}", size: 24, spacingAfter: 300));
 
             // ── Memo header block ──
-            body.AppendChild(Paragraph($"Report date: {vm.ReportDate}"));
-            body.AppendChild(Paragraph($"Ref: {vm.RefNumber}"));
-            body.AppendChild(Paragraph($"Enquiries: {vm.EnquiryName}  \u00b7  Tel: {vm.EnquiryTel}"));
-            body.AppendChild(Paragraph($"To: {vm.ToName}, {vm.ToTitle}"));
-            body.AppendChild(Paragraph($"From: {vm.FromName}, {vm.FromTitle}"));
+            body.AppendChild(Para($"Report date: {vm.ReportDate}"));
+            body.AppendChild(Para($"Ref: {vm.RefNumber}"));
+            body.AppendChild(Para($"Enquiries: {vm.EnquiryName}  \u00b7  Tel: {vm.EnquiryTel}"));
+            body.AppendChild(Para($"To: {vm.ToName}, {vm.ToTitle}"));
+            body.AppendChild(Para($"From: {vm.FromName}, {vm.FromTitle}"));
             body.AppendChild(new Paragraph(new Run(new Break())));
 
             var years = Enumerable.Range(vm.StartYear, vm.EndYear - vm.StartYear + 1).ToArray();
@@ -76,29 +66,29 @@ public class FiveYearReportDocService
 
             // ── Section 3: Crash types & vehicle categories ──
             body.AppendChild(Heading("PROVINCIAL CRASH TYPES", size: 24));
-            body.AppendChild(BuildRankedTable(vm.CrashTypes, years, ""));
+            body.AppendChild(BuildRankedTable(vm.CrashTypes, years, "TYPE"));
             body.AppendChild(SpacerParagraph());
 
             body.AppendChild(Heading("PROVINCIAL VEHICLE CATEGORIES", size: 24));
-            body.AppendChild(BuildRankedTable(vm.VehicleCategories, years, ""));
+            body.AppendChild(BuildRankedTable(vm.VehicleCategories, years, "CATEGORY"));
             body.AppendChild(SpacerParagraph());
 
             // ── Section 4: Time of day ──
             body.AppendChild(Heading("PROVINCE PREVALENT TIMES: CRASHES", size: 24));
-            body.AppendChild(BuildRankedTable(vm.TimeSlotsCrashes, years, ""));
+            body.AppendChild(BuildRankedTable(vm.TimeSlotsCrashes, years, "TIME"));
             body.AppendChild(SpacerParagraph());
 
             body.AppendChild(Heading("PROVINCE PREVALENT TIMES: FATALITIES", size: 24));
-            body.AppendChild(BuildRankedTable(vm.TimeSlotsFatalities, years, ""));
+            body.AppendChild(BuildRankedTable(vm.TimeSlotsFatalities, years, "TIME"));
             body.AppendChild(SpacerParagraph());
 
             // ── Section 5: Day of week ──
             body.AppendChild(Heading("PROVINCE DAYS OF THE WEEK: CRASHES", size: 24));
-            body.AppendChild(BuildRankedTable(vm.DaysOfWeekCrashes, years, ""));
+            body.AppendChild(BuildRankedTable(vm.DaysOfWeekCrashes, years, "DAY"));
             body.AppendChild(SpacerParagraph());
 
             body.AppendChild(Heading("PROVINCE DAYS OF THE WEEK: FATALITIES", size: 24));
-            body.AppendChild(BuildRankedTable(vm.DaysOfWeekFatalities, years, ""));
+            body.AppendChild(BuildRankedTable(vm.DaysOfWeekFatalities, years, "DAY"));
             body.AppendChild(SpacerParagraph());
 
             // ── Section 6: Shock weekend ──
@@ -137,18 +127,33 @@ public class FiveYearReportDocService
         return Task.FromResult(stream.ToArray());
     }
 
-    // ══════════════════════════════════════════════════════════════
-    // TABLE SHAPE 1 — Region summary (Tables 0–4)
-    // Label | Year1 | Year2 | ... | TOTAL | AVERAGE
-    // ══════════════════════════════════════════════════════════════
+  
+    private static int[] ComputeWidths(int columnCount, int labelWidth = 2200)
+    {
+        if (columnCount <= 1) return new[] { PageWidthDxa };
+
+        var widths = new int[columnCount];
+        widths[0] = labelWidth;
+        var remaining = PageWidthDxa - labelWidth;
+        var per = remaining / (columnCount - 1);
+
+        for (int i = 1; i < columnCount; i++) widths[i] = per;
+      
+        widths[columnCount - 1] += remaining - per * (columnCount - 1);
+        return widths;
+    }
+
+   
     private static Table BuildRegionSummaryTable(RegionSummary region, int[] years)
     {
+        var widths = ComputeWidths(years.Length + 3);
+
         var headerCells = new List<string> { "" };
         headerCells.AddRange(years.Select(y => y.ToString()));
         headerCells.Add("TOTAL");
         headerCells.Add("AVERAGE");
 
-        var rows = new List<TableRow> { MakeRow(headerCells, bold: true, shaded: true) };
+        var rows = new List<TableRow> { MakeRow(headerCells, widths, bold: true, shaded: true, isHeader: true) };
 
         foreach (var stat in region.Stats)
         {
@@ -156,25 +161,23 @@ public class FiveYearReportDocService
             cells.AddRange(stat.Years.Select(v => v.ToString()));
             cells.Add(stat.Total.ToString());
             cells.Add(stat.Average.ToString());
-            rows.Add(MakeRow(cells));
+            rows.Add(MakeRow(cells, widths));
         }
 
-        return MakeTable(rows);
+        return MakeTable(rows, widths);
     }
 
-    // ══════════════════════════════════════════════════════════════
-    // TABLE SHAPE 2 — Ranked breakdown (Tables 5–22)
-    // Label | Year1 | Year2 | ... | TOTAL | AVERAGE | %
-    // ══════════════════════════════════════════════════════════════
     private static Table BuildRankedTable(RankedTable table, int[] years, string labelHeader)
     {
+        var widths = ComputeWidths(years.Length + 4);
+
         var headerCells = new List<string> { labelHeader };
         headerCells.AddRange(years.Select(y => y.ToString()));
         headerCells.Add("TOTAL");
         headerCells.Add("AVERAGE");
         headerCells.Add("%");
 
-        var rows = new List<TableRow> { MakeRow(headerCells, bold: true, shaded: true) };
+        var rows = new List<TableRow> { MakeRow(headerCells, widths, bold: true, shaded: true, isHeader: true) };
 
         foreach (var row in table.Rows)
         {
@@ -183,7 +186,7 @@ public class FiveYearReportDocService
             cells.Add(row.Total.ToString());
             cells.Add(row.Average.ToString());
             cells.Add($"{row.Percent:0}%");
-            rows.Add(MakeRow(cells));
+            rows.Add(MakeRow(cells, widths));
         }
 
         // TOTAL footer row, matching the reference document's tables
@@ -193,43 +196,39 @@ public class FiveYearReportDocService
         totalCells.Add(table.GrandTotal.ToString());
         totalCells.Add("");
         totalCells.Add("100%");
-        rows.Add(MakeRow(totalCells, bold: true));
+        rows.Add(MakeRow(totalCells, widths, bold: true));
 
-        return MakeTable(rows);
+        return MakeTable(rows, widths);
     }
 
-    // ══════════════════════════════════════════════════════════════
-    // TABLE SHAPE 3 — Demographics (Tables 23–25)
-    // Label | Year1 | Year2 | ... | TOTAL   (years may have gaps)
-    // ══════════════════════════════════════════════════════════════
+    
     private static Table BuildDemographicTable(List<DemographicYearRow> rows, List<int> availableYears, string cornerLabel)
     {
+        var widths = ComputeWidths(availableYears.Count + 2);
+
         var headerCells = new List<string> { cornerLabel };
         headerCells.AddRange(availableYears.Select(y => y.ToString()));
         headerCells.Add("TOTAL");
 
-        var tableRows = new List<TableRow> { MakeRow(headerCells, bold: true, shaded: true) };
+        var tableRows = new List<TableRow> { MakeRow(headerCells, widths, bold: true, shaded: true, isHeader: true) };
 
         foreach (var row in rows)
         {
             var cells = new List<string> { row.Label };
             cells.AddRange(availableYears.Select(y => row.ByYear.TryGetValue(y, out var v) ? v.ToString() : "0"));
             cells.Add(row.Total.ToString());
-            tableRows.Add(MakeRow(cells));
+            tableRows.Add(MakeRow(cells, widths));
         }
 
         var totalRow = new List<string> { "TOTAL" };
         foreach (var y in availableYears)
             totalRow.Add(rows.Sum(r => r.ByYear.TryGetValue(y, out var v) ? v : 0).ToString());
         totalRow.Add(rows.Sum(r => r.Total).ToString());
-        tableRows.Add(MakeRow(totalRow, bold: true));
+        tableRows.Add(MakeRow(totalRow, widths, bold: true));
 
-        return MakeTable(tableRows);
+        return MakeTable(tableRows, widths);
     }
 
-    // ══════════════════════════════════════════════════════════════
-    // OpenXML primitives
-    // ══════════════════════════════════════════════════════════════
 
     private static Paragraph Heading(string text, int size = 22, int spacingAfter = 120)
     {
@@ -246,7 +245,7 @@ public class FiveYearReportDocService
         };
     }
 
-    private static Paragraph Paragraph(string text, int size = 20)
+    private static Paragraph Para(string text, int size = 20)
     {
         var run = new Run(new Text(text));
         run.RunProperties = new RunProperties(
@@ -262,7 +261,7 @@ public class FiveYearReportDocService
             new RunFonts { Ascii = FontName },
             new Italic(),
             new FontSize { Val = "18" },
-            new Color { Val = "B45309" }); // amber — flags this as a caveat, not a normal figure
+            new Color { Val = "B45309" });
         return new Paragraph(run)
         {
             ParagraphProperties = new ParagraphProperties(
@@ -273,15 +272,24 @@ public class FiveYearReportDocService
     private static Paragraph SpacerParagraph() =>
         new(new ParagraphProperties(new SpacingBetweenLines { After = "300" }));
 
-    private static TableRow MakeRow(IEnumerable<string> cellTexts, bool bold = false, bool shaded = false)
+    private static TableRow MakeRow(
+        IReadOnlyList<string> cellTexts, int[] widths,
+        bool bold = false, bool shaded = false, bool isHeader = false)
     {
         var row = new TableRow();
-        foreach (var text in cellTexts)
-            row.AppendChild(MakeCell(text, bold, shaded));
+
+        if (isHeader)
+            row.AppendChild(new TableRowProperties(new TableHeader()));
+
+        for (int i = 0; i < cellTexts.Count; i++)
+        {
+            var width = i < widths.Length ? widths[i] : widths[^1];
+            row.AppendChild(MakeCell(cellTexts[i], width, bold, shaded));
+        }
         return row;
     }
 
-    private static TableCell MakeCell(string text, bool bold = false, bool shaded = false)
+    private static TableCell MakeCell(string text, int widthDxa, bool bold = false, bool shaded = false)
     {
         var run = new Run(new Text(text ?? string.Empty));
         run.RunProperties = new RunProperties(
@@ -291,27 +299,35 @@ public class FiveYearReportDocService
 
         var cell = new TableCell(new Paragraph(run));
 
-        var cellProps = new TableCellProperties(
-            new TableCellWidth { Type = TableWidthUnitValues.Auto },
-            new TableCellMargin(
-                new TopMargin { Width = "40" },
-                new BottomMargin { Width = "40" },
-                new LeftMargin { Width = "80", Type = TableWidthUnitValues.Dxa },
-                new RightMargin { Width = "80", Type = TableWidthUnitValues.Dxa })
-          
-        );
+       
+        var cellProps = new TableCellProperties();
+
+        cellProps.AppendChild(new TableCellWidth
+        {
+            Width = widthDxa.ToString(),
+            Type = TableWidthUnitValues.Dxa
+        });
+
         if (shaded)
             cellProps.AppendChild(new Shading { Val = ShadingPatternValues.Clear, Fill = "D9D9D9" });
+
+        cellProps.AppendChild(new TableCellMargin(
+            new TopMargin { Width = "40", Type = TableWidthUnitValues.Dxa },
+            new LeftMargin { Width = "80", Type = TableWidthUnitValues.Dxa },
+            new BottomMargin { Width = "40", Type = TableWidthUnitValues.Dxa },
+            new RightMargin { Width = "80", Type = TableWidthUnitValues.Dxa }));
 
         cell.TableCellProperties = cellProps;
         return cell;
     }
 
-    private static Table MakeTable(List<TableRow> rows)
+    private static Table MakeTable(List<TableRow> rows, int[] widths)
     {
         var table = new Table();
 
+       
         var tableProps = new TableProperties(
+            new TableWidth { Width = PageWidthDxa.ToString(), Type = TableWidthUnitValues.Dxa },
             new TableBorders(
                 new TopBorder { Val = BorderValues.Single, Size = 4, Color = "999999" },
                 new BottomBorder { Val = BorderValues.Single, Size = 4, Color = "999999" },
@@ -320,10 +336,15 @@ public class FiveYearReportDocService
                 new InsideHorizontalBorder { Val = BorderValues.Single, Size = 4, Color = "CCCCCC" },
                 new InsideVerticalBorder { Val = BorderValues.Single, Size = 4, Color = "CCCCCC" }
             ),
-            new TableWidth { Type = TableWidthUnitValues.Auto }
+            new TableLayout { Type = TableLayoutValues.Fixed }
         );
-
         table.AppendChild(tableProps);
+
+        var grid = new TableGrid();
+        foreach (var w in widths)
+            grid.AppendChild(new GridColumn { Width = w.ToString() });
+        table.AppendChild(grid);
+
         foreach (var row in rows)
             table.AppendChild(row);
 

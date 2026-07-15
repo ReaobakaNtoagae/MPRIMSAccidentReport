@@ -5,42 +5,11 @@ using static CrashReport.ViewModels.FiveYearReportRequest;
 
 namespace CrashReport.Services;
 
-/// <summary>
-/// Builds the Five Year Report — the same month analyzed across 5
-/// consecutive years (e.g. "MAY ANALYSIS FOR THE PAST FIVE YEARS,
-/// 2021–2025"), matching the department's existing manually-compiled
-/// analysis document.
-///
-/// Inherits from MonthlyMemoDataService to reuse LoadAsync, the
-/// Districts station map, and small helpers (InSlot, ExtractStation,
-/// FormatDate) — but writes its own aggregation logic throughout,
-/// because every table here is a 5-YEAR ranking (one column per year)
-/// rather than the current-vs-prior comparison shape the monthly/
-/// quarterly reports use.
-///
-/// REGION NAMING — confirmed with the department:
-/// This report displays "EHLANZENI" and "BOHLABELA" as two separate
-/// regions, where "BOHLABELA" is simply the historical/informal name
-/// for the same stations the rest of the system calls "Ehlanzeni
-/// North". No new station lists were created — RegionDisplayNames
-/// below just relabels the existing Districts array entries for this
-/// report only; Monthly/Quarterly reports are unaffected and keep
-/// using "EHLANZENI SOUTH"/"EHLANZENI NORTH".
-///
-/// DEMOGRAPHICS — included in this report (unlike Monthly/Quarterly,
-/// which exclude them for data-quality reasons) because the department's
-/// existing document includes them. Sourced from crash_demographics,
-/// which is manually typed by stations and known to have gaps (see
-/// DemographicsHasGaps on the view model) — the reference document
-/// itself is missing 2021 age data for exactly this reason.
-/// </summary>
+
 public class FiveYearReportDataService : MonthlyMemoDataService
 {
     public FiveYearReportDataService(AppDbContext context) : base(context) { }
 
-    // Maps the inherited Districts array's internal `key` to the
-    // display name THIS report uses — everywhere else in the system
-    // continues to say "EHLANZENI NORTH".
     private static readonly Dictionary<string, string> RegionDisplayNames = new()
     {
         ["EhlanzeniSouth"] = "EHLANZENI",
@@ -48,6 +17,8 @@ public class FiveYearReportDataService : MonthlyMemoDataService
         ["GertSibande"] = "GERT SIBANDE",
         ["Nkangala"] = "NKANGALA",
     };
+
+  
 
     private static readonly string[] CrashTypeList =
     {

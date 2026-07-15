@@ -1,25 +1,34 @@
 ﻿using ClosedXML.Excel;
 using CrashReport.Data;
 using CrashReport.Models;
-using DocumentFormat.OpenXml.Spreadsheet;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using System.Text.RegularExpressions;
 
 namespace CrashReport.Services;
 
+/// <summary>
+/// Imports station Excel workbooks into crash_summaries — the flat
+/// reporting table — rather than fabricating placeholder rows in the
+/// core relational tables (crashes/persons/vehicles) as the previous
+/// version did.
+///
+/// ARCHITECTURE (post-split):
+///   • Core tables    = CR1 wizard captures only (real detailed data)
+///   • crash_summaries = Excel-imported summary rows (this service)
+///   • crash_demographics = the workbook's bottom summary block (unchanged)
+///   • Reports        = union of core + summaries, merged in
+///                      MonthlyMemoDataService.LoadAsync, deduped by CrNo
+///
+/// Everything about HOW the file is read is unchanged from the previous
+/// version: dynamic header-based column detection, worksheet-header
+/// period/district detection, the summary-section boundary walk, and
+/// the demographics parsing all work exactly as before. What changed is
+/// only WHERE parsed rows are written.
+/// </summary>
 public class ExcelImportService
 {
     private readonly AppDbContext _context;
     private readonly ILogger<ExcelImportService> _logger;
-
-    private static readonly HashSet<string> NonVehicleTypes =
-        new(StringComparer.OrdinalIgnoreCase)
-        {
-            "P/D",
-            "HIT N RUN",
-            "HIT & RUN"
-        };
 
     public ExcelImportService(AppDbContext context, ILogger<ExcelImportService> logger)
     {
@@ -28,19 +37,7 @@ public class ExcelImportService
     }
 
     // ════════════════════════════════════════════════════════════
-    // DYNAMIC COLUMN DETECTION
-    //
-    // Every field is located by its header TEXT, not by a fixed column
-    // number. If a station inserts, removes, or reorders a column, the
-    // map below still finds the right one — instead of every hardcoded
-    // Cell(9)/Cell(24)/etc. silently reading the wrong field.
-    //
-    // The tricky part: the injury columns have TWO header rows —
-    //   Row 5 (group):    FATAL          GENDER   SERIOUS        SLIGHT
-    //   Row 6 (sub):   D  P  PD  C       M  F   D  P  PD  C   D  P  PD  C
-    // "D" alone is ambiguous — it appears in three different blocks.
-    // So we first find each group's column span from the group row,
-    // then only look for D/P/PD/C inside that span.
+    // DYNAMIC COLUMN DETECTION (unchanged from previous version)
     // ════════════════════════════════════════════════════════════
 
     private class ColumnMap
@@ -50,11 +47,6 @@ public class ExcelImportService
         public int SeriousD, SeriousP, SeriousPd, SeriousC;
         public int SlightD, SlightP, SlightPd, SlightC;
 
-        /// <summary>
-        /// Lists any critical field that could not be located, so the
-        /// import can fail loudly with a clear message instead of silently
-        /// importing garbage from a wrong (or default-zero) column.
-        /// </summary>
         public List<string> MissingCriticalFields()
         {
             var missing = new List<string>();
@@ -70,18 +62,12 @@ public class ExcelImportService
         (raw ?? "").Trim().ToUpperInvariant()
                    .Replace(" ", "").Replace("-", "").Replace(".", "").Replace("_", "");
 
-    /// <summary>
-    /// Locates the header row (by finding "SAPS" with "AR NO" nearby, in
-    /// whatever column they happen to sit) and builds a ColumnMap from it,
-    /// combined with the group-header row directly above it.
-    /// Returns null if no header row could be found at all.
-    /// </summary>
     private (int HeaderRowNumber, ColumnMap Map)? BuildColumnMap(IXLWorksheet ws)
     {
         var rows = ws.RowsUsed().ToList();
 
         int subHeaderIdx = -1;
-        const int scanCols = 60; // generous — real files use ~24, this tolerates extra columns
+        const int scanCols = 60;
 
         for (int i = 0; i < rows.Count && subHeaderIdx == -1; i++)
         {
@@ -90,7 +76,6 @@ public class ExcelImportService
             {
                 if (NormalizeHeader(row.Cell(c).GetString()) != "SAPS") continue;
 
-                // "AR NO" should appear within the next few columns
                 for (int c2 = c + 1; c2 <= c + 5; c2++)
                 {
                     if (NormalizeHeader(row.Cell(c2).GetString()) == "ARNO")
@@ -110,7 +95,6 @@ public class ExcelImportService
         var groupRow = subHeaderIdx > 0 ? rows[subHeaderIdx - 1] : null;
         var map = new ColumnMap();
 
-        // ── Simple, uniquely-named columns ─────────────────────
         for (int c = 1; c <= scanCols; c++)
         {
             switch (NormalizeHeader(headerRow.Cell(c).GetString()))
@@ -128,7 +112,6 @@ public class ExcelImportService
             }
         }
 
-        // ── Grouped injury columns (FATAL / GENDER / SERIOUS / SLIGHT) ──
         if (groupRow != null)
         {
             var groups = new List<(string Group, int StartCol)>();
@@ -138,7 +121,7 @@ public class ExcelImportService
                 if (g is "FATAL" or "GENDER" or "SERIOUS" or "SLIGHT")
                     groups.Add((g, c));
             }
-            groups.Add(("__END__", scanCols + 1)); // sentinel to close the last span
+            groups.Add(("__END__", scanCols + 1));
 
             for (int gi = 0; gi < groups.Count - 1; gi++)
             {
@@ -181,22 +164,15 @@ public class ExcelImportService
     }
 
     // ════════════════════════════════════════════════════════════
-    // REPORT HEADER DETECTION — period and district
-    //
-    // The period ("ACCIDENT REPORT:   01 - 31 JANUARY 2026") and the
-    // district/area label ("EHLANZENI", "PROVINCIAL", etc.) are printed
-    // as free text near the top of the sheet. Rather than assuming a
-    // fixed cell, both are found by scanning the first few rows and
-    // pattern-matching the text — same "search by content, not position"
-    // approach as the column map above.
+    // REPORT HEADER DETECTION (unchanged from previous version)
     // ════════════════════════════════════════════════════════════
 
     private class ReportHeaderInfo
     {
         public DateOnly? PeriodFrom { get; set; }
         public DateOnly? PeriodTo { get; set; }
-        public string? District { get; set; }     // e.g. "EHLANZENI", "GERT SIBANDE" — null if not present
-        public bool IsProvincial { get; set; }     // header explicitly said PROVINCIAL/CONSOLIDATED/MPUMALANGA
+        public string? District { get; set; }
+        public bool IsProvincial { get; set; }
     }
 
     private static readonly Dictionary<string, int> MonthNameToNumber =
@@ -228,8 +204,6 @@ public class ExcelImportService
             ["DECEMBER"] = 12,
         };
 
-    // Longest/most-specific names first so "EHLANZENI SOUTH" is matched
-    // in full rather than being caught by a looser check for "EHLANZENI".
     private static readonly string[] KnownDistricts =
     {
         "EHLANZENI SOUTH", "EHLANZENI NORTH", "EHLANZENI",
@@ -242,7 +216,6 @@ public class ExcelImportService
             "PROVINCIAL", "MPUMALANGA", "CONSOLIDATED", "CONSOLIDATED REPORT"
         };
 
-    // Matches "01 - 31 JANUARY 2026", "1-5 February 2025", etc.
     private static readonly Regex PeriodPattern = new(
         @"(\d{1,2})\s*-\s*(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})",
         RegexOptions.Compiled);
@@ -250,9 +223,6 @@ public class ExcelImportService
     private ReportHeaderInfo ExtractReportHeaderInfo(IXLWorksheet ws)
     {
         var info = new ReportHeaderInfo();
-
-        // The header block (title, period, district label) always sits
-        // in the first handful of rows, well above the SAPS/AR NO header.
         var rows = ws.RowsUsed().Take(8).ToList();
 
         foreach (var row in rows)
@@ -262,7 +232,6 @@ public class ExcelImportService
                 var text = row.Cell(c).GetString();
                 if (string.IsNullOrWhiteSpace(text)) continue;
 
-                // ── Period ──
                 if (info.PeriodFrom == null)
                 {
                     var m = PeriodPattern.Match(text);
@@ -278,24 +247,17 @@ public class ExcelImportService
                                 info.PeriodFrom = new DateOnly(year, monthNum, Math.Min(dayFrom, daysInMonth));
                                 info.PeriodTo = new DateOnly(year, monthNum, Math.Min(dayTo, daysInMonth));
                             }
-                            catch
-                            {
-                                // Malformed date text (e.g. day 31 in a 30-day month
-                                // typed incorrectly) — leave null, caller falls back.
-                            }
+                            catch { }
                         }
                     }
                 }
 
-                // ── District / area label ──
                 if (info.District == null && !info.IsProvincial)
                 {
                     var normalized = text.Trim().ToUpperInvariant();
 
                     if (ProvincialLabels.Contains(normalized))
-                    {
                         info.IsProvincial = true;
-                    }
                     else
                     {
                         var match = KnownDistricts.FirstOrDefault(d => normalized == d);
@@ -309,14 +271,16 @@ public class ExcelImportService
         return info;
     }
 
+    // ════════════════════════════════════════════════════════════
+    // IMPORT — now writes CrashSummary rows, not core-table graphs
+    // ════════════════════════════════════════════════════════════
+
     public async Task<ImportResult> ImportAsync(Stream stream, string fileName, string province = "MP")
     {
         var result = new ImportResult { FileName = fileName };
 
         using var wb = new XLWorkbook(stream);
         var ws = wb.Worksheets.First();
-
-        DebugFindRaceTable(ws);
 
         var located = BuildColumnMap(ws);
         if (located == null)
@@ -332,14 +296,10 @@ public class ExcelImportService
         {
             result.AddError(
                 "Header row was found, but these required columns could not be located: " +
-                string.Join(", ", missing) +
-                ". Check the column headers in the source file match the expected names " +
-                "(SAPS, AR NO, CAS, DATE, DAY, TIME, ROUTE, LOCATION, TYPE, INVOLVED, " +
-                "and the FATAL/GENDER/SERIOUS/SLIGHT group headers with D/P/PD/C sub-columns).");
+                string.Join(", ", missing) + ".");
             return result;
         }
 
-        // ── Period and district, read from the sheet's own header text ──
         var headerInfo = ExtractReportHeaderInfo(ws);
 
         DateOnly periodFrom, periodTo;
@@ -347,25 +307,19 @@ public class ExcelImportService
         {
             periodFrom = headerInfo.PeriodFrom.Value;
             periodTo = headerInfo.PeriodTo.Value;
-            _logger.LogInformation(
-                "Period detected from worksheet header: {From} to {To}", periodFrom, periodTo);
         }
         else
         {
             (periodFrom, periodTo) = ExtractPeriodFromFileName(fileName);
             _logger.LogWarning(
-                "Could not find a period ('DD - DD MONTH YYYY') in the worksheet header — " +
-                "falling back to filename/date parsing: {From} to {To}", periodFrom, periodTo);
+                "No period found in worksheet header — falling back to filename: {From} to {To}",
+                periodFrom, periodTo);
         }
 
         result.DetectedPeriodFrom = periodFrom;
         result.DetectedPeriodTo = periodTo;
         result.DetectedDistrict = headerInfo.District;
         result.DetectedIsProvincial = headerInfo.IsProvincial;
-
-        _logger.LogInformation(
-            "Report header — Period: {From} to {To}, District: {District}, Provincial: {IsProvincial}",
-            periodFrom, periodTo, headerInfo.District ?? "(not found)", headerInfo.IsProvincial);
 
         var allRows = ws.RowsUsed().Skip(headerRowNumber).ToList();
 
@@ -379,18 +333,15 @@ public class ExcelImportService
 
             if (string.IsNullOrWhiteSpace(saps) || saps.Equals("TOTAL", StringComparison.OrdinalIgnoreCase))
             {
-                if (inSummary)
-                    summaryRows.Add(row);
-                else
-                    inSummary = true;
+                if (inSummary) summaryRows.Add(row);
+                else inSummary = true;
                 continue;
             }
 
             var col7 = row.Cell(map.Location > 0 ? map.Location : 8).GetString().Trim();
-            var col0 = saps;
 
             if (col7.Equals("GRAND TOTAL", StringComparison.OrdinalIgnoreCase) ||
-                col0.StartsWith("TOTAL:", StringComparison.OrdinalIgnoreCase))
+                saps.StartsWith("TOTAL:", StringComparison.OrdinalIgnoreCase))
             {
                 inSummary = true;
                 continue;
@@ -419,15 +370,21 @@ public class ExcelImportService
             }
         }
 
+        // Demographics block — unchanged behaviour, still goes to
+        // crash_demographics keyed by period.
         result.Demographics = ParseDemographics(summaryRows, ws);
         await SaveDemographicsAsync(result.Demographics, periodFrom, periodTo, province);
 
-        var defaultVehicle = await GetOrCreateDefaultVehicle();
-        var defaultVehicleId = defaultVehicle.VehicleId;
+        // ── Dedup against BOTH stores ──
+        // A CR number already present either as a real form capture OR
+        // as a previously-imported summary must not be imported again.
+        var existingSummaryCrNos = await _context.CrashSummaries
+            .Select(s => s.CrNo)
+            .ToHashSetAsync();
 
-        var existingCrNos = await _context.Crashes
-            .Select(c => c.CrNo)
-            .Where(c => c != null)
+        var existingFormCrNos = await _context.Crashes
+            .Where(c => c.CrNo != null)
+            .Select(c => c.CrNo!)
             .ToHashSetAsync();
 
         foreach (var row in dataRows)
@@ -435,35 +392,40 @@ public class ExcelImportService
             result.TotalRows++;
             try
             {
-                var crash = ParseDataRow(row, map, province, defaultVehicleId, periodFrom.Year);
-                if (crash == null)
+                var summary = ParseSummaryRow(row, map, fileName, periodFrom.Year);
+                if (summary == null)
                 {
                     result.Skipped++;
                     result.AddWarning($"Row {row.RowNumber()}: could not parse — skipped.");
                     continue;
                 }
 
-                if (crash.CrNo != null && existingCrNos.Contains(crash.CrNo))
+                if (existingSummaryCrNos.Contains(summary.CrNo))
                 {
                     result.Skipped++;
-                    result.AddWarning($"Row {row.RowNumber()}: duplicate CrNo '{crash.CrNo}' — skipped.");
+                    result.AddWarning($"Row {row.RowNumber()}: CrNo '{summary.CrNo}' already imported — skipped.");
                     continue;
                 }
 
-                // Sanity check: does this row's date actually fall inside the
-                // period declared at the top of the sheet? A mismatch usually
-                // means a typo in the DATE column on a manually-maintained
-                // file — worth flagging for review, not worth blocking the import.
-                if (crash.CrashDate < periodFrom || crash.CrashDate > periodTo)
+                if (existingFormCrNos.Contains(summary.CrNo))
+                {
+                    result.Skipped++;
+                    result.AddWarning(
+                        $"Row {row.RowNumber()}: CrNo '{summary.CrNo}' already exists as a full CR1 " +
+                        $"form capture — skipped (the form record takes precedence in reports).");
+                    continue;
+                }
+
+                if (summary.CrashDate < periodFrom || summary.CrashDate > periodTo)
                 {
                     result.AddWarning(
-                        $"Row {row.RowNumber()}: crash date {crash.CrashDate:dd/MM/yyyy} falls outside " +
+                        $"Row {row.RowNumber()}: crash date {summary.CrashDate:dd/MM/yyyy} falls outside " +
                         $"the declared report period ({periodFrom:dd/MM/yyyy} – {periodTo:dd/MM/yyyy}). " +
                         $"Imported anyway — please verify the DATE column on this row.");
                 }
 
-                _context.Crashes.Add(crash);
-                if (crash.CrNo != null) existingCrNos.Add(crash.CrNo);
+                _context.CrashSummaries.Add(summary);
+                existingSummaryCrNos.Add(summary.CrNo);
                 result.Imported++;
             }
             catch (Exception ex)
@@ -478,66 +440,36 @@ public class ExcelImportService
         return result;
     }
 
-    private async Task<Vehicle> GetOrCreateDefaultVehicle()
-    {
-        var defaultVehicle = await _context.Vehicles
-            .FirstOrDefaultAsync(v => v.Make == "IMPORTED" && v.Model == "DEFAULT");
-
-        if (defaultVehicle == null)
-        {
-            defaultVehicle = new Vehicle
-            {
-                Make = "IMPORTED",
-                Model = "DEFAULT",
-                VehicleTypeCode = "UNKNOWN",
-                CountryOfRegistration = "RSA",
-                CreatedAt = DateTime.UtcNow
-            };
-            _context.Vehicles.Add(defaultVehicle);
-            await _context.SaveChangesAsync();
-        }
-
-        return defaultVehicle;
-    }
-
-    private Crash? ParseDataRow(IXLRow row, ColumnMap map, string province, int defaultVehicleId, int fallbackYear)
+    // ── Row parsing — one flat CrashSummary, no entity graph ──────
+    private CrashSummary? ParseSummaryRow(IXLRow row, ColumnMap map, string fileName, int fallbackYear)
     {
         var saps = row.Cell(map.Saps).GetString().Trim().ToUpper();
+        if (string.IsNullOrEmpty(saps)) return null;
+
         var arNo = map.ArNo > 0 ? row.Cell(map.ArNo).GetString().Trim() : "";
         var casNo = map.Cas > 0 ? row.Cell(map.Cas).GetString().Trim() : "";
         var dateRaw = row.Cell(map.Date).GetString().Trim();
-        var day = map.Day > 0 ? row.Cell(map.Day).GetString().Trim() : "";
         var timeRaw = map.Time > 0 ? row.Cell(map.Time).GetString().Trim() : "";
         var route = map.Route > 0 ? row.Cell(map.Route).GetString().Trim().ToUpper() : "";
         var location = map.Location > 0 ? row.Cell(map.Location).GetString().Trim() : "";
-
         var crashType = row.Cell(map.Type).GetString().Trim().ToUpper();
-
         var vehicles = row.Cell(map.Involved).GetString().Trim();
-        var vehicleEntries = ParseVehicleEntries(vehicles);
-        var vehicleCount = vehicleEntries.Count;
 
-        if (string.IsNullOrEmpty(saps)) return null;
-
-        DateOnly crashDate = DateOnly.FromDateTime(DateTime.Today);
+        // Date — day/month from the cell, year from the sheet's declared period
+        DateOnly crashDate = new DateOnly(fallbackYear, 1, 1);
         if (!string.IsNullOrEmpty(dateRaw))
         {
             var parts = dateRaw.Replace('-', '/').Split('/');
-            if (parts.Length >= 2)
+            if (parts.Length >= 2 &&
+                int.TryParse(parts[0], out var dd) && int.TryParse(parts[1], out var mm))
             {
-                if (int.TryParse(parts[0], out var dd) && int.TryParse(parts[1], out var mm))
-                {
-                    // FIX: was DateTime.Today.Year — since the DATE column
-                    // never actually contains a year ("22/01" only), that
-                    // meant every row silently got the CURRENT year instead
-                    // of the year the report actually covers. fallbackYear
-                    // comes from the period already detected off the sheet's
-                    // own header text ("01 - 31 JANUARY 2021" → 2021).
-                    var year = fallbackYear;
-                    if (parts.Length >= 3 && int.TryParse(parts[2], out var yyyy))
-                        year = yyyy;
+                var year = fallbackYear;
+                if (parts.Length >= 3 && int.TryParse(parts[2], out var yyyy))
+                    year = yyyy;
 
-                    dd = Math.Min(dd, DateTime.DaysInMonth(year, mm));
+                if (mm >= 1 && mm <= 12)
+                {
+                    dd = Math.Min(Math.Max(dd, 1), DateTime.DaysInMonth(year, mm));
                     crashDate = new DateOnly(year, mm, dd);
                 }
             }
@@ -550,287 +482,54 @@ public class ExcelImportService
             if (TimeOnly.TryParse(norm, out var t)) crashTime = t;
         }
 
-        int fatalD = IntCell(row, map.FatalD);
-        int fatalP = IntCell(row, map.FatalP);
-        int fatalPD = IntCell(row, map.FatalPd);
-        int fatalC = IntCell(row, map.FatalC);
-        int fatalM = IntCell(row, map.GenderM);
-        int fatalF = IntCell(row, map.GenderF);
+        // Vehicle count — count the real vehicle entries in the INVOLVED
+        // string, excluding the pedestrian/hit-and-run markers.
+        var vehicleCount = vehicles
+            .Split('/')
+            .Select(p => p.Trim())
+            .Count(p => !string.IsNullOrWhiteSpace(p)
+                        && !p.Equals("P/D", StringComparison.OrdinalIgnoreCase)
+                        && !p.Equals("HIT N RUN", StringComparison.OrdinalIgnoreCase)
+                        && !p.Equals("HIT & RUN", StringComparison.OrdinalIgnoreCase));
 
-        int serD = IntCell(row, map.SeriousD);
-        int serP = IntCell(row, map.SeriousP);
-        int serPD = IntCell(row, map.SeriousPd);
-        int serC = IntCell(row, map.SeriousC);
-
-        int sliD = IntCell(row, map.SlightD);
-        int sliP = IntCell(row, map.SlightP);
-        int sliPD = IntCell(row, map.SlightPd);
-        int sliC = IntCell(row, map.SlightC);
-
-        var crNo = string.IsNullOrEmpty(arNo) ? saps : $"{saps}-{arNo}";
-
-        var crash = new Crash
+        return new CrashSummary
         {
-            CrNo = crNo,
+            CrNo = string.IsNullOrEmpty(arNo) ? saps : $"{saps}-{arNo}",
+            Station = saps,
             CasNo = string.IsNullOrEmpty(casNo) ? null : casNo,
-            ProvinceCode = province,
             CrashDate = crashDate,
             CrashTime = crashTime,
-            RoadNumber = string.IsNullOrEmpty(route) ? null : route,
-            BriefDescription = BuildBriefDescription(location, crashType, vehicleCount),
-            NoOfVehiclesInvolved = (byte)Math.Min(vehicleCount, 255),
-            VehicleString = vehicles,
-            CreatedAt = DateTime.UtcNow
+            Route = string.IsNullOrEmpty(route) ? null : route,
+            Location = string.IsNullOrEmpty(location) ? null : location,
+            CrashType = string.IsNullOrEmpty(crashType) ? null : crashType,
+            VehiclesString = string.IsNullOrEmpty(vehicles) ? null : vehicles,
+            VehicleCount = (byte)Math.Min(vehicleCount, 255),
+
+            FatalDrivers = ByteCell(row, map.FatalD),
+            FatalPassengers = ByteCell(row, map.FatalP),
+            FatalPedestrians = ByteCell(row, map.FatalPd),
+            FatalCyclists = ByteCell(row, map.FatalC),
+            FatalMale = ByteCell(row, map.GenderM),
+            FatalFemale = ByteCell(row, map.GenderF),
+
+            SeriousDrivers = ByteCell(row, map.SeriousD),
+            SeriousPassengers = ByteCell(row, map.SeriousP),
+            SeriousPedestrians = ByteCell(row, map.SeriousPd),
+            SeriousCyclists = ByteCell(row, map.SeriousC),
+
+            SlightDrivers = ByteCell(row, map.SlightD),
+            SlightPassengers = ByteCell(row, map.SlightP),
+            SlightPedestrians = ByteCell(row, map.SlightPd),
+            SlightCyclists = ByteCell(row, map.SlightC),
+
+            SourceFile = fileName,
+            ImportedAt = DateTime.UtcNow
         };
-
-        if (!string.IsNullOrEmpty(location))
-        {
-            var crashLocation = new CrashLocation
-            {
-                Crash = crash,
-                StreetRoadName = string.IsNullOrEmpty(route) ? null : route,
-                CityTown = string.IsNullOrEmpty(location) ? null : location,
-                Suburb = ParseSuburbFromLocation(location),
-                BuiltUpArea = DetermineBuiltUpArea(location),
-                AreaType = DetermineAreaType(location)
-            };
-            crash.CrashLocations.Add(crashLocation);
-        }
-
-        int vehicleSequence = 1;
-        foreach (var vehicleEntry in vehicleEntries)
-        {
-            var crashVehicle = new CrashVehicle
-            {
-                Crash = crash,
-                VehicleId = defaultVehicleId,
-                VehicleType = vehicleEntry.VehicleType,
-                VehicleReference = $"V{vehicleSequence}",
-                DriverPersonId = null,
-                SeatbeltUsed = null,
-                AlcoholSuspected = null,
-                AlcoholTestResult = null,
-                DrugSuspected = null,
-                DrugTestResult = null,
-                VehicleManoeuvre = null,
-                PositionBeforeCrash = null,
-                PassengersForReward = null,
-                BreakdownCompany = null
-            };
-
-            crash.CrashVehicles.Add(crashVehicle);
-            vehicleSequence++;
-        }
-
-        if (!string.IsNullOrEmpty(crashType))
-        {
-            crash.CrashConditions.Add(new CrashCondition
-            {
-                CrashType = crashType
-            });
-        }
-
-        var fatalTotal = fatalD + fatalP + fatalPD + fatalC;
-
-        AddPersons(crash, "Driver", "Fatal", fatalD, fatalM, fatalF, fatalTotal);
-        AddPersons(crash, "Passenger", "Fatal", fatalP, fatalM, fatalF, fatalTotal);
-        AddPersons(crash, "Pedestrian", "Fatal", fatalPD, fatalM, fatalF, fatalTotal);
-        AddPersons(crash, "Bicyclist", "Fatal", fatalC, fatalM, fatalF, fatalTotal);
-        AddPersons(crash, "Driver", "Serious", serD, 0, 0, 0);
-        AddPersons(crash, "Passenger", "Serious", serP, 0, 0, 0);
-        AddPersons(crash, "Pedestrian", "Serious", serPD, 0, 0, 0);
-        AddPersons(crash, "Bicyclist", "Serious", serC, 0, 0, 0);
-        AddPersons(crash, "Driver", "Slight", sliD, 0, 0, 0);
-        AddPersons(crash, "Passenger", "Slight", sliP, 0, 0, 0);
-        AddPersons(crash, "Pedestrian", "Slight", sliPD, 0, 0, 0);
-        AddPersons(crash, "Bicyclist", "Slight", sliC, 0, 0, 0);
-
-        return crash;
     }
 
-    private List<VehicleEntry> ParseVehicleEntries(string vehiclesStr)
-    {
-        var entries = new List<VehicleEntry>();
-
-        if (string.IsNullOrWhiteSpace(vehiclesStr))
-            return entries;
-
-        var s = vehiclesStr.Trim();
-
-        if (s.Equals("P/D", StringComparison.OrdinalIgnoreCase))
-            return entries;
-
-        var parts = s.Split('/')
-            .Select(p => p.Trim())
-            .Where(p => !string.IsNullOrWhiteSpace(p))
-            .ToList();
-
-        int vehicleIndex = 1;
-        foreach (var part in parts)
-        {
-            if (NonVehicleTypes.Contains(part))
-                continue;
-
-            var vehicleType = part.Trim();
-
-            entries.Add(new VehicleEntry
-            {
-                Index = vehicleIndex,
-                VehicleType = vehicleType,
-                Reference = $"V{vehicleIndex}"
-            });
-            vehicleIndex++;
-        }
-
-        return entries;
-    }
-
-    private void AddPersons(Crash crash, string role, string severity, int count,
-        int maleTotal, int femaleTotal, int totalFatal)
-    {
-        if (count <= 0) return;
-
-        for (int i = 0; i < count; i++)
-        {
-            string? gender = null;
-
-            if (severity == "Fatal" && totalFatal > 0 && (maleTotal > 0 || femaleTotal > 0))
-            {
-                var assignedFatalMales = crash.CrashPeople
-                    .Count(p => p.SeverityOfInjury == "Fatal" &&
-                                p.Role == role &&
-                                p.Person?.Gender == "Male");
-
-                var assignedFatalFemales = crash.CrashPeople
-                    .Count(p => p.SeverityOfInjury == "Fatal" &&
-                                p.Role == role &&
-                                p.Person?.Gender == "Female");
-
-                if (assignedFatalMales < maleTotal)
-                    gender = "Male";
-                else if (assignedFatalFemales < femaleTotal)
-                    gender = "Female";
-            }
-
-            var person = new Person
-            {
-                Surname = "IMPORTED",
-                FullNames = "RECORD",
-                Gender = gender,
-                IdType = "UNKNOWN"
-            };
-
-            var crashPerson = new CrashPerson
-            {
-                Person = person,
-                Role = role,
-                SeverityOfInjury = severity
-            };
-
-            if (role == "Driver" && crash.CrashVehicles.Any())
-            {
-                var firstVehicle = crash.CrashVehicles.First();
-                crashPerson.CrashVehicle = firstVehicle;
-                crashPerson.CrashVehicleId = firstVehicle.CrashVehicleId;
-            }
-
-            crash.CrashPeople.Add(crashPerson);
-        }
-    }
-
-    private string BuildBriefDescription(string location, string crashType, int vehicleCount)
-    {
-        var parts = new List<string>();
-
-        if (!string.IsNullOrEmpty(location))
-            parts.Add($"Location: {location}");
-
-        if (!string.IsNullOrEmpty(crashType))
-            parts.Add($"Type: {crashType}");
-
-        if (vehicleCount > 0)
-            parts.Add($"Vehicles: {vehicleCount}");
-
-        return parts.Count > 0 ? string.Join(" | ", parts) : "Imported from Excel";
-    }
-
-    private static string? ParseSuburbFromLocation(string location)
-    {
-        if (string.IsNullOrWhiteSpace(location))
-            return null;
-
-        if (Regex.IsMatch(location, @"\b(RD|ROAD|STR|STREET|DR|DRIVE)\b", RegexOptions.IgnoreCase))
-            return null;
-
-        if (location.Split(' ').Length <= 3 && !location.Contains("/"))
-            return location;
-
-        return null;
-    }
-
-    private static string? ParseCityTownFromLocation(string location)
-    {
-        if (string.IsNullOrWhiteSpace(location))
-            return null;
-
-        var knownTowns = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            "TONGA", "WHITE RIVER", "MASOYI", "BARBERTON", "KANYAMAZANE",
-            "MATSULU", "NGODWANA", "MHALA", "CALCUTTA", "MASHISHING",
-            "NELSPRUIT", "MALALANE", "SCHOEMANSDAL", "KOMATIPOORT",
-            "HAZYVIEW", "SABIE", "ACORNHOEK", "KABOKWENI", "GRASKOP",
-            "BUSHBUCKRIDGE", "KAMHLUSHWA"
-        };
-
-        foreach (var town in knownTowns)
-        {
-            if (location.Contains(town, StringComparison.OrdinalIgnoreCase))
-                return town;
-        }
-
-        return null;
-    }
-
-    private static bool? DetermineBuiltUpArea(string location)
-    {
-        if (string.IsNullOrWhiteSpace(location))
-            return null;
-
-        var builtUpIndicators = new[] { "STR", "STREET", "RD", "ROAD", "DRIVE", "AVE", "AVENUE" };
-
-        foreach (var indicator in builtUpIndicators)
-        {
-            if (location.Contains(indicator, StringComparison.OrdinalIgnoreCase))
-                return true;
-        }
-
-        if (ParseCityTownFromLocation(location) != null)
-            return true;
-
-        return false;
-    }
-
-    private static string? DetermineAreaType(string location)
-    {
-        if (string.IsNullOrWhiteSpace(location))
-            return null;
-
-        var ruralIndicators = new[] { "FARM", "NATURE RESERVE", "RURAL", "PLAAS" };
-        foreach (var indicator in ruralIndicators)
-        {
-            if (location.Contains(indicator, StringComparison.OrdinalIgnoreCase))
-                return "Rural";
-        }
-
-        var urbanIndicators = new[] { "STR", "STREET", "DRIVE", "AVE", "ROAD" };
-        foreach (var indicator in urbanIndicators)
-        {
-            if (location.Contains(indicator, StringComparison.OrdinalIgnoreCase))
-                return "Urban";
-        }
-
-        return "Unknown";
-    }
+    // ════════════════════════════════════════════════════════════
+    // Demographics parsing — unchanged from previous version
+    // ════════════════════════════════════════════════════════════
 
     private ImportDemographics ParseDemographics(List<IXLRow> summaryRows, IXLWorksheet ws)
     {
@@ -855,8 +554,6 @@ public class ExcelImportService
         }
 
         ParseRaceDataFromWorksheet(ws, demo);
-
-        _logger.LogInformation("Parsing demographics from {RowCount} summary rows", data.Count);
 
         for (int i = 0; i < data.Count; i++)
         {
@@ -1016,33 +713,6 @@ public class ExcelImportService
         _logger.LogWarning("Could not find RACE data in worksheet");
     }
 
-    private void DebugFindRaceTable(IXLWorksheet ws)
-    {
-        // Retained from the original for troubleshooting; consider
-        // dropping to LogDebug or removing once the dynamic column
-        // mapping above has been verified against real station files.
-        var allRows = ws.RowsUsed().ToList();
-
-        for (int rowIdx = 0; rowIdx < Math.Min(allRows.Count, 50); rowIdx++)
-        {
-            var row = allRows[rowIdx];
-            for (int col = 1; col <= 60; col++)
-            {
-                var cellValue = row.Cell(col).GetString().Trim().ToUpper();
-                if (cellValue == "RACE")
-                {
-                    _logger.LogInformation("Found 'RACE' at Row {Row}, Col {Col}", row.RowNumber(), col);
-                }
-            }
-        }
-    }
-
-    /// <summary>
-    /// Fallback only — used when the worksheet header itself doesn't contain
-    /// a recognisable "DD - DD MONTH YYYY" period. Tries to pull a date out
-    /// of the filename, accepting dots, dashes, or underscores as separators
-    /// (e.g. "18.02.2025", "18-02-2025", or "EHL_Acc_Data_..._31_01_2026").
-    /// </summary>
     private (DateOnly From, DateOnly To) ExtractPeriodFromFileName(string fileName)
     {
         var match = Regex.Match(fileName, @"(\d{1,2})[._-](\d{1,2})[._-](\d{4})");
@@ -1053,36 +723,22 @@ public class ExcelImportService
             int b = int.Parse(match.Groups[2].Value);
             int year = int.Parse(match.Groups[3].Value);
 
-            // Filenames in this project use DD_MM_YYYY (day first), matching
-            // the DD/MM date format used throughout the rest of the sheet.
             int day = a, month = b;
             if (month > 12 && day <= 12)
-            {
-                // Defensive swap in case a MM_DD_YYYY-style name slips through.
                 (day, month) = (b, a);
-            }
 
             try
             {
                 var fromDate = new DateOnly(year, month, 1);
                 var toDate = fromDate.AddMonths(1).AddDays(-1);
-                _logger.LogInformation("Extracted period from filename: {From} to {To}", fromDate, toDate);
                 return (fromDate, toDate);
             }
-            catch
-            {
-                // Fall through to the current-month default below.
-            }
+            catch { }
         }
 
         var today = DateOnly.FromDateTime(DateTime.Now);
         var defaultFrom = new DateOnly(today.Year, today.Month, 1);
-        var defaultTo = defaultFrom.AddMonths(1).AddDays(-1);
-
-        _logger.LogWarning(
-            "No period found in worksheet header or filename — using current month as a last resort: {From} to {To}",
-            defaultFrom, defaultTo);
-        return (defaultFrom, defaultTo);
+        return (defaultFrom, defaultFrom.AddMonths(1).AddDays(-1));
     }
 
     private async Task SaveDemographicsAsync(
@@ -1120,13 +776,10 @@ public class ExcelImportService
             existingRecord.RaceIndian = demographics.RaceIndian;
             existingRecord.RaceOther = demographics.RaceOther;
             existingRecord.CreatedAt = DateTime.UtcNow;
-
-            _logger.LogInformation("Updated existing demographics record for {Province} - Period: {PeriodFrom} to {PeriodTo}",
-                province, periodFrom, periodTo);
         }
         else
         {
-            var record = new CrashDemographicRecord
+            _context.CrashDemographics.Add(new CrashDemographicRecord
             {
                 PeriodFrom = periodFrom,
                 PeriodTo = periodTo,
@@ -1150,23 +803,13 @@ public class ExcelImportService
                 RaceIndian = demographics.RaceIndian,
                 RaceOther = demographics.RaceOther,
                 CreatedAt = DateTime.UtcNow
-            };
-
-            _context.CrashDemographics.Add(record);
-            _logger.LogInformation("Added new demographics record for {Province} - Period: {PeriodFrom} to {PeriodTo}",
-                province, periodFrom, periodTo);
+            });
         }
 
         await _context.SaveChangesAsync();
-        _logger.LogInformation("Demographics saved successfully for {Province}", province);
     }
 
-    /// <summary>
-    /// Reads an integer from the given column. Returns 0 for column 0
-    /// (meaning that field wasn't found in the header at all) so a
-    /// missing optional column degrades gracefully instead of throwing.
-    /// </summary>
-    private static int IntCell(IXLRow row, int col)
+    private static byte ByteCell(IXLRow row, int col)
     {
         if (col <= 0) return 0;
 
@@ -1175,22 +818,13 @@ public class ExcelImportService
             var cell = row.Cell(col);
             if (cell.IsEmpty()) return 0;
 
-            if (cell.TryGetValue(out int i)) return i;
+            if (cell.TryGetValue(out int i)) return (byte)Math.Clamp(i, 0, 255);
 
             var str = cell.GetString().Trim();
-            if (string.IsNullOrEmpty(str)) return 0;
-
-            if (int.TryParse(str, out var p)) return p;
+            if (int.TryParse(str, out var p)) return (byte)Math.Clamp(p, 0, 255);
         }
         catch { }
         return 0;
-    }
-
-    private class VehicleEntry
-    {
-        public int Index { get; set; }
-        public string VehicleType { get; set; } = string.Empty;
-        public string? Reference { get; set; }
     }
 }
 
@@ -1206,9 +840,6 @@ public class ImportResult
     public List<string> ErrorMessages { get; set; } = new();
     public ImportDemographics Demographics { get; set; } = new();
 
-    // ── Detected from the worksheet header — surface these in the UI so
-    //    the admin can confirm the right file/period/district was picked
-    //    up before trusting the import.
     public DateOnly? DetectedPeriodFrom { get; set; }
     public DateOnly? DetectedPeriodTo { get; set; }
     public string? DetectedDistrict { get; set; }

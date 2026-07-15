@@ -2,6 +2,28 @@
     ViewData["Title"] = "New CR1 Crash Report";
 }
 
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <strong>Error!</strong>
+        <div style="white-space: pre-line;">@TempData["ErrorMessage"]</div>
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+}
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <strong>Success!</strong> @TempData["SuccessMessage"]
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+}
+
+
 <form id="wizardForm" method="post" asp-action="Submit">
     @Html.AntiForgeryToken()
     <input type="hidden" id="formJsonInput" name="formJson" />
@@ -542,8 +564,8 @@
             numberBox("#speedBox",        null, 0, function(v)          { formData.CrashInfo.SpeedLimitKmh             = v; });
             lookupSelect("#routeSelect",  "routes",   "e.g. N4, R40...",function(v) { formData.CrashInfo.RoadNumber    = v; });
             textBox("#kmMarkerBox",       "Km Marker",                    function(v) { formData.CrashInfo.KmMarker     = v; });
-            numberBox("#vehicleCountBox", 1, 1, function(v) { formData.CrashInfo.NoOfVehiclesInvolved = v; });
-            numberBox("#appendicesBox",   0, 0, function(v) { formData.CrashInfo.NoOfAppendices       = v; });
+            numberBox("#vehicleCountBox", 1, 1, function(v) { formData.CrashInfo.NoOfVehiclesInvolved = v || 1; });
+            numberBox("#appendicesBox",   0, 0, function(v) { formData.CrashInfo.NoOfAppendices       = v || 0; });
             $("#descBox").dxTextArea({
                 height: 80, placeholder: "It is alleged that...",
                 onValueChanged: function(e) { formData.CrashInfo.BriefDescription = e.value; }
@@ -555,8 +577,8 @@
             textBox("#suburbBox",          "Suburb",                            function(v){ formData.Location.Suburb = v; });
             textBox("#cityTownBox",        "City / Town",                       function(v){ formData.Location.CityTown = v; });
             textBox("#intersectionBox",    "Intersection street / road",        function(v){ formData.Location.IntersectionStreet = v; });
-            numberBox("#gpsXBox", null, null, function(v){ formData.Location.GpsXCoordinate = v; });
-            numberBox("#gpsYBox", null, null, function(v){ formData.Location.GpsYCoordinate = v; });
+            numberBox("#gpsXBox",null,  -35, function(v){ formData.Location.GpsXCoordinate = v !== null ? parseFloat(v) : null; });
+            numberBox("#gpsYBox", null, 16, function(v){ formData.Location.GpsYCoordinate = v !== null ? parseFloat(v) : null; });
             staticSelect("#roadClassBox",  roadClasses,  "Select...",           function(v){ formData.Location.RoadFunctionalClassification = v; });
             staticSelect("#junctionBox",   junctionTypes,"Select...",           function(v){ formData.Location.JunctionType = v; });
             staticSelect("#roadLayoutBox", roadLayouts,  "Select...",           function(v){ formData.Location.RoadLayout = v; });

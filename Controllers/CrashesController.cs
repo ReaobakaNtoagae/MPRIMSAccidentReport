@@ -135,7 +135,6 @@ public class CrashesController : Controller
         var data = await _context.Crashes
             .Select(c => new
             {
-                c.CrashId,
                 c.CrNo,
                 c.CasNo,
                 c.CrashDate,
