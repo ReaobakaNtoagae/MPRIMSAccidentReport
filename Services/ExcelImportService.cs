@@ -6,25 +6,7 @@ using System.Text.RegularExpressions;
 
 namespace CrashReport.Services;
 
-/// <summary>
-/// Imports station Excel workbooks into crash_summaries — the flat
-/// reporting table — rather than fabricating placeholder rows in the
-/// core relational tables (crashes/persons/vehicles) as the previous
-/// version did.
-///
-/// ARCHITECTURE (post-split):
-///   • Core tables    = CR1 wizard captures only (real detailed data)
-///   • crash_summaries = Excel-imported summary rows (this service)
-///   • crash_demographics = the workbook's bottom summary block (unchanged)
-///   • Reports        = union of core + summaries, merged in
-///                      MonthlyMemoDataService.LoadAsync, deduped by CrNo
-///
-/// Everything about HOW the file is read is unchanged from the previous
-/// version: dynamic header-based column detection, worksheet-header
-/// period/district detection, the summary-section boundary walk, and
-/// the demographics parsing all work exactly as before. What changed is
-/// only WHERE parsed rows are written.
-/// </summary>
+
 public class ExcelImportService
 {
     private readonly AppDbContext _context;
@@ -36,9 +18,6 @@ public class ExcelImportService
         _logger = logger;
     }
 
-    // ════════════════════════════════════════════════════════════
-    // DYNAMIC COLUMN DETECTION (unchanged from previous version)
-    // ════════════════════════════════════════════════════════════
 
     private class ColumnMap
     {
@@ -163,9 +142,6 @@ public class ExcelImportService
         return (headerRow.RowNumber(), map);
     }
 
-    // ════════════════════════════════════════════════════════════
-    // REPORT HEADER DETECTION (unchanged from previous version)
-    // ════════════════════════════════════════════════════════════
 
     private class ReportHeaderInfo
     {
@@ -271,9 +247,6 @@ public class ExcelImportService
         return info;
     }
 
-    // ════════════════════════════════════════════════════════════
-    // IMPORT — now writes CrashSummary rows, not core-table graphs
-    // ════════════════════════════════════════════════════════════
 
     public async Task<ImportResult> ImportAsync(Stream stream, string fileName, string province = "MP")
     {
@@ -370,17 +343,14 @@ public class ExcelImportService
             }
         }
 
-        // Demographics block — unchanged behaviour, still goes to
-        // crash_demographics keyed by period.
+   
         result.Demographics = ParseDemographics(summaryRows, ws);
         await SaveDemographicsAsync(result.Demographics, periodFrom, periodTo, province);
 
-        // ── Dedup against BOTH stores ──
-        // A CR number already present either as a real form capture OR
-        // as a previously-imported summary must not be imported again.
         var existingSummaryCrNos = await _context.CrashSummaries
             .Select(s => s.CrNo)
             .ToHashSetAsync();
+
 
         var existingFormCrNos = await _context.Crashes
             .Where(c => c.CrNo != null)
@@ -440,7 +410,7 @@ public class ExcelImportService
         return result;
     }
 
-    // ── Row parsing — one flat CrashSummary, no entity graph ──────
+  
     private CrashSummary? ParseSummaryRow(IXLRow row, ColumnMap map, string fileName, int fallbackYear)
     {
         var saps = row.Cell(map.Saps).GetString().Trim().ToUpper();
@@ -455,7 +425,7 @@ public class ExcelImportService
         var crashType = row.Cell(map.Type).GetString().Trim().ToUpper();
         var vehicles = row.Cell(map.Involved).GetString().Trim();
 
-        // Date — day/month from the cell, year from the sheet's declared period
+        
         DateOnly crashDate = new DateOnly(fallbackYear, 1, 1);
         if (!string.IsNullOrEmpty(dateRaw))
         {
@@ -482,8 +452,7 @@ public class ExcelImportService
             if (TimeOnly.TryParse(norm, out var t)) crashTime = t;
         }
 
-        // Vehicle count — count the real vehicle entries in the INVOLVED
-        // string, excluding the pedestrian/hit-and-run markers.
+
         var vehicleCount = vehicles
             .Split('/')
             .Select(p => p.Trim())
@@ -527,9 +496,7 @@ public class ExcelImportService
         };
     }
 
-    // ════════════════════════════════════════════════════════════
-    // Demographics parsing — unchanged from previous version
-    // ════════════════════════════════════════════════════════════
+
 
     private ImportDemographics ParseDemographics(List<IXLRow> summaryRows, IXLWorksheet ws)
     {

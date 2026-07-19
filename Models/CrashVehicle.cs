@@ -25,7 +25,7 @@ public partial class CrashVehicle
 
     public string? DrugSuspected { get; set; }
 
-    public string? DrugTestResult { get; set; }
+    public string? DrugTestResult { get; set; } 
 
     public string? VehicleManoeuvre { get; set; }
 

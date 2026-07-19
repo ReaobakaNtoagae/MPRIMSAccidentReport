@@ -89,15 +89,12 @@ public class StandbyReportDataService
         return vm;
     }
 
-    /// <summary>
-    /// Loads data from BOTH sources (Crashes and CrashSummaries)
-    /// Deduplicated by CrNo - form captures take precedence
-    /// </summary>
+    
     private async Task<List<CrashRow>> LoadPeriodAsync(DateOnly from, DateOnly to)
     {
         var result = new List<CrashRow>();
 
-        // ── Source 1: Real CR1 form captures ─────────────────────
+      
         var crashes = await _context.Crashes
             .Include(c => c.CrashConditions)
             .Include(c => c.CrashLocations)
@@ -131,12 +128,12 @@ public class StandbyReportDataService
 
         result.AddRange(formRows);
 
-        // ── Source 2: Excel-imported summaries ────────────────────
+      
         var summaries = await _context.CrashSummaries
             .Where(s => s.CrashDate >= from && s.CrashDate <= to)
             .ToListAsync();
 
-        // Get all CrNos from form data to deduplicate
+        
         var formCrNos = formRows
             .Where(r => !string.IsNullOrEmpty(r.CrNo))
             .Select(r => r.CrNo)
@@ -163,7 +160,7 @@ public class StandbyReportDataService
                     Fatalities = s.Fatalities,
                     Serious = s.Serious,
                     Slight = s.Slight,
-                    FatalPedestrian = s.FatalPedestrians // Maps to the summary's FatalPedestrians field
+                    FatalPedestrian = s.FatalPedestrians
                 };
             }).ToList();
 
@@ -223,7 +220,7 @@ public class StandbyReportDataService
         DateOnly subFrom = to.AddDays(-2);
         DateOnly subTo = to;
 
-        // Special case: Valentine's Day weekend
+       
         var feb14 = new DateOnly(from.Year, 2, 14);
         var feb16 = new DateOnly(from.Year, 2, 16);
         if (from <= feb14 && to >= feb16)
@@ -250,7 +247,7 @@ public class StandbyReportDataService
     private async Task<List<ProblematicRoute>> BuildProblematicRoutesAsync(
         DateOnly from, DateOnly to)
     {
-        // Load merged data for the period
+       
         var periodData = await LoadPeriodAsync(from, to);
 
         var routes = periodData
@@ -289,8 +286,7 @@ public class StandbyReportDataService
 
     private async Task<VictimDemographics> BuildDemographicsAsync(DateOnly from, DateOnly to)
     {
-        // For demographics, we need to get fatal victims from both sources
-        // Source 1: From Crashes (detailed person data)
+        
         var people = await _context.CrashPeople
             .Include(cp => cp.Crash)
             .Include(cp => cp.Person)
@@ -299,16 +295,12 @@ public class StandbyReportDataService
                          cp.SeverityOfInjury == "Fatal")
             .ToListAsync();
 
-        // Source 2: From CrashSummaries (aggregated demographics not available in same detail)
-        // We'll only use summaries for counts where person details aren't available
-        // The summary doesn't have age/gender/role breakdowns, so we rely on the detailed crashes
-        // for demographic breakdowns, but we'll add summary fatalities to the total count
+    
 
         var summaries = await _context.CrashSummaries
             .Where(s => s.CrashDate >= from && s.CrashDate <= to)
             .ToListAsync();
 
-        // Get CrNos from detailed data to avoid double counting
         var detailedCrNos = people
             .Select(p => p.Crash.CrNo)
             .Where(cr => !string.IsNullOrEmpty(cr))
@@ -331,26 +323,24 @@ public class StandbyReportDataService
         {
             TotalFatalities = people.Count + summaryFatalities,
 
-            // Age breakdown (only available from detailed data)
+            
             Age0to7 = people.Count(p => p.Person?.Age is >= 0 and <= 7),
             Age8to12 = people.Count(p => p.Person?.Age is >= 8 and <= 12),
             Age13to18 = people.Count(p => p.Person?.Age is >= 13 and <= 18),
             Age19to35 = people.Count(p => p.Person?.Age is >= 19 and <= 35),
             Age36Plus = people.Count(p => p.Person?.Age >= 36),
 
-            // Gender totals (only available from detailed data)
+            
             MaleTotal = people.Count(IsMale),
             FemaleTotal = people.Count(IsFemale),
 
-            // Driver (only available from detailed data)
+           
             MaleDriver = people.Count(p => IsMale(p) && IsRole(p, "Driver")),
             FemaleDriver = people.Count(p => IsFemale(p) && IsRole(p, "Driver")),
 
-            // Passenger (only available from detailed data)
             MalePassenger = people.Count(p => IsMale(p) && IsRole(p, "Passenger")),
             FemalePassenger = people.Count(p => IsFemale(p) && IsRole(p, "Passenger")),
 
-            // Pedestrian (only available from detailed data)
             MalePedestrian = people.Count(p => IsMale(p) && IsRole(p, "Pedestrian")),
             FemalePedestrian = people.Count(p => IsFemale(p) && IsRole(p, "Pedestrian")),
 
@@ -380,7 +370,7 @@ public class StandbyReportDataService
         if (!time.HasValue) return false;
         var h = time.Value.Hour;
         if (startH < endH) return h >= startH && h < endH;
-        return h >= startH || h < endH; // wraps around midnight
+        return h >= startH || h < endH; 
     }
 
     private static string GetDayRange(DateOnly from, DateOnly to)

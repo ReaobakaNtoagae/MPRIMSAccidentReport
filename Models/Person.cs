@@ -31,7 +31,7 @@ public partial class Person
 
     public string? OtherPhone { get; set; }
 
-    public string? WorkContactAddress { get; set; }
+    public string? WorkContactAddress { get; set; }                                                           
 
     public DateTime CreatedAt { get; set; }
 

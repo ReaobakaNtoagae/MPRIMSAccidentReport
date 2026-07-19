@@ -145,14 +145,14 @@ public class HomeController : Controller
 
         try
         {
-            // Deserialize into a dynamic/expando object or use JObject
+            
             using var document = JsonDocument.Parse(formJson);
             var root = document.RootElement;
 
-            // Build Crash entity directly from JSON
+            
             var crash = new Crash();
 
-            // Extract CrashInfo
+           
             if (root.TryGetProperty("CrashInfo", out var crashInfo))
             {
                 crash.CasNo = GetString(crashInfo, "CasNo");
@@ -171,20 +171,23 @@ public class HomeController : Controller
 
                 crash.ProvinceCode = GetString(crashInfo, "ProvinceCode");
 
-                // SpeedLimitKmh is a short (Int16) in the database
+                
                 crash.SpeedLimitKmh = GetShort(crashInfo, "SpeedLimitKmh");
+
+                crash.IncidentReportNo = GetString(crashInfo, "IncidentReportNo");
+
 
                 crash.RoadNumber = GetString(crashInfo, "RoadNumber");
                 crash.KmMarker = GetString(crashInfo, "KmMarker");
 
-                // NoOfVehiclesInvolved and NoOfAppendices are byte in the database
+                
                 crash.NoOfVehiclesInvolved = GetByte(crashInfo, "NoOfVehiclesInvolved", 1);
                 crash.NoOfAppendices = GetByte(crashInfo, "NoOfAppendices", 0);
 
                 crash.BriefDescription = GetString(crashInfo, "BriefDescription");
             }
 
-            // Extract Location
+            
             if (root.TryGetProperty("Location", out var location))
             {
                 var crashLocation = new CrashLocation
@@ -206,7 +209,7 @@ public class HomeController : Controller
                 _context.CrashLocations.Add(crashLocation);
             }
 
-            // Extract Conditions
+           
             if (root.TryGetProperty("Conditions", out var conditions))
             {
                 var crashCondition = new CrashCondition
@@ -223,7 +226,7 @@ public class HomeController : Controller
                 };
                 _context.CrashConditions.Add(crashCondition);
 
-                // Weather conditions
+               
                 if (conditions.TryGetProperty("WeatherConditions", out var weatherEl) &&
                     weatherEl.ValueKind == JsonValueKind.Array)
                 {
@@ -395,7 +398,7 @@ public class HomeController : Controller
         }
     }
 
-    // Helper methods for safe JSON extraction with proper data types
+    
 
     private static string? GetString(JsonElement element, string propertyName)
     {
@@ -873,7 +876,7 @@ public class HomeController : Controller
 
             var person = new Person
             {
-                IdType = "RSA_ID",
+                IdType = "RSA_ID",//ID shouldn't be default to sa id
                 IdNumber = pe.IdNumber,
                 Surname = pe.Surname,
                 FullNames = pe.FullNames ?? string.Empty,
