@@ -265,4 +265,205 @@ function createGroupedBarChart(cfg) {
     return PNG.sync.write(png);
 }
 
-module.exports = { createGroupedBarChart, ROUTE_PALETTE };
+function createPieChart(cfg) {
+    // ── 1. Configuration defaults ──────────────────────────────
+    const W = cfg.width || 600;
+    const H = cfg.height || 400;
+    const pos = cfg.legendPosition || 'right';
+    const originalData = cfg.data || [];
+    const originalLabels = cfg.labels || [];
+    const originalColors = cfg.colors || PALETTE;
+
+    // ── 2. Filter out zero, negative, and invalid values ──────
+    // This prevents empty/white slices from appearing
+    const validEntries = [];
+    for (let i = 0; i < originalData.length; i++) {
+        const val = originalData[i];
+        if (val !== null && val !== undefined && val > 0) {
+            validEntries.push({
+                value: val,
+                label: originalLabels[i] || `Item ${i + 1}`,
+                color: originalColors[i % originalColors.length]
+            });
+        }
+    }
+
+    // ── 3. Early exit if no valid data ─────────────────────────
+    if (validEntries.length === 0) {
+        const png = new PNG({ width: W, height: H, colorType: 2 });
+        fillRect(png, 0, 0, W, H, 255, 255, 255);
+        drawText(png, 10, 10, 'No data', 150, 150, 150, 2);
+        return PNG.sync.write(png);
+    }
+
+    // ── 4. Extract filtered data ───────────────────────────────
+    const data = validEntries.map(e => e.value);
+    const labels = validEntries.map(e => e.label);
+    const colors = validEntries.map(e => e.color);
+
+    const total = data.reduce((a, b) => a + b, 0);
+
+    // ── 5. Legend dimensions ────────────────────────────────────
+    const nItems = data.length;
+    const swatchW = 14, swatchH = 10;
+    const swatchGap = 4;
+    const itemH = 16;
+
+    const legendTexts = data.map((val, i) =>
+        `${labels[i]} (${((val / total) * 100).toFixed(1)}%)`
+    );
+
+    const maxLegendWidth = Math.max(
+        ...legendTexts.map(text => textWidth(text, 1))
+    );
+
+    const legendItemW = swatchW + swatchGap + maxLegendWidth + 8;
+    const legendBoxW = legendItemW + 24;
+    const legendBoxH = nItems * itemH + 12;
+
+    // ── 6. Margins ──────────────────────────────────────────────
+    const MT = 36;
+    const MB = 36;
+    const ML = 48;
+    const MR = pos === 'right' ? legendBoxW + 40 : 12;
+
+    const CW = W - ML - MR;
+    const CH = H - MT - MB;
+
+    // ── 7. Canvas (white background) ───────────────────────────
+    const png = new PNG({ width: W, height: H, colorType: 2 });
+    fillRect(png, 0, 0, W, H, 255, 255, 255);
+
+    // ── 8. Title ────────────────────────────────────────────────
+    if (cfg.title) {
+        const scale = 2;
+        const tw = textWidth(cfg.title, scale);
+        const tx = ML + Math.max(0, Math.floor((CW - tw) / 2));
+        drawText(png, tx, 4, cfg.title, 31, 56, 100, scale);
+    }
+
+    // ── 9. Sum & zero check ────────────────────────────────────
+  
+    if (total === 0) {
+        drawText(png, ML + 10, MT + 20, 'Total is zero', 150, 150, 150, 2);
+        return PNG.sync.write(png);
+    }
+
+    // ── 10. Pie geometry ────────────────────────────────────────
+    const centerX = ML + Math.floor(CW / 2);
+    const centerY = MT + Math.floor(CH / 2);
+    const radius = Math.min(CW, CH) / 2 - 10;
+
+    let startAngle = -Math.PI / 2;
+    startAngle = (startAngle + 2 * Math.PI) % (2 * Math.PI);
+
+    // ── 11. Draw pie slices ────────────────────────────────────
+    // ── 11. Draw pie slices ────────────────────────────────────────
+    for (let i = 0; i < data.length; i++) {
+        const value = data[i];
+        const sliceAngle = (value / total) * 2 * Math.PI;
+
+        const endAngle = startAngle + sliceAngle;
+
+        const [r, g, b] = colors[i];
+
+        const minX = Math.max(0, Math.floor(centerX - radius));
+        const maxX = Math.min(W - 1, Math.ceil(centerX + radius));
+        const minY = Math.max(0, Math.floor(centerY - radius));
+        const maxY = Math.min(H - 1, Math.ceil(centerY + radius));
+
+        const start = (startAngle + 2 * Math.PI) % (2 * Math.PI);
+        const end = (endAngle + 2 * Math.PI) % (2 * Math.PI);
+
+        for (let py = minY; py <= maxY; py++) {
+            for (let px = minX; px <= maxX; px++) {
+
+                const dx = px - centerX;
+                const dy = py - centerY;
+
+                if (dx * dx + dy * dy > radius * radius)
+                    continue;
+
+                let angle = Math.atan2(dy, dx);
+                if (angle < 0)
+                    angle += 2 * Math.PI;
+
+                let inside;
+
+                if (start <= end) {
+                    inside = angle >= start && angle < end;
+                } else {
+                    // slice wraps around 360°
+                    inside = angle >= start || angle < end;
+                }
+
+                if (inside) {
+                    const idx = (py * W + px) * 4;
+                    png.data[idx] = r;
+                    png.data[idx + 1] = g;
+                    png.data[idx + 2] = b;
+                    png.data[idx + 3] = 255;
+                }
+            }
+        }
+
+        startAngle = endAngle;
+    }
+
+
+
+    // ── 13. Pie border ──────────────────────────────────────────
+    for (let angle = 0; angle < 2 * Math.PI; angle += 0.01) {
+        const px = Math.round(centerX + radius * Math.cos(angle));
+        const py = Math.round(centerY + radius * Math.sin(angle));
+        if (px >= 0 && px < W && py >= 0 && py < H) {
+            const idx = (py * W + px) * 4;
+            png.data[idx] = 180;
+            png.data[idx + 1] = 180;
+            png.data[idx + 2] = 180;
+            png.data[idx + 3] = 255;
+        }
+    }
+
+    // ── 14. Legend ──────────────────────────────────────────────
+    if (pos === 'right') {
+        const padding = 10;
+        const lx = W - legendBoxW - padding;
+        const ly = MT + Math.floor((CH - legendBoxH) / 2);
+
+        // Background box
+        fillRect(png, lx - 2, ly - 4, legendBoxW - 2, legendBoxH + 4, 248, 248, 248);
+        hLine(png, lx - 2, ly - 4, legendBoxW - 2, 180, 180, 180);
+        hLine(png, lx - 2, ly - 4 + legendBoxH + 3, legendBoxW - 2, 180, 180, 180);
+        vLine(png, lx - 2, ly - 4, legendBoxH + 4, 180, 180, 180);
+        vLine(png, lx - 2 + legendBoxW - 3, ly - 4, legendBoxH + 4, 180, 180, 180);
+
+        data.forEach((val, di) => {
+            const iy = ly + 4 + di * itemH;
+            const [r, g, b] = colors[di % colors.length];
+
+            fillRect(png, lx + 4, iy + 1, swatchW, swatchH, r, g, b);
+
+            const label = labels[di] + ' (' + ((val / total) * 100).toFixed(1) + '%)';
+            drawText(png, lx + 4 + swatchW + swatchGap, iy, label, 40, 40, 40, 1);
+        });
+    } else {
+        // Bottom legend
+        const perRow = 3;
+        const itemW2 = Math.floor((W - ML) / Math.min(nItems, perRow));
+        const ly = H - 18;
+        data.forEach((val, di) => {
+            const lx = ML + (di % perRow) * itemW2;
+            const iy = ly + Math.floor(di / perRow) * itemH;
+            const [r, g, b] = colors[di % colors.length];
+
+            fillRect(png, lx, iy + 1, swatchW, swatchH, r, g, b);
+            const label = labels[di] + ' (' + ((val / total) * 100).toFixed(1) + '%)';
+            drawText(png, lx + swatchW + swatchGap, iy, label, 40, 40, 40, 1);
+        });
+    }
+
+    return PNG.sync.write(png);
+}
+
+module.exports = { createGroupedBarChart, createPieChart,  ROUTE_PALETTE };

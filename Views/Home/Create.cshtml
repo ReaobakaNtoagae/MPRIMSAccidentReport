@@ -259,6 +259,11 @@
                 <div><div class="field-label">AR Number</div><div id="arNoBox"></div></div>
                 <div><div class="field-label">CAS Number</div><div id="casNoBox"></div></div>
                 <div><div class="field-label">Capturing Number</div><div id="capturingBox"></div></div>
+                <div>
+    <div class="field-label">Incident Report No.</div>
+    <div id="incidentReportBox"></div>
+</div>
+                
             </div>
         </div>
         <div class="panel-card">
@@ -270,7 +275,6 @@
                 <div><div class="field-label">Speed Limit (km/h)</div><div id="speedBox"></div></div>
                 <div><div class="field-label">Route / Road</div><div id="routeSelect"></div></div>
                 <div><div class="field-label">Km Marker</div><div id="kmMarkerBox"></div></div>
-                <div><div class="field-label">No. of Vehicles</div><div id="vehicleCountBox"></div></div>
                 <div><div class="field-label">No. of Appendices</div><div id="appendicesBox"></div></div>
             </div>
         </div>
@@ -301,6 +305,7 @@
                 <div><div class="field-label">Junction Type</div><div id="junctionBox"></div></div>
                 <div><div class="field-label">Road Layout</div><div id="roadLayoutBox"></div></div>
                 <div><div class="field-label">Surface Type</div><div id="surfaceTypeBox"></div></div>
+                <div><div class="field-label">Surface Quality</div><div id="surfaceQualityBox"></div></div>
                 <div><div class="field-label">Surface Condition</div><div id="surfaceCondBox"></div></div>
             </div>
         </div>
@@ -361,8 +366,25 @@
         </div>
     </div>
 
+<div class="step-panel" id="panel-7">
 
-    <div class="step-panel" id="panel-7">
+    <div class="panel-card">
+
+        <h6>Witnesses</h6>
+
+        <div id="witnessTabs"></div>
+
+        <div id="witnessForms"></div>
+
+        <div style="margin-top:15px;">
+            <div id="btnAddWitness"></div>
+        </div>
+
+    </div>
+
+</div>
+
+    <div class="step-panel" id="panel-8">
         <div class="panel-card">
             <h6>Review Your Report</h6>
             <div id="reviewContent"></div>
@@ -382,8 +404,8 @@
 
 
                 var currentStep = 1;
-                var totalSteps  = 7;
-                var stepLabels  = ["Crash Info","Location","Conditions","Vehicles","Persons","Factors","Review"];
+                var totalSteps  = 8;
+                var stepLabels  = ["Crash Info","Location","Conditions","Vehicles","Persons","Factors", "Witnesses", "Review", ];
 
                 var formData = {
                     CrashInfo:  { NoOfVehiclesInvolved: 1, NoOfAppendices: 0 },
@@ -391,7 +413,10 @@
                     Conditions: { WeatherConditions: [] },
                     Vehicles:   [],
                     Persons:    [],
-                    Factors:    []
+                    Factors:    [],
+                    Witnesses: [],
+                    Attachments: []
+
                 };
 
                 var vehicleCount = 1;
@@ -405,7 +430,7 @@
                                       "Entering traffic flow","Merging","Diverging","Reversing",
                                       "Sudden start","Sudden stop","Swerving","Slowing down",
                                       "Avoiding object","Stationary","Overtaking - pass right",
-                                      "Overtaking - pass left","Other"];
+                                      "Overtaking - pass left","Changing lane", "Parking / parked", "Other"];
                 var seatbeltOpts   = ["SB available used","SB available not used","SB not available","H used","H not used"];
                 var yesNoUnk       = ["Yes","No","Unknown"];
                 var testResults    = ["Test given","Test not given","Test refused"];
@@ -419,6 +444,7 @@
                 var roadLayouts    = ["Straight","Slight Bend","Sharp Bend"];
                 var surfaceTypes   = ["Tarmac","Concrete","Gravel/Dirt","Block pave","Other"];
                 var surfaceConds   = ["Dry","Wet","Damp","Ice","Snow","Frost","Slippery","Flooding","Loose gravel"];
+                var surfaceQuality = ["Good", "Bumpy", "Pothole/s", "Cracks", "Corrugated", "Other"];
                 var junctionTypes  = ["Cross roads","T-Junction","Staggered junction","Y-junction",
                                       "Circle","Level Crossing","Not a junction","On/Off-ramp","Pedestrian Crossing","Other"];
                 var roadClasses    = ["Freeway/Motorway","On/Off ramp","Dual carriageway","Single carriageway",
@@ -426,6 +452,7 @@
                                       "Urban build-up area","Restricted road","Unknown","Other"];
                 var trafficCtrl    = ["Traffic signal","Stop sign","Officer","Yield/Give Way","Uncontrolled",
                                       "Boom","Pedestrian Crossing","Barrier line","Flashing TS","All TS out of order","Other"];
+                var overtakingCtrl = ["Barrier line", "Road sign", "None", "Not Fatal"];
                 var lightConds     = ["Daylight","Night + Street lights","Night + No street lights","Sunset","Sunrise","Unknown"];
                 var weatherOpts    = ["Clear","Mist/Fog","Rain","Overcast","Sleet/Hail","Snow","Dust","Smog/Smoke","Unknown"];
                 var humanFactors   = ["Cell phone holding/usage","Disregard for red traffic lights","Disregard for stop sign",
@@ -445,8 +472,62 @@
                                       "Visibility: smoke/fog/rain/etc.","Other"];
                 var factorMap      = { "Human": humanFactors, "Vehicle": vehicleFactors, "Road & Environmental": roadFactors };
 
+                var passengerVehicles = ["Motor car/station wagon", "Combi/minibus","Bus","Bus-train/Articulated Bus"];
+                var goodsVehicles = ["Light delivery vehicle", "Panel van", "GVM greater than 3500kg", "Truck: articulated", "Truck: artculated multiple"];
+                var motorcyles = ["125cc and under", "Above 125cc", "Tri-cycle", "Quad-cycle"];
+                var otherVehicles = ["Bicycle", "Mobile equipment: driven", "Caravan/trailer", "Tractor", "Animal-drawn vehicle", "E-Cycle(electric)", "Other(specify)"];
+
+                var vehicleMap = {"Passenger Vehicle" : passengerVehicles, "Goods Vehicle": goodsVehicles, "Motorcycle": motorcyles, "Other Vehicles": otherVehicles};
+
+                const damagePoints = [
+                                    "Front",
+                                    "Front Left",
+                                    "Front Right",
+                                    "Rear",
+                                    "Rear Left",
+                                    "Rear Right",
+                                    "Left Side",
+                                    "Right Side",
+                                    "Roof",
+                                    "Undercarriage",
+                                    "Windscreen",
+                                    "Rear Window",
+                                    "Bonnet",
+                                    "Boot",
+                                    "Engine",
+                                    "Suspension",
+                                    "Tyres",
+                                    "Lights",
+                                    "Mirror Left",
+                                    "Mirror Right",
+                                    "Multiple Areas",
+                                    "Burnt",
+                                    "Rollover Damage",
+                                    "Other"
+                                    ];
+            var yesNoUnknown = [
+                    "Yes",
+                    "No",
+                    "Unknown"
+                ];
+
+            var dangerousGoods = [
+                "Fuel",
+                "Diesel",
+                "Petrol",
+                "Gas",
+                "Explosives",
+                "Chemicals",
+                "Corrosive",
+                "Radioactive",
+                "Hazardous Waste",
+                "Medical Waste",
+                "Compressed Gas",
+                "Other"
+            ];
+
     
-                function buildStepBar() {
+            function buildStepBar() {
                     var bar = $("#stepBar").empty();
                     stepLabels.forEach(function(label, i) {
                         var n   = i + 1;
@@ -458,7 +539,7 @@
                 }
 
        
-                function lookupSelect(container, endpoint, placeholder, onChange) {
+             function lookupSelect(container, endpoint, placeholder, onChange) {
                     return $(container).dxSelectBox({
                         dataSource: new DevExpress.data.CustomStore({
                             key: "text",
@@ -500,7 +581,7 @@
                 }
 
            
-                function staticSelect(container, items, placeholder, onChange) {
+             function staticSelect(container, items, placeholder, onChange) {
                     return $(container).dxSelectBox({
                         items: items, searchEnabled: true, showClearButton: true,
                         placeholder: placeholder || "Select...",
@@ -508,18 +589,65 @@
                     }).dxSelectBox("instance");
                 }
 
-                function textBox(container, placeholder, onChange) {
+             function textBox(container, placeholder, onChange) {
                     return $(container).dxTextBox({
                         placeholder: placeholder, showClearButton: true,
                         onValueChanged: function(e) { if (onChange) onChange(e.value); }
                     }).dxTextBox("instance");
                 }
 
-                function numberBox(container, val, min, onChange) {
+             function numberBox(container, val, min, onChange) {
                     return $(container).dxNumberBox({
                         value: val || 0, min: min || 0,
                         onValueChanged: function(e) { if (onChange) onChange(e.value); }
                     }).dxNumberBox("instance");
+                }
+
+    
+             function staticSelectWithOther(container, items, placeholder, onValueChanged, otherText) {
+                    otherText = otherText || "Other";
+
+                    var wrapper = $("<div>").css({ display: "flex", alignItems: "center", gap: "8px" }).appendTo(container);
+
+                 
+                    var selectDiv = $("<div>").css({ flex: "1" }).appendTo(wrapper);
+                    var selectInst = selectDiv.dxSelectBox({
+                        items: items,
+                        searchEnabled: true,
+                        showClearButton: true,
+                        placeholder: placeholder || "Select...",
+                        onValueChanged: function(e) {
+                            var val = e.value;
+                            var isOther = (val === otherText);
+                            textBoxContainer.toggle(isOther);
+                            if (!isOther) {
+                                textBoxInst.option("value", "");
+                         
+                                if (onValueChanged) onValueChanged(val);
+                            } else {
+                                
+                                var textVal = textBoxInst.option("value") || "";
+                                var combined = textVal ? otherText + ": " + textVal : otherText;
+                                if (onValueChanged) onValueChanged(combined);
+                            }
+                        }
+                    }).dxSelectBox("instance");
+
+                    var textBoxContainer = $("<div>").css({ display: "none", flex: "1" }).appendTo(wrapper);
+                    var textBoxInst = textBoxContainer.dxTextBox({
+                        placeholder: "Please specify...",
+                        showClearButton: true,
+                        onValueChanged: function(e) {
+                            var val = e.value;
+                            var selected = selectInst.option("value");
+                            if (selected === otherText) {
+                                var combined = val ? otherText + ": " + val : otherText;
+                                if (onValueChanged) onValueChanged(combined);
+                            }
+                        }
+                    }).dxTextBox("instance");
+
+                    return { selectInstance: selectInst, textBoxInstance: textBoxInst };
                 }
 
            
@@ -535,7 +663,11 @@
                 });
                 textBox("#casNoBox",     "CAS Number",       function(v) { formData.CrashInfo.CasNo            = v; });
                 textBox("#capturingBox", "Capturing Number", function(v) { formData.CrashInfo.CapturingNumber  = v; });
-
+                textBox("#incidentReportBox",
+                "Incident Report Number",
+                function(v){
+                    formData.CrashInfo.IncidentReportNo = v;
+                });
                 $("#crashDateBox").dxDateBox({
                     type: "date", displayFormat: "dd/MM/yyyy", value: new Date(),
                     onValueChanged: function(e) {
@@ -546,17 +678,15 @@
                 $("#crashTimeBox").dxDateBox({
                     type: "time",
                     displayFormat: "HH:mm",
-                    pickerType: "list",
-                    interval: 5, 
+                    pickerType: "rollers",    
                     useMaskBehavior: true,
                     placeholder: "HH:mm",
                     onValueChanged: function(e) {
                         var d = e.value;
                         if (d) {
-                        
                             formData.CrashInfo.CrashTime =
-                                d.getHours().toString().padStart(2,"0") + ":" +
-                                d.getMinutes().toString().padStart(2,"0") + ":00";
+                                d.getHours().toString().padStart(2, "0") + ":" +
+                                d.getMinutes().toString().padStart(2, "0") + ":00";
                         }
                     }
                 });
@@ -564,7 +694,6 @@
                 numberBox("#speedBox",        null, 0, function(v)          { formData.CrashInfo.SpeedLimitKmh             = v; });
                 lookupSelect("#routeSelect",  "routes",   "e.g. N4, R40...",function(v) { formData.CrashInfo.RoadNumber    = v; });
                 textBox("#kmMarkerBox",       "Km Marker",                    function(v) { formData.CrashInfo.KmMarker     = v; });
-                numberBox("#vehicleCountBox", 1, 1, function(v) { formData.CrashInfo.NoOfVehiclesInvolved = v || 1; });
                 numberBox("#appendicesBox",   0, 0, function(v) { formData.CrashInfo.NoOfAppendices       = v || 0; });
                 $("#descBox").dxTextArea({
                     height: 80, placeholder: "It is alleged that...",
@@ -579,20 +708,33 @@
                 textBox("#intersectionBox",    "Intersection street / road",        function(v){ formData.Location.IntersectionStreet = v; });
                 numberBox("#gpsXBox",null,  -35, function(v){ formData.Location.GpsXCoordinate = v !== null ? parseFloat(v) : null; });
                 numberBox("#gpsYBox", null, 16, function(v){ formData.Location.GpsYCoordinate = v !== null ? parseFloat(v) : null; });
-                staticSelect("#roadClassBox",  roadClasses,  "Select...",           function(v){ formData.Location.RoadFunctionalClassification = v; });
+                staticSelectWithOther("#roadClassBox",  roadClasses,  "Select...",           function(v){ formData.Location.RoadFunctionalClassification = v; });
                 staticSelect("#junctionBox",   junctionTypes,"Select...",           function(v){ formData.Location.JunctionType = v; });
                 staticSelect("#roadLayoutBox", roadLayouts,  "Select...",           function(v){ formData.Location.RoadLayout = v; });
                 staticSelect("#surfaceTypeBox",surfaceTypes, "Select...",           function(v){ formData.Location.RoadSurfaceType = v; });
+                staticSelect("#surfaceQualityBox", surfaceQuality, "Select...",     function(v){formData.Location.RoadSurfaceQuality = v; });
                 staticSelect("#surfaceCondBox",surfaceConds, "Select...",           function(v){ formData.Location.RoadSurfaceCondition = v; });
 
             
                 staticSelect("#lightBox",      lightConds,  "Light condition...",  function(v){ formData.Conditions.LightCondition = v; });
                 staticSelect("#trafficCtrlBox",trafficCtrl, "Traffic control...",  function(v){ formData.Conditions.TrafficControlType = v; });
-                staticSelect("#obstructionBox",["Crash site","Roadworks","Roadblock","None","Other"],"Obstruction...",function(v){ formData.Conditions.ObstructionType = v; });
+                staticSelect("#overtakingCtrlBox", overtakingCtrl, "Overtaking Control", function(v) { formData.Conditions.OvertakingControl = v;});
+                staticSelectWithOther("#obstructionBox",["Crash site","Roadworks","Roadblock","None","Other"],"Obstruction...",function(v){ formData.Conditions.ObstructionType = v; });
                 staticSelect("#roadGradeBox",  ["Flat","Uphill","Downhill","Steep uphill","Steep downhill"],"Grade...",function(v){ formData.Conditions.RoadSegmentGrade = v; });
-                staticSelect("#roadSignsBox",  ["Visible","Not visible","Damaged","Missing","N/A"],"Road signs...",function(v){ formData.Conditions.RoadSignsCondition = v; });
+                staticSelectWithOther("#roadSignsBox",  ["Visible","Not visible","Damaged","Missing","N/A", "Other"],"Road signs...",function(v){ formData.Conditions.RoadSignsCondition = v; });
                 staticSelect("#roadMarkingsBox",["Good","Visible","Not visible","Not applicable"],"Road markings...",function(v){ formData.Conditions.RoadMarkingVisibility = v; });
-
+                staticSelect(
+                "#crashSeverityBox",
+                [
+                    "Slight Injury",
+                    "Minor Injury",
+                    "Serious Injury",
+                    "Fatal"
+                ],
+                "Severity",
+                function(v){
+                    formData.CrashInfo.CrashSeverity = v;
+                });
            
                 lookupSelect("#crashTypeSelect","crashtypes","e.g. HEAD ON, SIDE SWIPE...",function(v){ formData.Conditions.CrashType = v; });
                 staticSelect("#hitRunBox",[{text:"Yes",value:true},{text:"No",value:false}],"Select...",function(v){ formData.Conditions.HitAndRun = v; });
@@ -613,83 +755,767 @@
                     });
                 });
 
-                function buildVehicleForm(index) {
-                    var ref  = vehicleRefs[index];
-                    var data = { VehicleReference: ref };
+                function sec(fd,title){
+
+                    $("<div>")
+                        .css({
+                            fontWeight:700,
+                            color:"#2e7d32",
+                            fontSize:".8rem",
+                            textTransform:"uppercase",
+                            letterSpacing:".5px",
+                            margin:"18px 0 10px"
+                        })
+                        .text(title)
+                        .appendTo(fd);
+
+                }
+
+                   function buildVehicleForm(index) {
+
+                    var ref = vehicleRefs[index];
+
+                    var data = {
+                        VehicleReference: ref,
+                        VehicleDamages: []
+                    };
+
                     formData.Vehicles[index] = data;
 
-                    var tab = $("<div>").addClass("entry-tab" + (index === 0 ? " active" : ""))
-                        .attr("id", "vTab-" + index).text("Vehicle " + ref)
-                        .on("click", function() {
-                            $(".entry-tab").removeClass("active"); $(".entry-form").removeClass("active");
-                            $(this).addClass("active"); $("#vForm-" + index).addClass("active");
+                    var tab = $("<div>")
+                        .addClass("entry-tab" + (index === 0 ? " active" : ""))
+                        .attr("id","vTab-" + index)
+                        .text("Vehicle " + ref)
+                        .on("click",function(){
+
+                            $(".entry-tab").removeClass("active");
+                            $(".entry-form").removeClass("active");
+
+                            $(this).addClass("active");
+                            $("#vForm-" + index).addClass("active");
+
                         });
+
                     $("#vehicleTabs").append(tab);
 
-                    var fd = $("<div>").addClass("entry-form" + (index === 0 ? " active" : ""))
-                        .attr("id", "vForm-" + index).appendTo("#vehicleForms");
+                    var fd = $("<div>")
+                        .addClass("entry-form" + (index===0 ? " active":""))
+                        .attr("id","vForm-" + index)
+                        .appendTo("#vehicleForms");
 
-                    function sec(title) {
-                        $("<div>").css({ fontWeight:700, color:"#2e7d32", fontSize:".8rem",
-                            textTransform:"uppercase", letterSpacing:".5px", margin:"16px 0 10px"
-                        }).text(title).appendTo(fd);
+                    buildVehicleDetails(fd,data);
+
+                    buildDriverInformation(fd,data);
+
+                    buildDriverLicence(fd,data);
+
+                    buildDriverCrashDetails(fd,data);
+
+                    buildVehicleConduct(fd,data);
+
+                    buildVehicleDamage(fd,data);
+
+                    buildDangerousGoods(fd,data);
+                }
+
+            function buildVehicleDetails(fd, data) {
+
+            sec(fd, "Vehicle Details");
+
+            var row = $("<div class='field-row cols-4'>").appendTo(fd);
+
+            
+            var catWrap = $("<div>").appendTo(row);
+            $("<div class='field-label'>").text("Vehicle Category").appendTo(catWrap);
+            var catDiv = $("<div>").appendTo(catWrap);
+            var categoryInst = staticSelect(catDiv, Object.keys(vehicleMap), "Select category...", function(val) {
+                data.VehicleCategory = val;
+                var types = vehicleMap[val] || [];
+                typeInst.option("items", types);
+                typeInst.option("value", null);
+            });
+
+            var typeWrap = $("<div>").appendTo(row);
+            $("<div class='field-label'>").text("Vehicle Type").appendTo(typeWrap);
+            var typeDiv = $("<div>").appendTo(typeWrap);
+            var typeInst = staticSelect(typeDiv, [], "Select category first...", function(val) {
+                data.VehicleType = val;
+            });
+
+           
+            var restFields = [
+                ["Country of Registration","text", v => data.CountryOfRegistration = v],
+                ["Licence Disc Number","text", v => data.LicenceDiscNumber = v],
+                ["Colour","text", v => data.Colour = v],
+                ["Make","text", v => data.Make = v],
+                ["Model","text", v => data.Model = v],
+                ["VIN Number","text", v => data.VinNumber = v],
+                ["Trailer Licence Number","text", v => data.TrailerLicenceNumber = v],
+                ["Vehicle Type Code","text", v => data.VehicleTypeCode = v],
+                ["Special Function","sel", specialFuncs, v => data.SpecialFunction = v],
+                ["Private / Business","sel", ["Private","Business"], v => data.PrivateOrBusiness = v],
+                ["Licence Type Fitting","text", v => data.LicenceTypeFitting = v]
+            ];
+
+            
+            restFields.forEach(function(f, idx) {
+                if (idx % 4 === 0) {
+                    row = $("<div class='field-row cols-4'>").appendTo(fd);
+                }
+                var w = $("<div>").appendTo(row);
+                $("<div class='field-label'>").text(f[0]).appendTo(w);
+                if (f[1] == "sel") {
+                    staticSelect($("<div>").appendTo(w), f[2], f[0], f[3]);
+                } else {
+                    textBox($("<div>").appendTo(w), f[0], f[2]);
+                }
+            });
+        }
+
+
+            function buildDriverInformation(fd, data){
+
+            sec(fd,"Driver Information");
+
+            var row = $("<div class='field-row cols-4'>")
+                .appendTo(fd);
+
+            [
+                ["Surname","text",v=>data.DriverSurname=v],
+                ["Full Names","text",v=>data.DriverFullNames=v],
+                ["ID Number","text",v=>data.DriverIdNumber=v],
+
+                ["Age","number",v=>data.DriverAge=v],
+
+                ["Gender","sel",
+                    ["Male","Female","Unknown"],
+                    v=>data.DriverGender=v],
+
+                ["Country of Origin","text",
+                    v=>data.DriverCountryOfOrigin=v],
+
+                ["Nationality","text",
+                    v=>data.DriverNationality=v],
+
+                ["Population Group","sel",
+                    [
+                        "African",
+                        "Coloured",
+                        "Indian",
+                        "White",
+                        "Other",
+                        "Unknown"
+                    ],
+                    v=>data.DriverPopulationGroup=v],
+
+                ["Occupation","text",
+                    v=>data.DriverOccupation=v],
+
+                ["Employer","text",
+                    v=>data.DriverEmployer=v],
+
+                ["Home Address","text",
+                    v=>data.DriverHomeAddress=v],
+
+                ["Postal Address","text",
+                    v=>data.DriverPostalAddress=v],
+
+                ["Work Address","text",
+                    v=>data.DriverWorkAddress=v],
+
+                ["Telephone","text",
+                    v=>data.DriverTelephone=v],
+
+                ["Cell Phone","text",
+                    v=>data.DriverCellPhone=v],
+
+                ["Other Phone","text",
+                    v=>data.DriverOtherPhone=v],
+
+                ["Email Address","text",
+                    v=>data.DriverEmail=v]
+
+            ]
+            .forEach(function(f){
+
+                var w = $("<div>").appendTo(row);
+
+                $("<div class='field-label'>")
+                    .text(f[0])
+                    .appendTo(w);
+
+                if(f[1] === "sel")
+                {
+                    staticSelect(
+                        $("<div>").appendTo(w),
+                        f[2],
+                        f[0],
+                        f[3]
+                    );
+                }
+                else if(f[1] === "number")
+                {
+                    numberBox(
+                        $("<div>").appendTo(w),
+                        null,
+                        0,
+                        f[2]
+                    );
+                }
+                else
+                {
+                    textBox(
+                        $("<div>").appendTo(w),
+                        f[0],
+                        f[2]
+                    );
+                }
+
+            });
+
+        }
+
+            function buildDriverLicence(fd,data){
+
+    sec(fd,"Driver Licence");
+
+    var row = $("<div class='field-row cols-4'>")
+        .appendTo(fd);
+
+    [
+        ["Licence Number","text",
+            v=>data.LicenceNumber=v],
+
+        ["Licence Code","sel",
+            licenceCodes,
+            v=>data.LicenceCode=v],
+
+        ["Licence Type","text",
+            v=>data.LicenceType=v],
+
+        ["PrDP Number","text",
+            v=>data.PrdpNumber=v],
+
+        ["PrDP Code","text",
+            v=>data.PrdpCode=v],
+
+        ["Restrictions","text",
+            v=>data.LicenceRestrictions=v]
+    ]
+    .forEach(function(f){
+
+        var w=$("<div>").appendTo(row);
+
+        $("<div class='field-label'>")
+            .text(f[0])
+            .appendTo(w);
+
+        if(f[1]=="sel")
+        {
+            staticSelect(
+                $("<div>").appendTo(w),
+                f[2],
+                f[0],
+                f[3]
+            );
+        }
+        else
+        {
+            textBox(
+                $("<div>").appendTo(w),
+                f[0],
+                f[2]
+            );
+        }
+
+    });
+
+    // Date of Issue
+
+    var issue=$("<div>").appendTo(row);
+
+    $("<div class='field-label'>")
+        .text("Date of Issue")
+        .appendTo(issue);
+
+    $("<div>")
+        .appendTo(issue)
+        .dxDateBox({
+
+            type:"date",
+
+            displayFormat:"dd/MM/yyyy",
+
+            onValueChanged:function(e){
+
+                data.DateOfIssue=
+                    e.value
+                    ? e.value.toISOString().split("T")[0]
+                    : null;
+
+            }
+
+        });
+
+    // Expiry Date
+
+    var expiry=$("<div>").appendTo(row);
+
+    $("<div class='field-label'>")
+        .text("Expiry Date")
+        .appendTo(expiry);
+
+    $("<div>")
+        .appendTo(expiry)
+        .dxDateBox({
+
+            type:"date",
+
+            displayFormat:"dd/MM/yyyy",
+
+            onValueChanged:function(e){
+
+                data.ExpiryDate=
+                    e.value
+                    ? e.value.toISOString().split("T")[0]
+                    : null;
+
+            }
+
+        });
+
+}
+
+        function buildDriverCrashDetails(fd, data){
+
+            sec(fd,"Driver Crash Details");
+
+            var row = $("<div class='field-row cols-4'>")
+                .appendTo(fd);
+
+            [
+                ["Injury Severity","sel",
+                    injuries,
+                    v=>data.SeverityOfInjury=v],
+
+                ["Seatbelt / Helmet Used","sel",
+                    seatbeltOpts,
+                    v=>data.SeatbeltHelmetUsed=v],
+
+                ["Child Restraint Used","sel",
+                    ["Yes","No","Not Applicable"],
+                    v=>data.ChildRestraintUsed=v],
+
+                ["Airbag Deployed","sel",
+                    ["Yes","No","Unknown","Not Applicable"],
+                    v=>data.AirbagDeployed=v],
+
+                ["Ejected From Vehicle","sel",
+                    ["Yes","No","Unknown"],
+                    v=>data.EjectedFromVehicle=v],
+
+                ["Trapped In Vehicle","sel",
+                    ["Yes","No","Unknown"],
+                    v=>data.TrappedInVehicle=v],
+
+                ["Extricated By","sel",
+                    [
+                        "EMS",
+                        "Fire Brigade",
+                        "Police",
+                        "Public",
+                        "Self",
+                        "Not Applicable"
+                    ],
+                    v=>data.ExtricatedBy=v],
+
+                ["Liquor / Drug Suspected","sel",
+                    yesNoUnk,
+                    v=>data.LiquorDrugSuspected=v],
+
+                ["Liquor / Drug Test Done","sel",
+                    testResults,
+                    v=>data.LiquorDrugTestDone=v],
+
+                ["Liquor Test Result","text",
+                    v=>data.LiquorTestResult=v],
+
+                ["Drug Test Result","text",
+                    v=>data.DrugTestResult=v],
+
+                ["Ambulance Reference","text",
+                    v=>data.AmbulanceServiceRef=v],
+
+                ["Hospital","text",
+                    v=>data.Hospital=v],
+
+                ["Hospital Reference","text",
+                    v=>data.HospitalReference=v],
+
+                ["Medical Practitioner","text",
+                    v=>data.MedicalPractitioner=v]
+            ]
+
+            .forEach(function(f){
+
+                var w = $("<div>").appendTo(row);
+
+                $("<div class='field-label'>")
+                    .text(f[0])
+                    .appendTo(w);
+
+                if(f[1]=="sel")
+                {
+                    staticSelect(
+                        $("<div>").appendTo(w),
+                        f[2],
+                        f[0],
+                        f[3]
+                    );
+                }
+                else
+                {
+                    textBox(
+                        $("<div>").appendTo(w),
+                        f[0],
+                        f[2]
+                    );
+                }
+
+            });
+
+            // Time of Death
+
+            var tod = $("<div>").appendTo(row);
+
+            $("<div class='field-label'>")
+                .text("Time of Death")
+                .appendTo(tod);
+
+            $("<div>")
+                .appendTo(tod)
+                .dxDateBox({
+
+                    type:"time",
+
+                    displayFormat:"HH:mm",
+
+                    pickerType:"list",
+
+                    interval:5,
+
+                    useMaskBehavior:true,
+
+                    onValueChanged:function(e){
+
+                        if(e.value){
+
+                            data.TimeOfDeath =
+                                e.value.getHours().toString().padStart(2,"0")
+                                + ":" +
+                                e.value.getMinutes().toString().padStart(2,"0")
+                                + ":00";
+
+                        }
+                        else{
+
+                            data.TimeOfDeath = null;
+
+                        }
+
                     }
 
-                    sec("Vehicle " + ref + " — Details");
-                    var vRow = $("<div class='field-row cols-4'>").appendTo(fd);
-                    [
-                        ["#vLicDisc"+index,   "lkp_disc_"+index,  "Reg / Disc No.",  null, "text",   function(v){ data.LicenceDiscNumber = v; }],
-                        ["#vMake"+index,      null,                "Make",            null, "text",   function(v){ data.Make = v; }],
-                        ["#vModel"+index,     null,                "Model",           null, "text",   function(v){ data.Model = v; }],
-                        ["#vColour"+index,    null,                "Colour",          null, "text",   function(v){ data.Colour = v; }],
-                        ["#vCat"+index,       null,                "Category",        vehicleCategories, "sel", function(v){ data.VehicleCategory = v; }],
-                        ["#vFunc"+index,      null,                "Special Function",specialFuncs, "sel", function(v){ data.SpecialFunction = v; }],
-                        ["#vVin"+index,       null,                "VIN",             null, "text",   function(v){ data.VinNumber = v; }]
-                    ].forEach(function(f) {
-                        var wrap = $("<div>").appendTo(vRow);
-                        $("<div class='field-label'>").text(f[2]).appendTo(wrap);
-                        var box = $("<div>").attr("id", f[0].slice(1)).appendTo(wrap);
-                        if (f[4] === "sel") staticSelect(box, f[3], f[2] + "...", f[5]);
-                        else textBox(box, f[2], f[5]);
-                    });
+                });
 
-                    sec("Driver Details");
-                    var dRow = $("<div class='field-row cols-4'>").appendTo(fd);
-                    [
-                        ["Surname",    function(v){ data.DriverSurname   = v; }],
-                        ["Full Names", function(v){ data.DriverFullNames = v; }],
-                        ["ID Number",  function(v){ data.DriverIdNumber  = v; }],
-                        ["Cell Phone", function(v){ data.DriverCellPhone = v; }]
-                    ].forEach(function(f) {
-                        var w = $("<div>").appendTo(dRow);
-                        $("<div class='field-label'>").text(f[0]).appendTo(w);
-                        textBox($("<div>").appendTo(w), f[0], f[1]);
-                    });
-                    var dRow2 = $("<div class='field-row cols-4'>").appendTo(fd);
-                    var lw = $("<div>").appendTo(dRow2);
-                    $("<div class='field-label'>").text("Licence Code").appendTo(lw);
-                    staticSelect($("<div>").appendTo(lw), licenceCodes, "Code...", function(v){ data.LicenceCode = v; });
-                    var sw = $("<div>").appendTo(dRow2);
-                    $("<div class='field-label'>").text("Seatbelt / Helmet").appendTo(sw);
-                    staticSelect($("<div>").appendTo(sw), seatbeltOpts, "Select...", function(v){ data.SeatbeltUsed = v; });
-                    var iw = $("<div>").appendTo(dRow2);
-                    $("<div class='field-label'>").text("Injury Severity").appendTo(iw);
-                    staticSelect($("<div>").appendTo(iw), injuries, "Select...", function(v){ data.SeverityOfInjury = v; });
+            // Date of Death
 
-                    sec("Vehicle Conduct");
-                    var cRow = $("<div class='field-row cols-4'>").appendTo(fd);
+            var dod = $("<div>").appendTo(row);
+
+            $("<div class='field-label'>")
+                .text("Date of Death")
+                .appendTo(dod);
+
+            $("<div>")
+                .appendTo(dod)
+                .dxDateBox({
+
+                    type:"date",
+
+                    displayFormat:"dd/MM/yyyy",
+
+                    onValueChanged:function(e){
+
+                        data.DateOfDeath =
+                            e.value
+                            ? e.value.toISOString().split("T")[0]
+                            : null;
+
+                    }
+
+                });
+
+        }
+
+                function buildVehicleConduct(fd,data){
+
+            sec(fd,"Vehicle Conduct");
+
+            var row = $("<div class='field-row cols-4'>")
+                .appendTo(fd);
+
+            [
+                ["Vehicle Manoeuvre","sel",
+                    manoeuvres,
+                    v=>data.VehicleManoeuvre=v],
+
+                ["Position Before Crash","sel",
                     [
-                        ["Manoeuvre",         manoeuvres,  function(v){ data.VehicleManoeuvre    = v; }],
-                        ["Position Before",   ["Correct road lane","Wrong road lane","Wrong side of road","Road shoulder","On-road parking bay","Off-road parking bay"], function(v){ data.PositionBeforeCrash = v; }],
-                        ["Alcohol Suspected", yesNoUnk,    function(v){ data.AlcoholSuspected    = v; }],
-                        ["Alcohol Test",      testResults, function(v){ data.AlcoholTestResult   = v; }],
-                        ["Drug Suspected",    yesNoUnk,    function(v){ data.DrugSuspected       = v; }]
-                    ].forEach(function(f) {
-                        var w = $("<div>").appendTo(cRow);
-                        $("<div class='field-label'>").text(f[0]).appendTo(w);
-                        staticSelect($("<div>").appendTo(w), f[1], f[0] + "...", f[2]);
-                    });
+                        "Correct road lane",
+                        "Wrong road lane",
+                        "Wrong sideof road",
+                        "Road shoulder",
+                        "On-road parking bay",
+                        "Off-road parking bay"
+                    ],
+                    v=>data.PositionBeforeCrash=v],
+
+                ["Estimated Speed (km/h)","number",
+                    v=>data.EstimatedSpeed=v],
+
+                ["Passengers For Reward","sel",
+                    yesNoUnk,
+                    v=>data.PassengersForReward=v],
+
+                ["Overloaded","sel",
+                    yesNoUnk,
+                    v=>data.Overloaded=v],
+
+                ["Mechanical Defect Suspected","sel",
+                    yesNoUnk,
+                    v=>data.MechanicalDefect=v],
+
+                ["Tyre Burst","sel",
+                    yesNoUnk,
+                    v=>data.TyreBurst=v],
+
+                ["Brake Failure","sel",
+                    yesNoUnk,
+                    v=>data.BrakeFailure=v],
+
+                ["Headlights On","sel",
+                    yesNoUnk,
+                    v=>data.HeadlightsOn=v],
+
+                ["Indicators Used","sel",
+                    yesNoUnk,
+                    v=>data.IndicatorsUsed=v],
+
+                ["Alcohol Suspected","sel",
+                    yesNoUnk,
+                    v=>data.AlcoholSuspected=v],
+
+                ["Alcohol Test","sel",
+                    testResults,
+                    v=>data.AlcoholTestResult=v],
+
+                ["Drug Suspected","sel",
+                    yesNoUnk,
+                    v=>data.DrugSuspected=v],
+
+                ["Drug Test","sel",
+                    testResults,
+                    v=>data.DrugTestResult=v],
+
+                ["Breakdown Company","text",
+                    v=>data.BreakdownCompany=v]
+            ]
+
+            .forEach(function(f){
+
+                var w = $("<div>").appendTo(row);
+
+                $("<div class='field-label'>")
+                    .text(f[0])
+                    .appendTo(w);
+
+                if(f[1]=="sel")
+                {
+                    staticSelect(
+                        $("<div>").appendTo(w),
+                        f[2],
+                        f[0],
+                        f[3]
+                    );
                 }
+                else if(f[1]=="number")
+                {
+                    numberBox(
+                        $("<div>").appendTo(w),
+                        null,
+                        0,
+                        f[2]
+                    );
+                }
+                else
+                {
+                    textBox(
+                        $("<div>").appendTo(w),
+                        f[0],
+                        f[2]
+                    );
+                }
+
+            });
+
+        }
+
+             function buildVehicleDamage(fd,data){
+
+                sec(fd,"Vehicle Damage");
+
+                var row = $("<div class='field-row cols-1'>")
+                    .appendTo(fd);
+
+                var wrap = $("<div>").appendTo(row);
+
+                $("<div class='field-label'>")
+                    .text("Damaged Areas")
+                    .appendTo(wrap);
+
+                $("<div>")
+                    .appendTo(wrap)
+                    .dxTagBox({
+
+                        items: damagePoints,
+
+                        searchEnabled:true,
+
+                        showSelectionControls:true,
+
+                        applyValueMode:"useButtons",
+
+                        multiline:true,
+
+                        placeholder:"Select damaged areas...",
+
+                        onValueChanged:function(e){
+
+                            data.VehicleDamages = e.value || [];
+
+                        }
+
+                    });
+
+                var row2 = $("<div class='field-row cols-3'>")
+                    .appendTo(fd);
+
+                [
+                    ["Estimated Damage Cost","number",
+                        v=>data.EstimatedDamageCost=v],
+
+                    ["Vehicle Write-off","sel",
+                        ["Yes","No","Unknown"],
+                        v=>data.WriteOff=v],
+
+                    ["Roadworthy After Crash","sel",
+                        ["Yes","No","Unknown"],
+                        v=>data.Roadworthy=v]
+                ]
+
+                .forEach(function(f){
+
+                    var w = $("<div>").appendTo(row2);
+
+                    $("<div class='field-label'>")
+                        .text(f[0])
+                        .appendTo(w);
+
+                    if(f[1]=="sel")
+                        staticSelect(
+                            $("<div>").appendTo(w),
+                            f[2],
+                            f[0],
+                            f[3]
+                        );
+
+                    else
+                        numberBox(
+                            $("<div>").appendTo(w),
+                            null,
+                            0,
+                            f[2]
+                        );
+
+                });
+
+            }
+
+       function buildDangerousGoods(fd,data){
+
+    sec(fd,"Dangerous Goods");
+
+    var row = $("<div class='field-row cols-4'>")
+        .appendTo(fd);
+
+    [
+        ["Goods Carried","sel",
+            dangerousGoods,
+            v=>data.GoodsCarried=v],
+
+        ["UN Number","text",
+            v=>data.UnNumber=v],
+
+        ["Company Name","text",
+            v=>data.CompanyName=v],
+
+        ["Spillage Observed","sel",
+            yesNoUnk,
+            v=>data.SpillageObserved=v],
+
+        ["Vapour / Gas Emission","sel",
+            yesNoUnk,
+            v=>data.VapourGasEmission=v],
+
+        ["Placard Displayed","sel",
+            yesNoUnk,
+            v=>data.PlacardDisplayed=v],
+
+        ["Emergency Services Activated","sel",
+            yesNoUnk,
+            v=>data.EmergencyServicesActivated=v]
+    ]
+
+    .forEach(function(f){
+
+        var w = $("<div>").appendTo(row);
+
+        $("<div class='field-label'>")
+            .text(f[0])
+            .appendTo(w);
+
+        if(f[1]=="sel")
+        {
+            staticSelect(
+                $("<div>").appendTo(w),
+                f[2],
+                f[0],
+                f[3]
+            );
+        }
+        else
+        {
+            textBox(
+                $("<div>").appendTo(w),
+                f[0],
+                f[2]
+            );
+        }
+
+    });
+
+}
+
+
 
                 buildVehicleForm(0);
                 $("#btnAddVehicle").dxButton({
@@ -700,41 +1526,261 @@
                     }
                 });
 
-           
-                function buildPersonForm(index) {
-                    var data = {};
-                    formData.Persons[index] = data;
+                function buildPersonForm(index){
 
-                    var tab = $("<div>").addClass("entry-tab" + (index === 0 ? " active" : ""))
-                        .attr("id","pTab-"+index).text("Person " + (index + 1))
-                        .on("click", function() {
-                            $(".entry-tab").removeClass("active"); $(".entry-form").removeClass("active");
-                            $(this).addClass("active"); $("#pForm-"+index).addClass("active");
-                        });
-                    $("#personTabs").append(tab);
+            var data = {};
 
-                    var fd = $("<div>").addClass("entry-form" + (index === 0 ? " active" : ""))
-                        .attr("id","pForm-"+index).appendTo("#personForms");
+            formData.Persons[index] = data;
+
+            var tab = $("<div>")
+                .addClass("entry-tab" + (index===0 ? " active":""))
+                .attr("id","pTab-"+index)
+                .text("Person " + (index+1))
+                .on("click",function(){
+
+                    $(".entry-tab").removeClass("active");
+                    $(".entry-form").removeClass("active");
+
+                    $(this).addClass("active");
+                    $("#pForm-"+index).addClass("active");
+
+                });
+
+            $("#personTabs").append(tab);
+
+            var fd = $("<div>")
+                .addClass("entry-form" + (index===0 ? " active":""))
+                .attr("id","pForm-"+index)
+                .appendTo("#personForms");
+
+            buildPersonInformation(fd,data);
+
+            buildPersonCrashInformation(fd,data);
+
+            buildPersonMedical(fd,data);
+
+            buildPersonAddress(fd,data);
+
+            buildPedestrianDetails(fd,data);
+
+        }
+
+                function buildPersonInformation(fd,data){
+
+    sec(fd,"Personal Information");
+
+    var row=$("<div class='field-row cols-4'>").appendTo(fd);
+
+    [
+
+    ["Surname","text",v=>data.Surname=v],
+
+    ["Full Names","text",v=>data.FullNames=v],
+
+    ["ID Number","text",v=>data.IdNumber=v],
+
+    ["Age","number",v=>data.Age=v],
+
+    ["Gender","sel",
+        ["Male","Female","Unknown"],
+        v=>data.Gender=v],
+
+    ["Nationality","text",
+        v=>data.Nationality=v],
+
+    ["Population Group","sel",
+        [
+            "African",
+            "Coloured",
+            "Indian",
+            "White",
+            "Other",
+            "Unknown"
+        ],
+        v=>data.PopulationGroup=v],
+
+    ["Occupation","text",
+        v=>data.Occupation=v]
+
+    ]
+
+    .forEach(function(f){
+
+        var w=$("<div>").appendTo(row);
+
+        $("<div class='field-label'>").text(f[0]).appendTo(w);
+
+        if(f[1]=="sel")
+            staticSelect($("<div>").appendTo(w),f[2],f[0],f[3]);
+
+        else if(f[1]=="number")
+            numberBox($("<div>").appendTo(w),null,0,f[2]);
+
+        else
+            textBox($("<div>").appendTo(w),f[0],f[2]);
+
+    });
+
+}
+
+                function buildPersonCrashInformation(fd, data) {
+
+                    sec(fd, "Crash Information");
+
                     var row = $("<div class='field-row cols-4'>").appendTo(fd);
 
-                    [
-                        ["Surname",          "text",   roles,          function(v){ data.Surname          = v; }],
-                        ["Full Names",       "text",   null,           function(v){ data.FullNames        = v; }],
-                        ["ID Number",        "text",   null,           function(v){ data.IdNumber         = v; }],
-                        ["Gender",           "sel",    ["Male","Female","Unknown"], function(v){ data.Gender = v; }],
-                        ["Role",             "sel",    roles,          function(v){ data.Role             = v; }],
-                        ["Vehicle Ref",      "sel",    vehicleRefs.slice(0, vehicleCount), function(v){ data.VehicleReference = v; }],
-                        ["Seating Position", "sel",    seatPositions,  function(v){ data.SeatingPosition  = v; }],
-                        ["Injury Severity",  "sel",    injuries,       function(v){ data.SeverityOfInjury = v; }],
-                        ["Seatbelt/Helmet",  "sel",    seatbeltOpts,   function(v){ data.SeatbeltHelmet   = v; }],
-                        ["Hospital",         "text",   null,           function(v){ data.Hospital         = v; }]
-                    ].forEach(function(f) {
+                
+                    var roleWrap = $("<div>").appendTo(row);
+                    $("<div class='field-label'>").text("Role").appendTo(roleWrap);
+                    var roleDiv = $("<div>").appendTo(roleWrap);
+                    var roleInst = staticSelect(roleDiv,
+                        ["Passenger", "Pedestrian", "Cyclist", "Motorcyclist", "Passenger on Motorcycle", "Other"],
+                        "Select role...",
+                        function(val) {
+                            data.Role = val;
+                            if (data._pedestrianContainer) {
+                                var show = (val === "Pedestrian" || val === "Cyclist");
+                                data._pedestrianContainer.toggle(show);
+                            }
+                        }
+                    );
+
+                    
+                    var otherFields = [
+                        ["Vehicle Reference", "sel", vehicleRefs, v => data.VehicleReference = v],
+                        ["Seating Position", "sel", seatPositions, v => data.SeatingPosition = v],
+                        ["Injury Severity", "sel", injuries, v => data.SeverityOfInjury = v],
+                        ["Seatbelt / Helmet", "sel", seatbeltOpts, v => data.SeatbeltHelmet = v],
+                        ["Child Restraint", "sel", ["Yes", "No", "N/A"], v => data.ChildRestraint = v]
+                    ];
+
+                    otherFields.forEach(function(f) {
                         var w = $("<div>").appendTo(row);
                         $("<div class='field-label'>").text(f[0]).appendTo(w);
-                        if (f[1] === "sel") staticSelect($("<div>").appendTo(w), f[2], f[0]+"...", f[3]);
-                        else textBox($("<div>").appendTo(w), f[0], f[3]);
+                        staticSelect($("<div>").appendTo(w), f[2], f[0], f[3]);
                     });
                 }
+
+                function buildPersonMedical(fd,data){
+
+                        sec(fd,"Medical Information");
+
+                        var row=$("<div class='field-row cols-4'>").appendTo(fd);
+
+                        [
+
+                        ["Hospital","text",
+                            v=>data.Hospital=v],
+
+                        ["Hospital Reference","text",
+                            v=>data.HospitalReference=v],
+
+                        ["Ambulance Reference","text",
+                            v=>data.AmbulanceReference=v],
+
+                        ["Medical Practitioner","text",
+                            v=>data.Doctor=v]
+
+                        ]
+
+                        .forEach(function(f){
+
+                            var w=$("<div>").appendTo(row);
+
+                            $("<div class='field-label'>").text(f[0]).appendTo(w);
+
+                            textBox(
+                                $("<div>").appendTo(w),
+                                f[0],
+                                f[2]
+                            );
+
+                        });
+
+                    }
+
+                function buildPersonAddress(fd,data){
+
+                sec(fd,"Contact Details");
+
+                var row=$("<div class='field-row cols-4'>").appendTo(fd);
+
+                [
+
+                ["Home Address","text",
+                    v=>data.HomeAddress=v],
+
+                ["Postal Address","text",
+                    v=>data.PostalAddress=v],
+
+                ["Telephone","text",
+                    v=>data.Telephone=v],
+
+                ["Cell Phone","text",
+                    v=>data.CellPhone=v],
+
+                ["Email","text",
+                    v=>data.Email=v]
+
+                ]
+
+                .forEach(function(f){
+
+                    var w=$("<div>").appendTo(row);
+
+                    $("<div class='field-label'>").text(f[0]).appendTo(w);
+
+                    textBox(
+                        $("<div>").appendTo(w),
+                        f[0],
+                        f[2]
+                    );
+
+                });
+
+            }
+
+             
+
+                function buildPedestrianDetails(fd, data) {
+                var container = $("<div>").css({ display: "none" }).appendTo(fd);
+                
+
+                sec(container, "Pedestrian / Bicyclist Details");
+
+                var row = $("<div class='field-row cols-4'>").appendTo(container);
+
+                [
+                    ["Position on Road", "sel",
+                        ["Roadway", "Sidewalk/verge", "Shoulder of road", "Median"],
+                        v => data.PositionOnRoad = v],
+                    ["Location re Crossing", "sel",
+                    ["Within marked crossing", "Within 50m of crossing", "Not at crossing"],
+                    v => data.LocationReCrossing = v],
+                    ["Manoeuvre", "sel",
+                        ["Facing Traffic", "Back to traffic", "Crossing road"],
+                        v => data.Manoeuvre = v],
+                    ["Pedestrian Action", "sel",
+                        ["Walking", "Running", "Standing", "Playing", "Sitting","Lying down","Working", "Other"],
+                        v => data.PedestrianAction = v],
+                    ["Clothing Colour", "sel",
+                    ["Light", "Dark","Light & Dark","Reflective", "Other(specify)"],
+                    v => data.ClothingColour = v]
+                ]
+                .forEach(function(f) {
+                    var w = $("<div>").appendTo(row);
+                    $("<div class='field-label'>").text(f[0]).appendTo(w);
+                    if (f[1] == "sel")
+                        staticSelect($("<div>").appendTo(w), f[2], f[0], f[3]);
+                    else
+                        textBox($("<div>").appendTo(w), f[0], f[2]);
+                });
+
+                
+                data._pedestrianContainer = container;
+                }
+
+
 
                 $("#btnAddPerson").dxButton({
                     text:"Add Person", type:"default", icon:"plus",
@@ -794,6 +1840,71 @@
                     return '<div class="review-item"><div class="r-label">' + label +
                            '</div><div class="r-value">' + (value || "—") + '</div></div>';
                 }
+
+                var witnessCount = 0;
+
+                      var witnessCount = 0;
+
+        function buildWitnessForm(index){
+
+            var data = {};
+
+            formData.Witnesses[index] = data;
+
+            var tab = $("<div>")
+                .addClass("entry-tab" + (index==0 ? " active":""))
+                .text("Witness " + (index+1))
+                .on("click",function(){
+
+                    $("#witnessTabs .entry-tab").removeClass("active");
+                    $("#witnessForms .entry-form").removeClass("active");
+
+                    $(this).addClass("active");
+                    form.addClass("active");
+
+                });
+
+            $("#witnessTabs").append(tab);
+
+            var form = $("<div>")
+                .addClass("entry-form" + (index==0 ? " active":""))
+                .appendTo("#witnessForms");
+
+            var row = $("<div class='field-row cols-4'>").appendTo(form);
+
+            [
+                ["Surname Initials", "text", v => data.SurnameInitials = v],
+                ["ID Number", "text", v => data.IdNumber = v],
+                ["Cell Phone", "text", v => data.CellPhone = v],
+                ["Other Phone", "text", v => data.OtherPhone = v],
+                ["Work Contact Address", "text", v => data.WorkContactAddress = v]
+            ]
+            .forEach(function(f){
+
+                var w=$("<div>").appendTo(row);
+
+                $("<div class='field-label'>")
+                    .text(f[0])
+                    .appendTo(w);
+
+                if(f[1]=="sel")
+                    staticSelect($("<div>").appendTo(w),f[2],f[0],f[3]);
+                else
+                    textBox($("<div>").appendTo(w),f[0],f[2]);
+
+            });
+
+        }
+
+        $("#btnAddWitness").dxButton({
+            text: "Add Witness",
+            icon:"plus",
+            type:"default",
+
+            onClick:function(){
+                buildWitnessForm(witnessCount++)
+            }
+        })
 
                 function buildReview() {
                     var ci = formData.CrashInfo, lo = formData.Location, co = formData.Conditions;

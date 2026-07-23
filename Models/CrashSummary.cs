@@ -1,20 +1,12 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace CrashReport.Models;
 
-/// <summary>
-/// One summary row per crash imported from a station Excel workbook.
-///
-/// Lives entirely outside the core relational model — no foreign keys
-/// to crashes/persons/vehicles, no child tables. This is deliberate:
-/// Excel rows are aggregate counts, not detailed captures, and forcing
-/// them into the transactional tables previously required fabricating
-/// placeholder persons and vehicles. Reports consume the UNION of this
-/// table and the real crashes graph (merged in
-/// MonthlyMemoDataService.LoadAsync, deduplicated by CrNo).
-/// </summary>
+
 [Table("crash_summaries")]
+[Index(nameof(CrNo), nameof(SourceFile), IsUnique = true)]
 public class CrashSummary
 {
     [Key]

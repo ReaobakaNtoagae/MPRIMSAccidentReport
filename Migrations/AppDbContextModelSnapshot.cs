@@ -693,6 +693,138 @@ namespace CrashReport.Migrations
                     b.ToTable("crash_sketches", (string)null);
                 });
 
+            modelBuilder.Entity("CrashReport.Models.CrashSummary", b =>
+                {
+                    b.Property<int>("SummaryId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("summary_id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("SummaryId"));
+
+                    b.Property<string>("CasNo")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("cas_no");
+
+                    b.Property<string>("CrNo")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("cr_no");
+
+                    b.Property<DateOnly>("CrashDate")
+                        .HasColumnType("date")
+                        .HasColumnName("crash_date");
+
+                    b.Property<TimeOnly?>("CrashTime")
+                        .HasColumnType("time")
+                        .HasColumnName("crash_time");
+
+                    b.Property<string>("CrashType")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasColumnName("crash_type");
+
+                    b.Property<byte>("FatalCyclists")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("fatal_cyclists");
+
+                    b.Property<byte>("FatalDrivers")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("fatal_drivers");
+
+                    b.Property<byte>("FatalFemale")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("fatal_female");
+
+                    b.Property<byte>("FatalMale")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("fatal_male");
+
+                    b.Property<byte>("FatalPassengers")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("fatal_passengers");
+
+                    b.Property<byte>("FatalPedestrians")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("fatal_pedestrians");
+
+                    b.Property<DateTime>("ImportedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("imported_at");
+
+                    b.Property<string>("Location")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)")
+                        .HasColumnName("location");
+
+                    b.Property<string>("Route")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("route");
+
+                    b.Property<byte>("SeriousCyclists")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("serious_cyclists");
+
+                    b.Property<byte>("SeriousDrivers")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("serious_drivers");
+
+                    b.Property<byte>("SeriousPassengers")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("serious_passengers");
+
+                    b.Property<byte>("SeriousPedestrians")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("serious_pedestrians");
+
+                    b.Property<byte>("SlightCyclists")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("slight_cyclists");
+
+                    b.Property<byte>("SlightDrivers")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("slight_drivers");
+
+                    b.Property<byte>("SlightPassengers")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("slight_passengers");
+
+                    b.Property<byte>("SlightPedestrians")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("slight_pedestrians");
+
+                    b.Property<string>("SourceFile")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)")
+                        .HasColumnName("source_file");
+
+                    b.Property<string>("Station")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("station");
+
+                    b.Property<byte>("VehicleCount")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("vehicle_count");
+
+                    b.Property<string>("VehiclesString")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("vehicles_string");
+
+                    b.HasKey("SummaryId");
+
+                    b.HasIndex("CrNo", "SourceFile")
+                        .IsUnique()
+                        .HasFilter("[source_file] IS NOT NULL");
+
+                    b.ToTable("crash_summaries");
+                });
+
             modelBuilder.Entity("CrashReport.Models.CrashVehicle", b =>
                 {
                     b.Property<int>("CrashVehicleId")

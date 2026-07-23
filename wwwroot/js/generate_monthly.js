@@ -6,7 +6,7 @@ const {
 } = require('docx');
 const fs = require('fs');
 const path = require('path');
-const { createGroupedBarChart, ROUTE_PALETTE } = require(path.join(__dirname, 'charts.js'));
+const { createGroupedBarChart, createPieChart, ROUTE_PALETTE } = require(path.join(__dirname, 'charts.js'));
 
 const vm = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
 const out = process.argv[3];
@@ -54,6 +54,7 @@ function run(text, opts = {}) {
         color: opts.color || BLACK
     });
 }
+
 function para(children, opts = {}) {
     const c = Array.isArray(children) ? children : [children];
     return new Paragraph({
@@ -63,20 +64,26 @@ function para(children, opts = {}) {
         children: c
     });
 }
+
+
 function heading(text) {
     return new Paragraph({
         spacing: { before: 200, after: 80 },
         children: [run(text, { bold: true, size: 22, color: NAVY })]
     });
 }
+
 function blank(s = 120) {
     return new Paragraph({ spacing: { before: 0, after: s }, children: [run('')] });
 }
+
 function variation(prev, curr) {
     if (!prev || prev === 0) return curr === 0 ? "0" : "N/A";
-    const pct = ((curr - prev) / prev * 100).toFixed(2);
-    return (curr >= prev ? "+" : "") + pct;
+    const diff = curr - prev;
+    return (curr >= prev ? "+" : "") + diff;
 }
+
+
 function chartPara(buf, w = 520, h = 260) {
     return new Paragraph({
         alignment: AlignmentType.CENTER,
@@ -121,7 +128,7 @@ function compTable(rows) {
         rows: [
             new TableRow({
                 children: [hdrCell('', C[0]), hdrCell(String(vm.PriorYear), C[1]),
-                hdrCell(String(vm.CurrentYear), C[2]), hdrCell('VARIATION', C[3])]
+                hdrCell(String(vm.CurrentYear), C[2]), hdrCell('DIFFERENCE', C[3])]
             }),
             ...rows.map(r => {
                 const mc = metricColor(r.label);
@@ -297,6 +304,44 @@ const fig1 = createGroupedBarChart({
     legendPosition: 'right', width: CW, height: CH
 });
 
+const metrics = ['Crashes', 'Fatalities', 'Serious', 'Slight'];
+
+function getPieData(yearData) {
+    return {
+        data: metrics.map(m => yearData[m] || 0),
+        labels: metrics
+    };
+}
+
+const rawData = [c.Crashes || 0, c.Fatalities || 0, c.Serious || 0, c.Slight || 0];
+const rawLabels = ['Crashes', 'Fatalities', 'Serious', 'Slight'];
+
+const filteredData = [];
+const filteredLabels = [];
+for (let i = 0; i < rawData.length; i++) {
+    if (rawData[i] > 0) {
+        filteredData.push(rawData[i]);
+        filteredLabels.push(rawLabels[i]);
+    }
+}
+
+const pieCurrentYear = createPieChart({
+    title: `${vm.CurrentYear}`,
+    data: filteredData,
+    labels: filteredLabels,
+    legendPosition: 'right',
+    width: CW,
+    height: CH
+});
+
+const piePreviousYear = createPieChart({
+    title: `${vm.PriorYear}`,
+    ...getPieData(pr),
+    legendPosition: 'right',
+    width: CW,
+    height: CH
+});
+
 
 const fig2a = createGroupedBarChart({
     title: 'Total Crashes: ' + (vm.MonthName || ''),
@@ -367,6 +412,7 @@ const fig6 = pRoutes.length > 0 ? createGroupedBarChart({
     })),
     legendPosition: 'right', palette: ROUTE_PALETTE, width: CW, height: CH
 }) : null;
+
 
 
 const DEFAULT_SLOTS = [
@@ -453,7 +499,8 @@ children.push(
     ]),
     blank(80),
     para([run('FIGURE 1', { bold: true, size: 18 })], { align: AlignmentType.CENTER, after: 40 }),
-    chartPara(fig1),
+    chartPara(pieCurrentYear),
+    chartPara(piePreviousYear),
     figNarrative('Figure 1 represents ' + changedList([
         { label: 'Crashes', prev: pr.Crashes, curr: c.Crashes },
         { label: 'Fatalities', prev: pr.Fatalities, curr: c.Fatalities },
@@ -674,8 +721,31 @@ if (vm.CrashTypes && vm.CrashTypes.length > 0) {
                 }))
             ]
         }),
-        blank()
     );
+
+    const sortedByFatalities = [...vm.CrashTypes]
+        .sort((a, b) => (b.FatalCurr || 0) - (a.FatalCurr || 0));
+
+    children.push(
+        para(run['Priority crashes that make up the highest number of fatalities are as follows:'])
+    );
+
+    sortedByFatalities.forEach(ct => {
+        children.push(
+            new Paragraph({
+                bullet: { level: 0 },
+                children: [
+                    run(ct.Type, { bold: true, size: 21 })
+                    
+                ]
+            })
+        );
+    });
+
+    children.push(blank());
+    
+
+    
 }
 
 

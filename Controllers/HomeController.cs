@@ -143,73 +143,73 @@ public class HomeController : Controller
             return RedirectToAction(nameof(Create));
         }
 
+        // Start a transaction to guarantee all-or-nothing
+        await using var transaction = await _context.Database.BeginTransactionAsync();
+
         try
         {
-            
             using var document = JsonDocument.Parse(formJson);
             var root = document.RootElement;
 
-            
             var crash = new Crash();
 
-           
+            // ========== 1. CRASH INFO ==========
             if (root.TryGetProperty("CrashInfo", out var crashInfo))
             {
                 crash.CasNo = GetString(crashInfo, "CasNo");
                 crash.CrNo = GetString(crashInfo, "CrNo");
                 crash.CapturingNumber = GetString(crashInfo, "CapturingNumber");
-
-                if (crashInfo.TryGetProperty("CrashDate", out var dateEl) && dateEl.ValueKind == JsonValueKind.String)
-                {
-                    crash.CrashDate = DateOnly.TryParse(dateEl.GetString(), out var d) ? d : DateOnly.FromDateTime(DateTime.Today);
-                }
-
-                if (crashInfo.TryGetProperty("CrashTime", out var timeEl) && timeEl.ValueKind == JsonValueKind.String)
-                {
-                    crash.CrashTime = TimeOnly.TryParse(timeEl.GetString(), out var t) ? t : null;
-                }
-
-                crash.ProvinceCode = GetString(crashInfo, "ProvinceCode");
-
-                
-                crash.SpeedLimitKmh = GetShort(crashInfo, "SpeedLimitKmh");
-
                 crash.IncidentReportNo = GetString(crashInfo, "IncidentReportNo");
-
-
                 crash.RoadNumber = GetString(crashInfo, "RoadNumber");
                 crash.KmMarker = GetString(crashInfo, "KmMarker");
-
-                
-                crash.NoOfVehiclesInvolved = GetByte(crashInfo, "NoOfVehiclesInvolved", 1);
+                crash.BriefDescription = GetString(crashInfo, "BriefDescription");
+                crash.ProvinceCode = GetString(crashInfo, "ProvinceCode");
+                crash.SpeedLimitKmh = GetShort(crashInfo, "SpeedLimitKmh");
                 crash.NoOfAppendices = GetByte(crashInfo, "NoOfAppendices", 0);
 
-                crash.BriefDescription = GetString(crashInfo, "BriefDescription");
+                if (crashInfo.TryGetProperty("CrashDate", out var dateEl) && dateEl.ValueKind == JsonValueKind.String)
+                    crash.CrashDate = DateOnly.TryParse(dateEl.GetString(), out var d) ? d : DateOnly.FromDateTime(DateTime.Today);
+
+                if (crashInfo.TryGetProperty("CrashTime", out var timeEl) && timeEl.ValueKind == JsonValueKind.String)
+                    crash.CrashTime = TimeOnly.TryParse(timeEl.GetString(), out var t) ? t : null;
+
+                // VehicleString will be auto-generated later; keep if sent by UI.
+                crash.VehicleString = GetString(crashInfo, "VehicleString");
             }
 
-            
+            // ========== 2. LOCATION ==========
             if (root.TryGetProperty("Location", out var location))
             {
                 var crashLocation = new CrashLocation
                 {
                     Crash = crash,
-                    StreetRoadName = GetString(location, "StreetRoadName"),
+                    BuiltUpArea = GetBool(location, "BuiltUpArea"),
                     AreaType = GetString(location, "AreaType"),
-                    Suburb = GetString(location, "Suburb"),
-                    CityTown = GetString(location, "CityTown"),
-                    IntersectionStreet = GetString(location, "IntersectionStreet"),
+                    StreetRoadName = GetString(location, "StreetRoadName"),
                     GpsXCoordinate = GetDecimal(location, "GpsXCoordinate"),
                     GpsYCoordinate = GetDecimal(location, "GpsYCoordinate"),
+                    IntersectionStreet = GetString(location, "IntersectionStreet"),
+                    IntersectionRoadNo = GetString(location, "IntersectionRoadNo"),
+                    BetweenFrom = GetString(location, "BetweenFrom"),
+                    BetweenTo = GetString(location, "BetweenTo"),
+                    Suburb = GetString(location, "Suburb"),
+                    CityTown = GetString(location, "CityTown"),
+                    DistanceKm = GetDecimal(location, "DistanceKm"),
+                    CompassDirection = GetString(location, "CompassDirection"),
+                    FromPoint = GetString(location, "FromPoint"),
+                    KmMarkerInfo = GetString(location, "KmMarkerInfo"),
+                    NextCityTown = GetString(location, "NextCityTown"),
                     RoadFunctionalClassification = GetString(location, "RoadFunctionalClassification"),
                     JunctionType = GetString(location, "JunctionType"),
                     RoadLayout = GetString(location, "RoadLayout"),
                     RoadSurfaceType = GetString(location, "RoadSurfaceType"),
+                    RoadSurfaceQuality = GetString(location, "RoadSurfaceQuality"),
                     RoadSurfaceCondition = GetString(location, "RoadSurfaceCondition")
                 };
                 _context.CrashLocations.Add(crashLocation);
             }
 
-           
+            // ========== 3. CONDITIONS ==========
             if (root.TryGetProperty("Conditions", out var conditions))
             {
                 var crashCondition = new CrashCondition
@@ -222,13 +222,16 @@ public class HomeController : Controller
                     RoadSegmentGrade = GetString(conditions, "RoadSegmentGrade"),
                     ObstructionType = GetString(conditions, "ObstructionType"),
                     RoadSignsCondition = GetString(conditions, "RoadSignsCondition"),
-                    RoadMarkingVisibility = GetString(conditions, "RoadMarkingVisibility")
+                    RoadMarkingVisibility = GetString(conditions, "RoadMarkingVisibility"),
+                    OvertakingControl = GetString(conditions, "OvertakingControl"),
+                    TyreBurstObserved = GetString(conditions, "TyreBurstObserved"),
+                    VehicleLightsCondition = GetString(conditions, "VehicleLightsCondition"),
+                    OtherObservations = GetString(conditions, "OtherObservations"),
                 };
                 _context.CrashConditions.Add(crashCondition);
 
-               
-                if (conditions.TryGetProperty("WeatherConditions", out var weatherEl) &&
-                    weatherEl.ValueKind == JsonValueKind.Array)
+                // Weather
+                if (conditions.TryGetProperty("WeatherConditions", out var weatherEl) && weatherEl.ValueKind == JsonValueKind.Array)
                 {
                     foreach (var w in weatherEl.EnumerateArray())
                     {
@@ -244,67 +247,134 @@ public class HomeController : Controller
                 }
             }
 
-            // Extract Vehicles
+            // ========== 4. VEHICLES ==========
+            var vehicleMakes = new List<string>();
             if (root.TryGetProperty("Vehicles", out var vehicles) && vehicles.ValueKind == JsonValueKind.Array)
             {
                 foreach (var ve in vehicles.EnumerateArray())
                 {
-                    // Create Vehicle entity
+                    // ---- 4a. Vehicle (static) ----
                     var vehicle = new Vehicle
                     {
+                        CountryOfRegistration = GetString(ve, "CountryOfRegistration") ?? "ZA",
                         LicenceDiscNumber = GetString(ve, "LicenceDiscNumber"),
+                        Colour = GetString(ve, "Colour"),
                         Make = GetString(ve, "Make"),
                         Model = GetString(ve, "Model"),
-                        Colour = GetString(ve, "Colour"),
+                        VinNumber = GetString(ve, "VinNumber"),
+                        VehicleType = GetString(ve, "VehicleType"),
+                        TrailerLicenceNumber = GetString(ve, "TrailerLicenceNumber"),
                         VehicleCategory = GetString(ve, "VehicleCategory"),
+                        VehicleTypeCode = GetString(ve, "VehicleTypeCode"),
                         SpecialFunction = GetString(ve, "SpecialFunction"),
-                        VinNumber = GetString(ve, "VinNumber")
+                        PrivateOrBusiness = GetString(ve, "PrivateOrBusiness"),
+                        LicenceTypeFitting = GetString(ve, "LicenceTypeFitting"),
+                        CreatedAt = DateTime.Now
                     };
                     _context.Vehicles.Add(vehicle);
                     await _context.SaveChangesAsync();
 
-                    // Create CrashVehicle
+                    // Collect makes for VehicleString
+                    if (!string.IsNullOrEmpty(vehicle.Make))
+                        vehicleMakes.Add(vehicle.Make);
+
+                    // ---- 4b. CrashVehicle (link + crash-specific data) ----
                     var crashVehicle = new CrashVehicle
                     {
                         Crash = crash,
                         Vehicle = vehicle,
                         VehicleReference = GetString(ve, "VehicleReference"),
                         VehicleManoeuvre = GetString(ve, "VehicleManoeuvre"),
-                        SeatbeltUsed = GetString(ve, "SeatbeltUsed"),
+                        SeatbeltUsed = GetString(ve, "SeatbeltHelmetUsed"),  // <-- mapped from frontend
                         AlcoholSuspected = GetString(ve, "AlcoholSuspected"),
                         AlcoholTestResult = GetString(ve, "AlcoholTestResult"),
                         DrugSuspected = GetString(ve, "DrugSuspected"),
-                        PositionBeforeCrash = GetString(ve, "PositionBeforeCrash")
+                        DrugTestResult = GetString(ve, "DrugTestResult"),
+                        PositionBeforeCrash = GetString(ve, "PositionBeforeCrash"),
+                        VehicleType = GetString(ve, "VehicleType"),
+                        PassengersForReward = GetString(ve, "PassengersForReward"),
+                        BreakdownCompany = GetString(ve, "BreakdownCompany"),
+                       
                     };
                     _context.CrashVehicles.Add(crashVehicle);
+                    await _context.SaveChangesAsync(); // needed to get CrashVehicleId for damages
 
-                    // Handle driver if present
+                    // ---- 4c. VehicleDamages ----
+                    if (ve.TryGetProperty("VehicleDamages", out var damages) && damages.ValueKind == JsonValueKind.Array)
+                    {
+                        foreach (var damage in damages.EnumerateArray())
+                        {
+                            if (damage.ValueKind == JsonValueKind.String)
+                            {
+                                _context.VehicleDamages.Add(new VehicleDamage
+                                {
+                                    CrashVehicleId = crashVehicle.CrashVehicleId,
+                                    DamagePoint = damage.GetString()!
+                                });
+                            }
+                        }
+                    }
+
+                    // ---- 4d. DangerousGoods ----
+                    if (!string.IsNullOrWhiteSpace(GetString(ve, "GoodsCarried")) ||
+                        !string.IsNullOrWhiteSpace(GetString(ve, "UnNumber")) ||
+                        !string.IsNullOrWhiteSpace(GetString(ve, "CompanyName")))
+                    {
+                        _context.DangerousGoods.Add(new DangerousGood
+                        {
+                            Crash = crash,
+                            VehicleReference = crashVehicle.VehicleReference,
+                            GoodsCarried = GetString(ve, "GoodsCarried"),
+                            SpillageObserved = GetString(ve, "SpillageObserved"),
+                            VapourGasEmission = GetString(ve, "VapourGasEmission"),
+                            PlacardDisplayed = GetString(ve, "PlacardDisplayed"),
+                            UnNumber = GetString(ve, "UnNumber"),
+                            CompanyName = GetString(ve, "CompanyName"),
+                            EmergencyServicesActivated = GetString(ve, "EmergencyServicesActivated")
+                        });
+                    }
+
+                    // ---- 4e. Driver (Person) ----
                     var driverSurname = GetString(ve, "DriverSurname");
                     if (!string.IsNullOrEmpty(driverSurname))
                     {
                         var driver = new Person
                         {
-                            IdType = "RSA_ID",
+                            IdType = GetString(ve, "DriverIdType") ?? "RSA_ID",
                             IdNumber = GetString(ve, "DriverIdNumber"),
+                            Age = GetByte(ve, "DriverAge"),
                             Surname = driverSurname,
-                            FullNames = GetString(ve, "DriverFullNames") ?? string.Empty,
+                            FullNames = GetString(ve, "DriverFullNames") ?? "",
+                            CountryOfOrigin = GetString(ve, "DriverCountryOfOrigin"),
+                            Nationality = GetString(ve, "DriverNationality"),
+                            PopulationGroup = GetString(ve, "DriverPopulationGroup"),
+                            Gender = GetString(ve, "DriverGender"),
+                            HomeAddress = GetString(ve, "DriverHomeAddress"),
                             CellPhone = GetString(ve, "DriverCellPhone"),
-                            Gender = GetString(ve, "Gender")
+                            OtherPhone = GetString(ve, "DriverOtherPhone"),
+                            WorkContactAddress = GetString(ve, "DriverWorkAddress"),
+                            CreatedAt = DateTime.Now
                         };
                         _context.Persons.Add(driver);
                         await _context.SaveChangesAsync();
 
                         crashVehicle.DriverPersonId = driver.PersonId;
 
+                        // ---- Driver Licence ----
                         if (!string.IsNullOrEmpty(GetString(ve, "LicenceCode")))
                         {
                             _context.DriversLicences.Add(new DriversLicence
                             {
                                 PersonId = driver.PersonId,
-                                LicenceCode = GetString(ve, "LicenceCode")
+                                LicenceType = GetString(ve, "LicenceType"),
+                                LicenceNumber = GetString(ve, "LicenceNumber"),
+                                LicenceCode = GetString(ve, "LicenceCode"),
+                                DateOfIssue = GetDateOnly(ve, "DateOfIssue"),
+                                PrdpCode = GetString(ve, "PrdpCode")
                             });
                         }
 
+                        // ---- CrashPerson (Driver) ----
                         _context.CrashPeople.Add(new CrashPerson
                         {
                             Crash = crash,
@@ -312,7 +382,15 @@ public class HomeController : Controller
                             CrashVehicle = crashVehicle,
                             Role = "Driver",
                             VehicleReference = GetString(ve, "VehicleReference"),
-                            SeverityOfInjury = GetString(ve, "SeverityOfInjury")
+                            SeverityOfInjury = GetString(ve, "SeverityOfInjury"),
+                            PersonReference = GetString(ve, "PersonReference"),
+                            PassengerNumber = GetByte(ve, "PassengerNumber"),
+                            ChildRestraintUsed = GetString(ve, "ChildRestraintUsed"),
+                            LiquorDrugSuspected = GetString(ve, "LiquorDrugSuspected"),
+                            LiquorDrugTestDone = GetString(ve, "LiquorDrugTestDone"),
+                            AmbulanceServiceRef = GetString(ve, "AmbulanceServiceRef"),
+                            Hospital = GetString(ve, "Hospital"),
+               
                         });
                     }
 
@@ -320,7 +398,13 @@ public class HomeController : Controller
                 }
             }
 
-            // Extract Persons
+            
+            crash.NoOfVehiclesInvolved = (byte)(root.TryGetProperty("Vehicles", out var vArr) ? vArr.GetArrayLength() : 0);
+
+         
+            if (string.IsNullOrEmpty(crash.VehicleString) && vehicleMakes.Any())
+                crash.VehicleString = string.Join(", ", vehicleMakes.Distinct());
+
             if (root.TryGetProperty("Persons", out var persons) && persons.ValueKind == JsonValueKind.Array)
             {
                 foreach (var pe in persons.EnumerateArray())
@@ -330,16 +414,24 @@ public class HomeController : Controller
 
                     var person = new Person
                     {
-                        IdType = "RSA_ID",
-                        IdNumber = GetString(pe, "IdNumber"),
+                        IdType = GetString(pe, "DriverIdType") ?? "RSA_ID",
+                        IdNumber = GetString(pe, "DriverIdNumber"),
+                        Age = GetByte(pe, "DriverAge"),
                         Surname = surname,
-                        FullNames = GetString(pe, "FullNames") ?? string.Empty,
-                        Gender = GetString(pe, "Gender")
+                        FullNames = GetString(pe, "DriverFullNames") ?? "",
+                        CountryOfOrigin = GetString(pe, "CountryOfOrigin"),
+                        Nationality = GetString(pe, "Nationality"),
+                        PopulationGroup = GetString(pe, "PopulationGroup"),
+                        Gender = GetString(pe, "Gender"),
+                        HomeAddress = GetString(pe, "HomeAddress"),
+                        CellPhone = GetString(pe, "DriverCellPhone"),
+                        OtherPhone = GetString(pe, "OtherPhone"),
+                        WorkContactAddress = GetString(pe, "WorkContactAddress"),
+                        CreatedAt = DateTime.Now
                     };
                     _context.Persons.Add(person);
                     await _context.SaveChangesAsync();
 
-                    // Find the vehicle reference if provided
                     int? crashVehicleId = null;
                     var vehicleRef = GetString(pe, "VehicleReference");
                     if (!string.IsNullOrEmpty(vehicleRef))
@@ -350,7 +442,7 @@ public class HomeController : Controller
                         if (cv != null) crashVehicleId = cv.CrashVehicleId;
                     }
 
-                    _context.CrashPeople.Add(new CrashPerson
+                    var crashPerson = new CrashPerson
                     {
                         Crash = crash,
                         Person = person,
@@ -360,14 +452,39 @@ public class HomeController : Controller
                         SeatingPosition = GetString(pe, "SeatingPosition"),
                         SeverityOfInjury = GetString(pe, "SeverityOfInjury"),
                         SeatbeltHelmetUsed = GetString(pe, "SeatbeltHelmet"),
-                        Hospital = GetString(pe, "Hospital")
-                    });
+                        Hospital = GetString(pe, "Hospital"),
+                        PersonReference = GetString(pe, "PersonReference"),
+                        PassengerNumber = GetByte(pe, "PassengerNumber"),
+                        ChildRestraintUsed = GetString(pe, "ChildRestraint"),
+                        LiquorDrugSuspected = GetString(pe, "LiquorDrugSuspected"),
+                        LiquorDrugTestDone = GetString(pe, "LiquorDrugTestDone"),
+                        AmbulanceServiceRef = GetString(pe, "AmbulanceReference"),
+                    };
 
-                    await _context.SaveChangesAsync();
+                    _context.CrashPeople.Add(crashPerson);
+                    await _context.SaveChangesAsync(); 
+
+                   
+                    var role = GetString(pe, "Role");
+                    if (role == "Pedestrian" || role == "Cyclist")
+                    {
+                        var detail = new PedestrianBicyclistDetail
+                        {
+                            CrashPersonId = crashPerson.CrashPersonId,
+                            PositionOnRoad = GetString(pe, "PositionOnRoad"),
+                            LocationReCrossing = GetString(pe, "LocationReCrossing"),
+                            Manoeuvre = GetString(pe, "Manoeuvre"),
+                            PedestrianAction = GetString(pe, "PedestrianAction"),
+                            ClothingColour = GetString(pe, "ClothingColour")
+                        };
+                        _context.PedestrianBicyclistDetails.Add(detail);
+                 
+                    }
                 }
             }
 
-            // Extract Factors
+
+            // 6. CONTRIBUTORY FACTORS
             if (root.TryGetProperty("Factors", out var factors) && factors.ValueKind == JsonValueKind.Array)
             {
                 foreach (var f in factors.EnumerateArray())
@@ -385,20 +502,41 @@ public class HomeController : Controller
                 }
             }
 
+            // ========== 7. WITNESSES (NEW) ==========
+            if (root.TryGetProperty("Witnesses", out var witnesses) && witnesses.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var w in witnesses.EnumerateArray())
+                {
+                    var surname = GetString(w, "Surname");
+                    if (string.IsNullOrEmpty(surname)) continue;
+
+                    _context.Witnesses.Add(new Witness
+                    {
+                        Crash = crash,
+                        SurnameInitials = surname,
+                        IdNumber = GetString(w, "IdNumber"),
+                        CellPhone = GetString(w, "CellPhone"),
+                        OtherPhone = GetString(w, "OtherPhone"),
+                        WorkContactAddress = GetString(w, "WorkContactAddress")
+                    });
+                }
+            }
+
+            // ========== SAVE & COMMIT ==========
             _context.Crashes.Add(crash);
             await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
 
             TempData["SuccessMessage"] = $"Crash report #{crash.CrashId} saved successfully.";
             return RedirectToAction(nameof(Index));
         }
         catch (Exception ex)
         {
+            await transaction.RollbackAsync();
             TempData["ErrorMessage"] = $"An error occurred: {ex.Message}";
             return RedirectToAction(nameof(Create));
         }
     }
-
-    
 
     private static string? GetString(JsonElement element, string propertyName)
     {
@@ -469,6 +607,18 @@ public class HomeController : Controller
     {
         if (element.TryGetProperty(propertyName, out var prop) && prop.ValueKind == JsonValueKind.Number)
             return prop.GetDecimal();
+        return null;
+    }
+
+    private static DateOnly? GetDateOnly(JsonElement element, string propertyName)
+    {
+        if (element.TryGetProperty(propertyName, out var prop) &&
+            prop.ValueKind == JsonValueKind.String &&
+            DateOnly.TryParse(prop.GetString(), out var date))
+        {
+            return date;
+        }
+
         return null;
     }
 

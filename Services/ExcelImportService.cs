@@ -296,6 +296,7 @@ public class ExcelImportService
 
         var allRows = ws.RowsUsed().Skip(headerRowNumber).ToList();
 
+        // ── Split data rows from summary/demographics rows ──
         var dataRows = new List<IXLRow>();
         var summaryRows = new List<IXLRow>();
         bool inSummary = false;
@@ -343,19 +344,18 @@ public class ExcelImportService
             }
         }
 
-   
+        // ── Handle demographics ──
         result.Demographics = ParseDemographics(summaryRows, ws);
         await SaveDemographicsAsync(result.Demographics, periodFrom, periodTo, province);
 
-        var existingSummaryCrNos = await _context.CrashSummaries
-            .Select(s => s.CrNo)
-            .ToHashSetAsync();
-
-
+        // ── Pre‑fetch full-form CrNos (these are sacred – no duplicates allowed) ──
         var existingFormCrNos = await _context.Crashes
             .Where(c => c.CrNo != null)
             .Select(c => c.CrNo!)
             .ToHashSetAsync();
+
+        // ── Track duplicates within the same file (local check) ──
+        var processedInThisFile = new HashSet<string>();
 
         foreach (var row in dataRows)
         {
@@ -370,32 +370,33 @@ public class ExcelImportService
                     continue;
                 }
 
-                if (existingSummaryCrNos.Contains(summary.CrNo))
-                {
-                    result.Skipped++;
-                    result.AddWarning($"Row {row.RowNumber()}: CrNo '{summary.CrNo}' already imported — skipped.");
-                    continue;
-                }
-
+                // 1. Block if this CrNo already exists as a full CR1 form
                 if (existingFormCrNos.Contains(summary.CrNo))
                 {
                     result.Skipped++;
                     result.AddWarning(
-                        $"Row {row.RowNumber()}: CrNo '{summary.CrNo}' already exists as a full CR1 " +
-                        $"form capture — skipped (the form record takes precedence in reports).");
+                        $"Row {row.RowNumber()}: CrNo '{summary.CrNo}' already exists as a full CR1 form — skipped.");
                     continue;
                 }
 
+                // 2. Block duplicates within the same source file
+                if (!processedInThisFile.Add(summary.CrNo))
+                {
+                    result.Skipped++;
+                    result.AddWarning(
+                        $"Row {row.RowNumber()}: duplicate CrNo '{summary.CrNo}' in the same file — skipped.");
+                    continue;
+                }
+
+                // 3. Optional date‑range warning
                 if (summary.CrashDate < periodFrom || summary.CrashDate > periodTo)
                 {
                     result.AddWarning(
-                        $"Row {row.RowNumber()}: crash date {summary.CrashDate:dd/MM/yyyy} falls outside " +
-                        $"the declared report period ({periodFrom:dd/MM/yyyy} – {periodTo:dd/MM/yyyy}). " +
-                        $"Imported anyway — please verify the DATE column on this row.");
+                        $"Row {row.RowNumber()}: crash date {summary.CrashDate:dd/MM/yyyy} outside period " +
+                        $"({periodFrom:dd/MM/yyyy} – {periodTo:dd/MM/yyyy}) — imported anyway.");
                 }
 
                 _context.CrashSummaries.Add(summary);
-                existingSummaryCrNos.Add(summary.CrNo);
                 result.Imported++;
             }
             catch (Exception ex)
@@ -410,7 +411,8 @@ public class ExcelImportService
         return result;
     }
 
-  
+
+
     private CrashSummary? ParseSummaryRow(IXLRow row, ColumnMap map, string fileName, int fallbackYear)
     {
         var saps = row.Cell(map.Saps).GetString().Trim().ToUpper();

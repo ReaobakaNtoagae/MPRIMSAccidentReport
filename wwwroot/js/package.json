@@ -2,5 +2,8 @@
   "dependencies": {
     "docx": "^9.7.1",
     "pngjs": "^7.0.0"
+  },
+  "devDependencies": {
+    "eslint": "^10.7.0"
   }
 }

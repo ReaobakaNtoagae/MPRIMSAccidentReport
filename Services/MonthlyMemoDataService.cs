@@ -139,19 +139,7 @@ public class MonthlyMemoDataService
     }
 
 
-    // ── LoadAsync — merges TWO data sources into the same Row shape ──
-    //
-    //   1. The core crashes graph: real CR1 form captures (the wizard).
-    //   2. crash_summaries: Excel-imported summary rows.
-    //
-    // Dedup rule: if the same CrNo exists in both stores, the FORM
-    // capture wins — the detailed record is strictly more trustworthy
-    // than the spreadsheet line. The importer also blocks this overlap
-    // at import time; this is defence-in-depth.
-    //
-    // Monthly, Quarterly, and Five-Year data services all reach their
-    // data exclusively through this one method (via inheritance), so
-    // all three reports automatically see the union of both sources.
+  
     protected async Task<List<Row>> LoadAsync(DateOnly from, DateOnly to)
     {
         // ── Source 1: real CR1 form captures ─────────────────────
