@@ -40,13 +40,18 @@ builder.Services.AddScoped<QuarterlyReportDataService>();
 builder.Services.AddScoped<QuarterlyReportDocService>();
 builder.Services.AddScoped<FiveYearReportDataService>();
 builder.Services.AddScoped<FiveYearReportDocService>();
+builder.Services.AddScoped<IStationDistrictLookup, StationDistrictLookup>();
 
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 {
     options.Password.RequireDigit = true;
-    options.Password.RequiredLength = 8;
+    options.Password.RequiredLength = 12;
     options.Password.RequireUppercase = true;
+    options.Password.RequireLowercase = true;
     options.Password.RequireNonAlphanumeric = true;
+
+    options.Password.RequiredUniqueChars = 4;
+    
 
     options.Lockout.MaxFailedAccessAttempts = 5;
     options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);

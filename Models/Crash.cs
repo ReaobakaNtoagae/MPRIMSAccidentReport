@@ -14,7 +14,6 @@ public partial class Crash
     public string? IncidentReportNo { get; set; }
 
     public string? CapturingNumber { get; set; }
-
     public DateOnly CrashDate { get; set; }
 
     public TimeOnly? CrashTime { get; set; }

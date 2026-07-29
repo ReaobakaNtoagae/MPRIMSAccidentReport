@@ -1,5 +1,6 @@
 ﻿using CrashReport.Data;
 using CrashReport.Models;
+using CrashReport.Services;
 using CrashReport.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -10,9 +11,11 @@ namespace CrashReport.Controllers;
 public class CrashesController : Controller
 {
     private readonly AppDbContext _context;
-    public CrashesController(AppDbContext context)
+    private readonly MonthlyMemoDataService _memoData;
+    public CrashesController(AppDbContext context, MonthlyMemoDataService memoData)
     {
         _context = context;
+        _memoData = memoData;
     }
 
 
@@ -132,27 +135,31 @@ public class CrashesController : Controller
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
-        var data = await _context.Crashes
-            .Select(c => new
-            {
-                c.CrNo,
-                c.CasNo,
-                c.CrashDate,
-                c.CrashTime,
-                c.ProvinceCode,
-                c.SpeedLimitKmh,
-                Location = c.CrashLocations
-                                 .Select(l => l.CityTown ?? l.StreetRoadName)
-                                 .FirstOrDefault(),
-                VehicleCount = c.CrashVehicles.Count,
-                PersonCount = c.CrashPeople.Count,
-                FatalCount = c.CrashPeople.Count(cp => cp.SeverityOfInjury == "Fatal"),
-                SeriousCount = c.CrashPeople.Count(cp => cp.SeverityOfInjury == "Serious")
-            })
-            .OrderByDescending(c => c.CrashDate)
-            .ToListAsync();
 
-        return Json(data);
+        var to = DateOnly.FromDateTime(DateTime.Today);
+        var from = to.AddMonths(-3);
+
+        var rows = await _memoData.LoadAsync(from, to);
+        var flat = rows
+            .OrderByDescending(r => r.Date)
+            .ThenByDescending(r => r.Time)
+            .Select(r => new
+            {
+
+                CrashId = r.Source == "Manual" ? r.CrashId : (int?)null,
+                r.CrNo,
+                r.Station,
+                r.District,
+                Date = r.Date.ToString("yyyy-MM-dd"),
+                r.Route,
+                r.CrashType,
+                r.VehicleCount,
+                r.Fatalities,
+                r.Serious,
+                r.Source
+            });
+
+        return Json(flat);
     }
 
 
@@ -302,6 +309,73 @@ public class CrashesController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    [HttpGet]
+    public async Task<IActionResult> Grid([FromQuery] CrashGridFilter filter)
+    {
+        var rows = await _memoData.LoadAsync(filter.From, filter.To);
+
+        if (!string.IsNullOrWhiteSpace(filter.District))
+            rows = rows.Where(r => string.Equals(r.District, filter.District, StringComparison.OrdinalIgnoreCase)).ToList();
+
+        if (!string.IsNullOrWhiteSpace(filter.Severity))
+            rows = rows.Where(r => string.Equals(r.OverallSeverity, filter.Severity, StringComparison.OrdinalIgnoreCase)).ToList();
+
+        if (!string.IsNullOrWhiteSpace(filter.Source))
+            rows = rows.Where(r => string.Equals(r.Source, filter.Source, StringComparison.OrdinalIgnoreCase)).ToList();
+
+        if (!string.IsNullOrWhiteSpace(filter.Search))
+        {
+            var term = filter.Search.Trim();
+            rows = rows.Where(r =>
+                r.CrNo.Contains(term, StringComparison.OrdinalIgnoreCase) ||
+                r.Route.Contains(term, StringComparison.OrdinalIgnoreCase)
+            ).ToList();
+        }
+
+        rows = Sort(rows, filter.SortBy, filter.SortDesc);
+
+        var total = rows.Count;
+        var page = Math.Max(filter.Page, 1);
+        var pageSize = filter.PageSize <= 0 ? 50 : filter.PageSize;
+
+        var paged = rows
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(r => new
+            {
+                r.CrashId,
+                r.CrNo,
+                r.Station,
+                r.District,
+                Date = r.Date.ToString("yyyy-MM-dd"),
+                r.Route,
+                r.CrashType,
+                r.VehicleCount,
+                r.Fatalities,
+                r.Serious,
+                Severity = r.OverallSeverity,
+                r.Source
+            });
+
+        return Json(new { total, page, pageSize, rows = paged });
+    }
+
+    private static List<Row> Sort(List<Row> rows, string sortBy, bool desc)
+    {
+        Func<Row, object> key = sortBy switch
+        {
+            "CrNo" => r => r.CrNo,
+            "District" => r => r.District,
+            "Station" => r => r.Station,
+            "Severity" => r => r.OverallSeverity,
+            "Source" => r => r.Source,
+            _ => r => r.Date
+        };
+
+        return desc
+            ? rows.OrderByDescending(key).ToList()
+            : rows.OrderBy(key).ToList();
+    }
 
 
     private bool CrashExists(int id) =>

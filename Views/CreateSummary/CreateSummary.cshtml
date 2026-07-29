@@ -1,0 +1,380 @@
+﻿@{
+    ViewData["Title"] = "Quick add crash record";
+}
+
+<style>
+    .qa-card {
+        background: #fff;
+        border-radius: 10px;
+        border: 1px solid #c8e6c9;
+        box-shadow: 0 2px 8px rgba(0,0,0,.06);
+        padding: 24px;
+        max-width: 780px;
+    }
+
+    .qa-note {
+        background: #e6f1fb;
+        border: 1px solid #b5d4f4;
+        border-radius: 8px;
+        padding: 10px 14px;
+        font-size: .8rem;
+        color: #0c447c;
+        margin-bottom: 20px;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .qa-section-title {
+        font-size: .72rem;
+        text-transform: uppercase;
+        letter-spacing: .7px;
+        color: #2e7d32;
+        font-weight: 700;
+        margin: 20px 0 10px;
+    }
+
+    .qa-row {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        margin-bottom: 12px;
+    }
+
+    .qa-field label {
+        font-size: .72rem;
+        color: #666;
+        display: block;
+        margin-bottom: 4px;
+    }
+
+    .qa-hidden {
+        display: none;
+    }
+
+    .qa-checkbox-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .qa-vehicle-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: #f1f8f1;
+        border: 1px solid #c8e6c9;
+        border-radius: 6px;
+        padding: 6px 10px 6px 12px;
+    }
+
+        .qa-vehicle-item .qa-vehicle-label {
+            font-size: .82rem;
+            font-weight: 600;
+            color: #2e7d32;
+            min-width: 70px;
+        }
+
+        .qa-vehicle-item .qa-vehicle-stepper {
+            width: 90px;
+        }
+</style>
+
+<div class="qa-card">
+    <div class="qa-note">
+        <i class="ti ti-bolt" style="font-size:16px;" aria-hidden="true"></i>
+        <span>
+            Quick add — logs the key details needed for reporting directly, without
+            the full CR1 form. CR number is generated automatically once you choose
+            a station. The record is saved the same way an imported row is, and can
+            be edited later from the crash reports grid.
+        </span>
+    </div>
+
+    <div class="qa-section-title">Identification</div>
+    <div class="qa-row">
+        <div class="qa-field"><label>AR number</label><div id="arNoBox"></div></div>
+        <div class="qa-field"><label>CAS number</label><div id="casNoBox"></div></div>
+        <div class="qa-field"><label>District</label><div id="districtBox"></div></div>
+    </div>
+    <div class="qa-row qa-hidden" id="stationRow">
+        <div class="qa-field"><label>Station</label><div id="stationBox"></div></div>
+    </div>
+
+    <div class="qa-section-title">Crash details</div>
+    <div class="qa-row">
+        <div class="qa-field"><label>Date</label><div id="crashDateBox"></div></div>
+        <div class="qa-field"><label>Time</label><div id="crashTimeBox"></div></div>
+        <div class="qa-field"><label>Crash type</label><div id="crashTypeBox"></div></div>
+    </div>
+    <div class="qa-row qa-hidden" id="routeLocationRow">
+        <div class="qa-field"><label>Route</label><div id="routeBox"></div></div>
+        <div class="qa-field" style="grid-column: span 2;"><label>Location</label><div id="locationBox"></div></div>
+    </div>
+    <div id="districtHint" style="font-size:.75rem; color:#9ca3af; margin-bottom:12px;">
+        Select a district above to choose station, route, and location.
+    </div>
+
+    <div class="qa-section-title">Vehicles involved</div>
+    <div class="qa-checkbox-grid" id="vehicleTypeCheckboxes"></div>
+
+    <div class="qa-section-title">Fatal injuries</div>
+    <div class="qa-row">
+        <div class="qa-field"><label>Drivers</label><div id="fatalDriversBox"></div></div>
+        <div class="qa-field"><label>Passengers</label><div id="fatalPassengersBox"></div></div>
+        <div class="qa-field"><label>Pedestrians</label><div id="fatalPedestriansBox"></div></div>
+    </div>
+    <div class="qa-row">
+        <div class="qa-field"><label>Cyclists</label><div id="fatalCyclistsBox"></div></div>
+        <div class="qa-field"><label>Male</label><div id="fatalMaleBox"></div></div>
+        <div class="qa-field"><label>Female</label><div id="fatalFemaleBox"></div></div>
+    </div>
+
+    <div class="qa-section-title">Serious injuries</div>
+    <div class="qa-row">
+        <div class="qa-field"><label>Drivers</label><div id="seriousDriversBox"></div></div>
+        <div class="qa-field"><label>Passengers</label><div id="seriousPassengersBox"></div></div>
+        <div class="qa-field"><label>Pedestrians</label><div id="seriousPedestriansBox"></div></div>
+    </div>
+    <div class="qa-row">
+        <div class="qa-field"><label>Cyclists</label><div id="seriousCyclistsBox"></div></div>
+    </div>
+
+    <div class="qa-section-title">Slight injuries</div>
+    <div class="qa-row">
+        <div class="qa-field"><label>Drivers</label><div id="slightDriversBox"></div></div>
+        <div class="qa-field"><label>Passengers</label><div id="slightPassengersBox"></div></div>
+        <div class="qa-field"><label>Pedestrians</label><div id="slightPedestriansBox"></div></div>
+    </div>
+    <div class="qa-row">
+        <div class="qa-field"><label>Cyclists</label><div id="slightCyclistsBox"></div></div>
+    </div>
+
+    <div style="margin-top:24px; display:flex; gap:10px;">
+        <div id="btnSave" style="min-width:140px;"></div>
+        <div id="btnCancel" style="min-width:100px;"></div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(function () {
+
+            var data = {
+                CrashDate: null, CrashTime: null, VehicleCounts: {},
+                FatalDrivers: 0, FatalPassengers: 0, FatalPedestrians: 0, FatalCyclists: 0,
+                FatalMale: 0, FatalFemale: 0,
+                SeriousDrivers: 0, SeriousPassengers: 0, SeriousPedestrians: 0, SeriousCyclists: 0,
+                SlightDrivers: 0, SlightPassengers: 0, SlightPedestrians: 0, SlightCyclists: 0
+            };
+
+            var stationsCache = [];
+            var allStationsLoaded = $.getJSON("/api/lookup/stations").done(function (items) {
+                stationsCache = items || [];
+            });
+
+            function textBox(container, placeholder, onChange, required) {
+                return $(container).dxTextBox({
+                    placeholder: placeholder, showClearButton: true,
+                    onValueChanged: function (e) { if (onChange) onChange(e.value); }
+                }).dxTextBox("instance");
+            }
+
+            function numberBox(container, onChange) {
+                return $(container).dxNumberBox({
+                    value: 0, min: 0,
+                    onValueChanged: function (e) { if (onChange) onChange(e.value); }
+                }).dxNumberBox("instance");
+            }
+
+            // ── AR / CAS ─────────────────────────────────────────────
+            textBox("#arNoBox", "e.g. TONGA-01-A", function (v) { data.ArNo = v; });
+            textBox("#casNoBox", "e.g. 2025/123456", function (v) { data.CasNo = v; });
+
+            // ── District → gates Station / Route / Location ─────────
+            var stationInst, routeInst, locationInst;
+
+            var districtInst = $("#districtBox").dxSelectBox({
+                dataSource: { load: function () { return $.getJSON("/api/lookup/districts"); } },
+                placeholder: "Select a district...",
+                showClearButton: true,
+                searchEnabled: true,
+                onValueChanged: function (e) {
+                    var chosen = e.value;
+                    var hasDistrict = !!chosen;
+
+                    $("#stationRow").toggleClass("qa-hidden", !hasDistrict);
+                    $("#routeLocationRow").toggleClass("qa-hidden", !hasDistrict);
+                    $("#districtHint").toggle(!hasDistrict);
+
+                    if (!hasDistrict) {
+                        data.Station = null;
+                        if (stationInst) stationInst.option("value", null);
+                        return;
+                    }
+
+                    // Station filtered by district — the lookup endpoint already
+                    // returns each station's district, so this is a real filter,
+                    // not just a visibility toggle.
+                    allStationsLoaded.done(function () {
+                        var filtered = stationsCache.filter(function (s) {
+                            return (s.district || "").toLowerCase() === chosen.toLowerCase();
+                        });
+
+                        if (!stationInst) {
+                            stationInst = $("#stationBox").dxSelectBox({
+                                items: filtered,
+                                displayExpr: "text",
+                                valueExpr: "text",
+                                placeholder: "Select a station...",
+                                showClearButton: true,
+                                searchEnabled: true,
+                                onValueChanged: function (e) { data.Station = e.value; }
+                            }).dxSelectBox("instance");
+                        } else {
+                            stationInst.option("items", filtered);
+                            stationInst.option("value", null);
+                        }
+                    });
+
+                    // Route and Location have no district field in their data —
+                    // gated on visibility only, not actually filtered by district.
+                    if (!routeInst) {
+                        routeInst = $("#routeBox").dxSelectBox({
+                            dataSource: {
+                                load: function (loadOptions) { return $.getJSON("/api/lookup/routes", { q: loadOptions.searchValue }); }
+                            },
+                            displayExpr: "text", valueExpr: "text",
+                            placeholder: "e.g. N4, R40...", showClearButton: true, searchEnabled: true, acceptCustomValue: true,
+                            onValueChanged: function (e) { data.Route = e.value; }
+                        }).dxSelectBox("instance");
+                    }
+                    if (!locationInst) {
+                        locationInst = $("#locationBox").dxSelectBox({
+                            dataSource: {
+                                load: function (loadOptions) { return $.getJSON("/api/lookup/locations", { q: loadOptions.searchValue }); }
+                            },
+                            displayExpr: "text", valueExpr: "text",
+                            placeholder: "Street / road name...", showClearButton: true, searchEnabled: true, acceptCustomValue: true,
+                            onValueChanged: function (e) { data.Location = e.value; }
+                        }).dxSelectBox("instance");
+                    }
+                }
+            }).dxSelectBox("instance");
+
+            // ── Crash details ────────────────────────────────────────
+            $("#crashDateBox").dxDateBox({
+                type: "date", displayFormat: "dd/MM/yyyy", value: new Date(),
+                onValueChanged: function (e) { data.CrashDate = e.value ? e.value.toISOString().split("T")[0] : null; }
+            });
+            $("#crashTimeBox").dxDateBox({
+                type: "time", displayFormat: "HH:mm", pickerType: "rollers", useMaskBehavior: true, placeholder: "HH:mm",
+                onValueChanged: function (e) {
+                    data.CrashTime = e.value
+                        ? e.value.getHours().toString().padStart(2, "0") + ":" + e.value.getMinutes().toString().padStart(2, "0")
+                        : null;
+                }
+            });
+            $("#crashTypeBox").dxSelectBox({
+                dataSource: { load: function (loadOptions) { return $.getJSON("/api/lookup/crashtypes", { q: loadOptions.searchValue }); } },
+                displayExpr: "text", valueExpr: "text",
+                placeholder: "e.g. HEAD ON, PEDESTRIAN...", showClearButton: true, searchEnabled: true, acceptCustomValue: true,
+                onValueChanged: function (e) { data.CrashType = e.value; }
+            });
+
+            // ── Vehicles involved — quantity steppers, not checkboxes. Real
+            // crash data regularly has the same type twice (e.g. "SED / SED"
+            // for a two-sedan collision), which a plain checkbox can't
+            // represent at all. Uses VehiclesInvolvedOption — real-world
+            // shorthand codes (SED, P/D, LDV...) extracted from actual crash
+            // records — rather than the CR1 form's longer formal vehicle
+            // category names, since that's how staff actually record this.
+            // VehicleCount and VehiclesString (the actual CrashSummary
+            // columns) are derived from the counts on save. ───────────────
+            $.getJSON("/api/lookup/formoptions").done(function (formOptions) {
+                (formOptions.VehiclesInvolvedOption || []).forEach(function (label) {
+                    data.VehicleCounts[label] = 0;
+
+                    var wrap = $("<div class='qa-vehicle-item'>").appendTo("#vehicleTypeCheckboxes");
+                    $("<span class='qa-vehicle-label'>").text(label).appendTo(wrap);
+                    $("<div class='qa-vehicle-stepper'>").appendTo(wrap).dxNumberBox({
+                        value: 0,
+                        min: 0,
+                        showSpinButtons: true,
+                        onValueChanged: function (e) {
+                            data.VehicleCounts[label] = e.value || 0;
+                        }
+                    });
+                });
+            });
+
+            // ── Injury counts ────────────────────────────────────────
+            numberBox("#fatalDriversBox", function (v) { data.FatalDrivers = v; });
+            numberBox("#fatalPassengersBox", function (v) { data.FatalPassengers = v; });
+            numberBox("#fatalPedestriansBox", function (v) { data.FatalPedestrians = v; });
+            numberBox("#fatalCyclistsBox", function (v) { data.FatalCyclists = v; });
+            numberBox("#fatalMaleBox", function (v) { data.FatalMale = v; });
+            numberBox("#fatalFemaleBox", function (v) { data.FatalFemale = v; });
+
+            numberBox("#seriousDriversBox", function (v) { data.SeriousDrivers = v; });
+            numberBox("#seriousPassengersBox", function (v) { data.SeriousPassengers = v; });
+            numberBox("#seriousPedestriansBox", function (v) { data.SeriousPedestrians = v; });
+            numberBox("#seriousCyclistsBox", function (v) { data.SeriousCyclists = v; });
+
+            numberBox("#slightDriversBox", function (v) { data.SlightDrivers = v; });
+            numberBox("#slightPassengersBox", function (v) { data.SlightPassengers = v; });
+            numberBox("#slightPedestriansBox", function (v) { data.SlightPedestrians = v; });
+            numberBox("#slightCyclistsBox", function (v) { data.SlightCyclists = v; });
+
+            // ── Save / Cancel ────────────────────────────────────────
+            $("#btnSave").dxButton({
+                text: "Save record",
+                type: "default",
+                icon: "save",
+                onClick: function () {
+                    if (!data.Station) {
+                        DevExpress.ui.notify("Please select a district and station.", "warning", 3000);
+                        return;
+                    }
+
+                    // Expand counts into a repeated list — e.g. {SED: 2, LDV: 1}
+                    // becomes "SED, SED, LDV" and a count of 3 — matching how
+                    // this data actually looks in real crash records ("SED / SED").
+                    var expanded = [];
+                    Object.keys(data.VehicleCounts).forEach(function (label) {
+                        var n = data.VehicleCounts[label] || 0;
+                        for (var i = 0; i < n; i++) expanded.push(label);
+                    });
+
+                    var payload = $.extend({}, data, {
+                        VehicleCount: expanded.length,
+                        VehiclesString: expanded.join(", ")
+                    });
+                    delete payload.VehicleCounts; // not a CrashSummary column — flattened into the two above
+
+                    $.post("/Crashes/CreateSummary", $.extend({
+                        __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').first().val()
+                    }, payload))
+                    .done(function (res) {
+                        if (res.success) {
+                            DevExpress.ui.notify(res.message + " (CR number: " + res.crNo + ")", "success", 4000);
+                            window.location.href = "/Crashes";
+                        } else {
+                            DevExpress.ui.notify(res.message, "error", 4000);
+                        }
+                    })
+                    .fail(function () {
+                        DevExpress.ui.notify("Something went wrong. Please try again.", "error", 3500);
+                    });
+                }
+            });
+
+            $("#btnCancel").dxButton({
+                text: "Cancel",
+                stylingMode: "outlined",
+                onClick: function () { window.location.href = "/Crashes"; }
+            });
+        });
+    </script>
+    @Html.AntiForgeryToken()
+}

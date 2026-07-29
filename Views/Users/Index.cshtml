@@ -92,6 +92,39 @@
         padding: 2px 0;
     }
 
+    /* ── Password rules checklist ────────────────────────────────── */
+    .pw-rules {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        margin-top: -8px;
+        margin-bottom: 4px;
+    }
+
+    .pw-rule {
+        font-size: .74rem;
+        color: #9ca3af;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+        .pw-rule.met {
+            color: #2e7d32;
+        }
+
+        .pw-rule .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #d1d5db;
+            flex-shrink: 0;
+        }
+
+        .pw-rule.met .dot {
+            background: #2e7d32;
+        }
+
     /* ── Grid overrides ───────────────────────────────────────── */
     .dx-datagrid-rowsview .dx-row > td {
         vertical-align: middle !important;
@@ -135,7 +168,59 @@
 @section Scripts {
     <script>
         $(function () {
-            var roles = ["Administrator", "Supervisor", "DataCapturer"];
+            // Role names come from AspNetRoles (via /Users/GetRoles), district
+            // names come from lkp_district (via /Lookups/Districts) — neither
+            // is hardcoded, so both dropdowns always reflect what actually
+            // exists in the database rather than a stale copy in the view.
+            var roles = [];
+            var districts = [];
+
+            function loadRoles() {
+                return $.getJSON("/Users/GetRoles").done(function (data) {
+                    roles = data || [];
+                });
+            }
+            function loadDistricts() {
+                return $.getJSON("/api/lookup/districts").done(function (data) {
+                    districts = data || [];
+                });
+            }
+
+            var lookupsReady = $.when(loadRoles(), loadDistricts());
+
+            // ── Password rules — mirrors AddIdentity's Password options exactly.
+            // If the server-side policy in Program.cs changes, this list needs
+            // to change with it, or the checklist will show green while Identity
+            // still rejects the password (or vice versa).
+            var pwRuleDefs = [
+                { key: "length", label: "At least 12 characters", test: function (v) { return v.length >= 12; } },
+                { key: "upper",  label: "One uppercase letter",   test: function (v) { return /[A-Z]/.test(v); } },
+                { key: "lower",  label: "One lowercase letter",   test: function (v) { return /[a-z]/.test(v); } },
+                { key: "digit",  label: "One number",             test: function (v) { return /[0-9]/.test(v); } },
+                { key: "symbol", label: "One symbol",             test: function (v) { return /[^A-Za-z0-9]/.test(v); } },
+                { key: "unique", label: "At least 4 unique characters", test: function (v) { return new Set(v.split("")).size >= 4; } }
+            ];
+
+            function passwordMeetsPolicy(v) {
+                return pwRuleDefs.every(function (r) { return r.test(v || ""); });
+            }
+
+            // Builds the checklist markup for a given container id, so create
+            // and edit forms can each have their own independent instance.
+            function buildPasswordRulesHtml(containerId) {
+                var html = '<div class="pw-rules" id="' + containerId + '">';
+                pwRuleDefs.forEach(function (r) {
+                    html += '<div class="pw-rule" data-rule="' + r.key + '"><span class="dot"></span><span>' + r.label + '</span></div>';
+                });
+                html += '</div>';
+                return html;
+            }
+
+            function updatePasswordRulesUi(containerId, value) {
+                pwRuleDefs.forEach(function (r) {
+                    $('#' + containerId + ' [data-rule="' + r.key + '"]').toggleClass('met', r.test(value || ""));
+                });
+            }
 
             // ── Add user button ────────────────────────────────────────
             $("#btnAddUser").dxButton({
@@ -143,11 +228,16 @@
                 icon: "plus",
                 type: "default",
                 stylingMode: "outlined",
-                onClick: function () { createPopupInst.option("visible", true); }
+                onClick: function () {
+                    // Refresh in case a role/district was added since page load
+                    lookupsReady.done(function () {
+                        createPopupInst.option("visible", true);
+                    });
+                }
             });
 
             // ── Users grid ────────────────────────────────────────────
-            $("#usersGrid").dxDataGrid({
+            var gridInst = $("#usersGrid").dxDataGrid({
                 dataSource: {
                     load: function () { return $.getJSON("/Users/GetAll"); }
                 },
@@ -196,7 +286,6 @@
                             }).appendTo(el);
                         }
                     },
-                    { dataField: "Station",  caption: "Station",  width: 130, cssClass: "dx-text-muted" },
                     { dataField: "District", caption: "District", width: 130, cssClass: "dx-text-muted" },
                     {
                         dataField: "Roles",
@@ -220,43 +309,28 @@
                     },
                     {
                         caption: "Actions",
-                        width: 140,
+                        width: 90,
                         alignment: "center",
                         allowSorting: false,
                         allowFiltering: false,
                         cellTemplate: function (el, info) {
                             var strip = $('<div class="action-strip">').css("justifyContent", "center");
 
-                            // Toggle active — lock / unlock icon
+                            // Single edit action — opens the consolidated Edit form
                             $('<div>').appendTo(strip).dxButton({
-                                icon: info.data.IsActive ? "lock" : "unlock",
-                                hint: info.data.IsActive ? "Deactivate user" : "Activate user",
-                                type: info.data.IsActive ? "danger" : "success",
+                                icon: "edit",
+                                hint: "Edit user",
                                 stylingMode: "outlined",
-                                onClick: function () { toggleActive(info.data.Id, info.data.FullName, info.data.IsActive); }
-                            });
-
-                            // Change role
-                            $('<div>').appendTo(strip).dxButton({
-                                icon: "group",
-                                hint: "Change role",
-                                stylingMode: "outlined",
-                                onClick: function () { showRoleDialog(info.data); }
-                            });
-
-                            // Reset password
-                            $('<div>').appendTo(strip).dxButton({
-                                icon: "key",
-                                hint: "Reset password",
-                                stylingMode: "outlined",
-                                onClick: function () { showPasswordReset(info.data.Id, info.data.FullName); }
+                                onClick: function () {
+                                    lookupsReady.done(function () { showEditDialog(info.data); });
+                                }
                             });
 
                             strip.appendTo(el);
                         }
                     }
                 ]
-            });
+            }).dxDataGrid("instance");
 
             // ── Create user popup ──────────────────────────────────────
             var createForm;
@@ -287,20 +361,21 @@
                                 editorOptions: { mode: "email" }
                             },
                             {
-                                dataField: "Station",
-                                label: { text: "Station" },
-                                isRequired: true,
-                                editorOptions: { placeholder: "e.g. NELSPRUIT" }
-                            },
-                            {
                                 dataField: "District",
                                 label: { text: "District" },
+                                colSpan: 2,
                                 isRequired: true,
-                                editorOptions: { placeholder: "e.g. EHLANZENI" }
+                                editorType: "dxSelectBox",
+                                editorOptions: {
+                                    items: districts,
+                                    placeholder: "Select a district...",
+                                    searchEnabled: true
+                                }
                             },
                             {
                                 dataField: "Role",
                                 label: { text: "Role" },
+                                colSpan: 2,
                                 isRequired: true,
                                 editorType: "dxSelectBox",
                                 editorOptions: { items: roles, placeholder: "Select a role..." }
@@ -308,10 +383,33 @@
                             {
                                 dataField: "Password",
                                 label: { text: "Password" },
+                                colSpan: 2,
                                 isRequired: true,
                                 editorOptions: {
                                     mode: "password",
-                                    placeholder: "Min 8 chars, upper, digit, symbol"
+                                    placeholder: "Enter a password",
+                                    valueChangeEvent: "keyup",
+                                    onValueChanged: function (e) {
+                                        updatePasswordRulesUi("createPwRules", e.value);
+                                    }
+                                },
+                                // Password is always required on create, so the
+                                // rule always applies — no empty-value exception here.
+                                validationRules: [
+                                    {
+                                        type: "custom",
+                                        message: "Password doesn't meet all the requirements below.",
+                                        validationCallback: function (e) {
+                                            return passwordMeetsPolicy(e.value);
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                itemType: "simple",
+                                colSpan: 2,
+                                template: function () {
+                                    return $(buildPasswordRulesHtml("createPwRules"));
                                 }
                             }
                         ]
@@ -332,14 +430,13 @@
                                     __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').first().val(),
                                     fullName: data.FullName,
                                     email:    data.Email,
-                                    station:  data.Station,
                                     district: data.District,
                                     role:     data.Role,
                                     password: data.Password
                                 }).done(function () {
                                     createPopupInst.option("visible", false);
                                     DevExpress.ui.notify("User created successfully.", "success", 3000);
-                                    location.reload();
+                                    gridInst.refresh();
                                 }).fail(function () {
                                     DevExpress.ui.notify("Something went wrong. Please try again.", "error", 3500);
                                 });
@@ -348,158 +445,163 @@
                 }
             }).dxPopup("instance");
 
-            // ── Toggle active ──────────────────────────────────────────
-            function toggleActive(id, name, currentlyActive) {
-                var action  = currentlyActive ? "deactivate" : "activate";
-                var message = "Are you sure you want to " + action + " <b>" + name + "</b>?";
+            // ── Edit user dialog (consolidated: profile, district, role, status, optional password) ──
+            function showEditDialog(user) {
+                var currentRole = user.Roles ? user.Roles.split(", ")[0] : null;
 
-                DevExpress.ui.dialog.confirm(message, "Confirm").done(function (yes) {
-                    if (!yes) return;
-                    $.post("/Users/ToggleActive", {
-                        __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').first().val(),
-                        id: id
-                    }).done(function () {
-                        DevExpress.ui.notify(
-                            name + " has been " + (currentlyActive ? "deactivated" : "activated") + ".",
-                            "success", 2500
-                        );
-                        location.reload();
-                    });
-                });
-            }
+                var $popupContainer = $('<div>').appendTo('body');
+                var editForm;
 
-                 // ── Change Role Dialog (fixed) ───────────────────────────────
-        function showRoleDialog(user) {
-            var currentRole = user.Roles ? user.Roles.split(", ")[0] : null;
+                var popupInstance = $popupContainer.dxPopup({
+                    title: "Edit user — " + user.FullName,
+                    width: 560,
+                    height: "auto",
+                    showCloseButton: true,
+                    visible: true,
+                    contentTemplate: function (content) {
+                        var wrap = $("<div>").css("padding", "4px 0").appendTo(content);
 
-            // Create a fresh container for the popup
-            var $popupContainer = $('<div>').appendTo('body');
-
-            var roleSelect = $('<div>').appendTo($popupContainer).dxSelectBox({
-                items: roles,
-                value: currentRole,
-                placeholder: "Select a role..."
-            });
-
-            var popupInstance = $popupContainer.dxPopup({
-                title: "Change role — " + user.FullName,
-                width: 400,
-                height: "auto",
-                showCloseButton: true,
-                visible: true,
-                contentTemplate: function () {
-                    // Return the existing select box (already in the container)
-                    return roleSelect;
-                },
-                onHiding: function () {
-                    // Clean up the container after popup closes
-                    $popupContainer.remove();
-                },
-                toolbarItems: [
-                    {
-                        widget: "dxButton",
-                        location: "after",
-                        toolbar: "bottom",
-                        options: {
-                            text: "Save",
-                            type: "default",
-                            onClick: function () {
-                                var role = roleSelect.dxSelectBox("instance").option("value");
-                                if (!role) {
-                                    DevExpress.ui.notify("Please select a role.", "warning", 2000);
-                                    return;
+                        editForm = $("<div>").appendTo(wrap).dxForm({
+                            colCount: 2,
+                            labelLocation: "top",
+                            showColonAfterLabel: false,
+                            formData: {
+                                FullName: user.FullName,
+                                Email: user.Email,
+                                District: user.District,
+                                Role: currentRole,
+                                IsActive: user.IsActive,
+                                NewPassword: ""
+                            },
+                            items: [
+                                {
+                                    dataField: "FullName",
+                                    label: { text: "Full name" },
+                                    colSpan: 2,
+                                    isRequired: true
+                                },
+                                {
+                                    dataField: "Email",
+                                    label: { text: "Email address" },
+                                    colSpan: 2,
+                                    isRequired: true,
+                                    editorOptions: { mode: "email" }
+                                },
+                                {
+                                    dataField: "District",
+                                    label: { text: "District" },
+                                    colSpan: 2,
+                                    isRequired: true,
+                                    editorType: "dxSelectBox",
+                                    editorOptions: {
+                                        items: districts,
+                                        placeholder: "Select a district...",
+                                        searchEnabled: true
+                                    }
+                                },
+                                {
+                                    dataField: "Role",
+                                    label: { text: "Role" },
+                                    colSpan: 2,
+                                    isRequired: true,
+                                    editorType: "dxSelectBox",
+                                    editorOptions: { items: roles, placeholder: "Select a role..." }
+                                },
+                                {
+                                    dataField: "IsActive",
+                                    label: { text: "Active" },
+                                    editorType: "dxSwitch",
+                                    editorOptions: {
+                                        disabled: user.IsSelf === true
+                                    }
+                                },
+                                {
+                                    dataField: "NewPassword",
+                                    label: { text: "New password (leave blank to keep current)" },
+                                    colSpan: 2,
+                                    editorOptions: {
+                                        mode: "password",
+                                        placeholder: "Leave blank to keep current password",
+                                        valueChangeEvent: "keyup",
+                                        onValueChanged: function (e) {
+                                            var $rules = $("#editPwRules");
+                                          
+                                            $rules.toggle(!!e.value);
+                                            updatePasswordRulesUi("editPwRules", e.value);
+                                        }
+                                    },
+                                    
+                                    validationRules: [
+                                        {
+                                            type: "custom",
+                                            message: "Password doesn't meet all the requirements below.",
+                                            validationCallback: function (e) {
+                                                return !e.value || passwordMeetsPolicy(e.value);
+                                            }
+                                        }
+                                    ]
+                                },
+                                {
+                                    itemType: "simple",
+                                    colSpan: 2,
+                                    template: function () {
+                                        
+                                        return $(buildPasswordRulesHtml("editPwRules")).hide();
+                                    }
                                 }
-                                $.post("/Users/UpdateRole", {
-                                    __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').first().val(),
-                                    id: user.Id,
-                                    newRole: role
-                                }).done(function () {
-                                    DevExpress.ui.notify(user.FullName + "'s role updated to " + role + ".", "success", 2500);
-                                    location.reload();
-                                });
-                            }
-                        }
+                            ]
+                        }).dxForm("instance");
                     },
-                    {
-                        widget: "dxButton",
-                        location: "after",
-                        toolbar: "bottom",
-                        options: {
-                            text: "Cancel",
-                            onClick: function () {
-                                popupInstance.hide();
-                            }
-                        }
-                    }
-                ]
-            }).dxPopup("instance");
-        }
+                    onHiding: function () {
+                        $popupContainer.remove();
+                    },
+                    toolbarItems: [
+                        {
+                            widget: "dxButton",
+                            location: "after",
+                            toolbar: "bottom",
+                            options: {
+                                text: "Save",
+                                type: "default",
+                                icon: "save",
+                                onClick: function () {
+                                    var result = editForm.validate();
+                                    if (!result.isValid) return;
+                                    var data = editForm.option("formData");
 
-        // ── Reset Password Dialog (fixed) ─────────────────────────────
-        function showPasswordReset(id, name) {
-            var $popupContainer = $('<div>').appendTo('body');
-
-            var passwordBox = $('<div>').appendTo($popupContainer).dxTextBox({
-                mode: "password",
-                placeholder: "New password..."
-            });
-
-            var popupInstance = $popupContainer.dxPopup({
-                title: "Reset password — " + name,
-                width: 450,
-                height: "auto",
-                showCloseButton: true,
-                visible: true,
-                contentTemplate: function () {
-                    return passwordBox;
-                },
-                onHiding: function () {
-                    $popupContainer.remove();
-                },
-                toolbarItems: [
-                    {
-                        widget: "dxButton",
-                        location: "after",
-                        toolbar: "bottom",
-                        options: {
-                            text: "Reset Password",
-                            type: "default",
-                            onClick: function () {
-                                var pass = passwordBox.dxTextBox("instance").option("value");
-                                if (!pass) {
-                                    DevExpress.ui.notify("Please enter a new password.", "warning", 2000);
-                                    return;
+                                    $.post("/Users/Edit", {
+                                        __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').first().val(),
+                                        Id: user.Id,
+                                        FullName: data.FullName,
+                                        Email: data.Email,
+                                        District: data.District,
+                                        Role: data.Role,
+                                        IsActive: data.IsActive,
+                                        NewPassword: data.NewPassword
+                                    }).done(function () {
+                                        DevExpress.ui.notify(user.FullName + " has been updated.", "success", 2500);
+                                        popupInstance.hide();
+                                        gridInst.refresh();
+                                    }).fail(function () {
+                                        DevExpress.ui.notify("Something went wrong. Please try again.", "error", 3500);
+                                    });
                                 }
-                                $.post("/Users/ResetPassword", {
-                                    __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').first().val(),
-                                    id: id,
-                                    newPassword: pass
-                                }).done(function () {
-                                    DevExpress.ui.notify("Password reset for " + name + ".", "success", 2500);
+                            }
+                        },
+                        {
+                            widget: "dxButton",
+                            location: "after",
+                            toolbar: "bottom",
+                            options: {
+                                text: "Cancel",
+                                onClick: function () {
                                     popupInstance.hide();
-                                    // Optionally reload after a short delay
-                                    setTimeout(function () { location.reload(); }, 500);
-                                }).fail(function () {
-                                    DevExpress.ui.notify("Password reset failed. Check the password meets policy requirements.", "error", 4000);
-                                });
+                                }
                             }
                         }
-                    },
-                    {
-                        widget: "dxButton",
-                        location: "after",
-                        toolbar: "bottom",
-                        options: {
-                            text: "Cancel",
-                            onClick: function () {
-                                popupInstance.hide();
-                            }
-                        }
-                    }
-                ]
-            }).dxPopup("instance");
-        }
-
+                    ]
+                }).dxPopup("instance");
+            }
         });
     </script>
     @Html.AntiForgeryToken()

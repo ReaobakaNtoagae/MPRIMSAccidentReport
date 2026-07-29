@@ -2,172 +2,122 @@
     ViewData["Title"] = "Dashboard";
 }
 
+<div style="position:relative;">
 
-@if (TempData["SuccessMessage"] != null)
-{
-    <div id="successMsg" data-message="@TempData["SuccessMessage"]"></div>
-}
-@if (TempData["ErrorMessage"] != null)
-{
-    <div id="errorMsg" data-message="@TempData["ErrorMessage"]"></div>
-}
-
-<style>
-    .stat-grid {
-        display: grid;
-        grid-template-columns: 1fr;
-        gap: 16px;
-        margin-bottom: 20px;
-    }
-
-    .stat-card {
-        border-radius: 12px;
-        padding: 20px 22px;
-        color: #fff;
-        box-shadow: 0 3px 12px rgba(0,0,0,.15);
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-        position: relative;
-        overflow: hidden;
-    }
-
-        .stat-card::after {
-            content: "";
-            position: absolute;
-            right: -10px;
-            top: -10px;
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            background: rgba(255,255,255,.1);
-        }
-
-        .stat-card .big-num {
-            font-size: 2.4rem;
-            font-weight: 800;
-            line-height: 1;
-        }
-
-        .stat-card .label {
-            font-size: .8rem;
-            opacity: .88;
-            font-weight: 500;
-        }
-
-        .stat-card .sub {
-            font-size: .72rem;
-            opacity: .65;
-            margin-top: 6px;
-            padding-top: 8px;
-            border-top: 1px solid rgba(255,255,255,.2);
-        }
-
-    .stat-row {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 16px;
-        margin-bottom: 20px;
-    }
-
-    .injury-card {
-        border-radius: 10px;
-        padding: 16px 18px;
-        display: flex;
-        align-items: center;
-        gap: 14px;
-        box-shadow: 0 2px 8px rgba(0,0,0,.07);
-        border-left: 5px solid transparent;
-    }
-
-        .injury-card .icon {
-            font-size: 1.6rem;
-            line-height: 1;
-        }
-
-        .injury-card .info .num {
-            font-size: 1.6rem;
-            font-weight: 800;
-            line-height: 1;
-        }
-
-        .injury-card .info .desc {
-            font-size: .75rem;
-            color: #666;
-            margin-top: 2px;
-        }
-</style>
-
-
-<div class="stat-grid">
-    <div class="stat-card" style="background: linear-gradient(135deg,#1b5e20,#2e7d32);">
-        <div class="big-num">@ViewBag.TotalCrashes</div>
-        <div class="label">Total Crash Reports</div>
-        <div class="sub">@ViewBag.ThisMonthCrashes new in @ViewBag.CurrentMonth</div>
+    <div style="position:absolute; inset:0; background:rgba(80,80,80,0.35); z-index:1000;
+        display:flex; align-items:center; justify-content:center; border-radius:10px;">
+        <div style="background:#fff; border-radius:10px; padding:24px 32px; text-align:center; box-shadow:0 4px 20px rgba(0,0,0,.15);">
+            <i class="ti ti-tools" style="font-size:28px; color:#5f5e5a;" aria-hidden="true"></i>
+            <p style="font-size:.95rem; font-weight:600; color:#374151; margin:12px 0 4px;">Dashboard under implementation</p>
+            <p style="font-size:.8rem; color:#9ca3af; margin:0;">This page isn't ready for use yet.</p>
+        </div>
     </div>
-</div>
 
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div id="successMsg" data-message="@TempData["SuccessMessage"]"></div>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div id="errorMsg" data-message="@TempData["ErrorMessage"]"></div>
+    }
 
-<div class="stat-row">
-    <div class="injury-card" style="background:#ffebee;border-left-color:#b71c1c;">
-        <div class="info">
+    <style>
+            .kpi-grid {
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 16px;
+                margin-bottom: 20px;
+            }
+
+            .kpi-card {
+                border-radius: 12px;
+                padding: 18px 20px;
+                box-shadow: 0 2px 8px rgba(0,0,0,.07);
+                border-left: 5px solid transparent;
+            }
+
+                .kpi-card .num {
+                    font-size: 1.9rem;
+                    font-weight: 800;
+                    line-height: 1;
+                }
+
+                .kpi-card .label {
+                    font-size: .78rem;
+                    color: #666;
+                    margin-top: 4px;
+                }
+
+                .kpi-card .sub {
+                    font-size: .7rem;
+                    color: #999;
+                    margin-top: 6px;
+                }
+
+            #quickActions {
+                display: flex;
+                gap: 10px;
+                margin-bottom: 20px;
+            }
+    </style>
+
+    <div class="kpi-grid">
+        <div class="kpi-card" style="background:#e8f5e9;border-left-color:#2e7d32;">
+            <div class="num" style="color:#2e7d32;">@ViewBag.TotalCrashes</div>
+            <div class="label">Total crash reports</div>
+            <div class="sub">@ViewBag.ThisMonthCrashes new in @ViewBag.CurrentMonth</div>
+        </div>
+        <div class="kpi-card" style="background:#ffebee;border-left-color:#b71c1c;">
             <div class="num" style="color:#b71c1c;">@ViewBag.FatalCount</div>
-            <div class="desc">Fatal Injuries (all time)</div>
+            <div class="label">Fatal injuries (all time)</div>
+            <div class="sub">@ViewBag.ThisMonthFatal this month</div>
         </div>
-        <div style="margin-left:auto;text-align:right;">
-            <div style="font-size:.72rem;color:#888;">This month</div>
-            <div style="font-size:1.1rem;font-weight:700;color:#b71c1c;">@ViewBag.ThisMonthFatal</div>
-        </div>
-    </div>
-    <div class="injury-card" style="background:#fff3e0;border-left-color:#e65100;">
-        <div class="info">
+        <div class="kpi-card" style="background:#fff3e0;border-left-color:#e65100;">
             <div class="num" style="color:#e65100;">@ViewBag.SeriousCount</div>
-            <div class="desc">Serious Injuries (all time)</div>
+            <div class="label">Serious injuries (all time)</div>
         </div>
-    </div>
-    <div class="injury-card" style="background:#e3f2fd;border-left-color:#0277bd;">
-        <div class="info">
+        <div class="kpi-card" style="background:#e3f2fd;border-left-color:#0277bd;">
             <div class="num" style="color:#0277bd;">@ViewBag.SlightCount</div>
-            <div class="desc">Slight Injuries (all time)</div>
+            <div class="label">Slight injuries (all time)</div>
         </div>
     </div>
-</div>
 
+    <div id="quickActions"></div>
 
-<div id="quickActions" style="display:flex;gap:10px;margin-bottom:20px;"></div>
-
-
-<div style="background:#fff;border-radius:10px;border:1px solid #c8e6c9;
-            box-shadow:0 2px 8px rgba(0,0,0,.06);overflow:hidden;">
-    <div style="padding:14px 20px;border-bottom:2px solid #e8f5e9;
-                font-size:.78rem;text-transform:uppercase;letter-spacing:.7px;
-                color:#2e7d32;font-weight:700;">
-        Recent Crash Reports
+    <div style="background:#fff;border-radius:10px;border:1px solid #c8e6c9;
+        box-shadow:0 2px 8px rgba(0,0,0,.06);overflow:hidden;">
+        <div style="padding:14px 20px;border-bottom:2px solid #e8f5e9;
+            font-size:.78rem;text-transform:uppercase;letter-spacing:.7px;
+            color:#2e7d32;font-weight:700;">
+            Crash reports
+            <span style="float:right;font-size:.68rem;text-transform:none;letter-spacing:0;color:#9ca3af;font-weight:400;">
+                Includes manually captured and imported records
+            </span>
+        </div>
+        <div id="crashHistoryGrid"></div>
     </div>
-    <div id="crashHistoryGrid"></div>
+
+    <form id="deleteForm" method="post" style="display:none;">
+        @Html.AntiForgeryToken()
+    </form>
+
 </div>
-
-
-<form id="deleteForm" method="post" style="display:none;">
-    @Html.AntiForgeryToken()
-</form>
 
 @section Scripts {
     <script>
         $(function () {
 
-           
             var successMsg = $("#successMsg").data("message");
             var errorMsg   = $("#errorMsg").data("message");
             if (successMsg) DevExpress.ui.notify(successMsg, "success", 4000);
             if (errorMsg)   DevExpress.ui.notify(errorMsg,   "error",   5000);
 
-           
             [
-                { text: "New CR1 Report",    type: "default", icon: "plus",     url: "/Home/Create" },
-                { text: "Search Crashes",    type: "normal",  icon: "find",     url: "/Crashes"     },
-                { text: "Monthly Report",    type: "normal",  icon: "chart",    url: "/Report"      },
-                { text: "Import Excel",      type: "normal",  icon: "upload",   url: "/Import"      }
+                { text: "New CR1 report",  type: "default", icon: "plus",   url: "/Home/Create" },
+                { text: "Search crashes",  type: "normal",  icon: "find",   url: "/Crashes"      },
+                { text: "Monthly report",  type: "normal",  icon: "chart",  url: "/Report"       },
+                { text: "Import Excel",    type: "normal",  icon: "upload", url: "/Import"       }
             ].forEach(function (a) {
                 $("<div>").appendTo("#quickActions").dxButton({
                     text: a.text, type: a.type, icon: a.icon,
@@ -175,68 +125,114 @@
                 });
             });
 
-            
+            // CustomStore against /Crashes/Grid, not a bare dataSource string.
+            // GetAll sorts by Date desc + Take(200) — fine for a small "recent
+            // activity" glance, but if manual-entry volume is high, that cap
+            // fills up with recent manual rows before any imported rows (often
+            // older, added in batches) ever get a look-in. Grid paginates
+            // properly instead, so both sources are reliably reachable here.
+            var crashStore = new DevExpress.data.CustomStore({
+                key: "RowKey",
+                load: function (loadOptions) {
+                    var page = Math.floor((loadOptions.skip || 0) / (loadOptions.take || 15)) + 1;
+                    var params = {
+                        page: page,
+                        pageSize: loadOptions.take || 15,
+                        sortBy: (loadOptions.sort && loadOptions.sort[0]) ? loadOptions.sort[0].selector : "Date",
+                        sortDesc: (loadOptions.sort && loadOptions.sort[0]) ? !!loadOptions.sort[0].desc : true
+                    };
+                    return $.getJSON("/Crashes/Grid", params).then(function (result) {
+                        var rows = result.rows.map(function (r) {
+                            r.RowKey = r.Source === "Import" ? "I-" + r.SummaryId : "M-" + r.CrashId;
+                            return r;
+                        });
+                        return { data: rows, totalCount: result.total };
+                    });
+                }
+            });
+
             $("#crashHistoryGrid").dxDataGrid({
-                dataSource: "/Crashes/GetAll",
+                dataSource: { store: crashStore },
+                remoteOperations: { paging: true, sorting: true },
                 columns: [
-                    { dataField: "CrNo",         caption: "CR No.",   width: 120 },
-                    { dataField: "CasNo",        caption: "CAS No.",  width: 120 },
+                    { dataField: "CrNo",     caption: "CR No.",   width: 120 },
                     {
-                        dataField: "CrashDate",  caption: "Date",
-                        dataType:  "date",       format: "dd MMM yyyy", width: 130
+                        dataField: "Date",   caption: "Date",
+                        dataType: "date",    format: "dd MMM yyyy", width: 130
                     },
-                    { dataField: "ProvinceCode", caption: "Province", width: 90  },
-                    { dataField: "Location",     caption: "Location", minWidth: 150 },
+                    { dataField: "District", caption: "District", width: 140 },
+                    { dataField: "Station",  caption: "Station",  width: 130 },
+                    { dataField: "Route",    caption: "Route",    width: 90  },
+                    { dataField: "CrashType", caption: "Crash type", width: 130 },
                     { dataField: "VehicleCount", caption: "Vehicles", width: 80, alignment: "center" },
                     {
                         caption: "Injuries", width: 200, alignment: "center",
                         allowSorting: false,
                         cellTemplate: function (container, options) {
                             var parts = [];
-                            if (options.data.FatalCount > 0)
+                            if (options.data.Fatalities > 0)
                                 parts.push('<span style="background:#b71c1c;color:#fff;' +
                                     'border-radius:10px;padding:1px 9px;font-size:.72rem;' +
                                     'font-weight:700;margin-right:3px">' +
-                                    options.data.FatalCount + ' fatal</span>');
-                            if (options.data.SeriousCount > 0)
+                                    options.data.Fatalities + ' fatal</span>');
+                            if (options.data.Serious > 0)
                                 parts.push('<span style="background:#e65100;color:#fff;' +
                                     'border-radius:10px;padding:1px 9px;font-size:.72rem;' +
                                     'margin-right:3px">' +
-                                    options.data.SeriousCount + ' serious</span>');
+                                    options.data.Serious + ' serious</span>');
                             container.html(parts.length ? parts.join("") :
                                 '<span style="color:#bbb;font-size:.75rem">—</span>');
+                        }
+                    },
+                    {
+                        dataField: "Source", caption: "Source", width: 90, alignment: "center",
+                        cellTemplate: function (container, options) {
+                            var isImport = options.value === "Import";
+                            container.html(
+                                '<span style="font-size:.68rem;padding:2px 8px;border-radius:6px;' +
+                                (isImport
+                                    ? 'background:#f5f5f5;color:#9e9e9e;'
+                                    : 'background:#e8f5e9;color:#2e7d32;') +
+                                '">' + options.value + '</span>'
+                            );
                         }
                     },
                     {
                         caption: "Actions", width: 145, alignment: "center",
                         allowSorting: false, allowFiltering: false,
                         cellTemplate: function (container, options) {
-                            var id   = options.data.CrashId;
-                            var crNo = options.data.CrNo || ("#" + id);
+                            var data = options.data;
+                            var isImport = data.Source === "Import";
+                            var id = isImport ? data.SummaryId : data.CrashId;
+                            var crNo = data.CrNo || ("#" + (id || ""));
+
+                            if (!id) {
+                                container.html('<span style="color:#bbb;font-size:.75rem">—</span>');
+                                return;
+                            }
+
+                            var editUrl   = isImport ? "/Crashes/EditSummary/" + id   : "/Home/Edit/" + id;
+                            var deleteUrl = isImport ? "/Crashes/DeleteSummary/" + id : "/Home/Delete/" + id;
+
                             $("<div>").css({ display:"flex", gap:"5px", justifyContent:"center" })
                                 .appendTo(container)
                                 .append(
                                     $("<div>").dxButton({
-                                        icon:"find", hint:"View Details",
-                                        type:"default", stylingMode:"outlined",
-                                        onClick: function() { window.location.href="/Crashes/Details/"+id; }
-                                    }),
-                                    $("<div>").dxButton({
-                                        icon:"edit", hint:"Edit",
+                                        icon:"edit", hint: isImport ? "Edit imported record" : "Edit",
                                         type:"normal", stylingMode:"outlined",
-                                        onClick: function() { window.location.href="/Home/Edit/"+id; }
+                                        onClick: function() { window.location.href = editUrl; }
                                     }),
                                     $("<div>").dxButton({
-                                        icon:"trash", hint:"Delete",
+                                        icon:"trash", hint: isImport ? "Delete imported record" : "Delete",
                                         type:"danger", stylingMode:"outlined",
                                         onClick: function() {
-                                            DevExpress.ui.dialog.confirm(
-                                                "Permanently delete crash report <b>" + crNo + "</b>?<br/>" +
-                                                "<small style='color:#888'>All linked records will also be removed.</small>",
-                                                "Confirm Delete"
-                                            ).then(function(confirmed) {
+                                            var warning = isImport
+                                                ? "Permanently delete imported record <b>" + crNo + "</b>?"
+                                                : "Permanently delete crash report <b>" + crNo + "</b>?<br/>" +
+                                                  "<small style='color:#888'>All linked records will also be removed.</small>";
+                                            DevExpress.ui.dialog.confirm(warning, "Confirm Delete").then(function(confirmed) {
                                                 if (!confirmed) return;
-                                                $("#deleteForm").attr("action", "/Home/Delete/"+id);
+                                                $("#deleteForm").attr("action", deleteUrl);
                                                 $("#deleteForm").submit();
                                             });
                                         }
@@ -257,7 +253,7 @@
                 rowAlternationEnabled: true,
                 hoverStateEnabled:     true,
                 onRowPrepared: function (e) {
-                    if (e.rowType === "data" && e.data.FatalCount > 0)
+                    if (e.rowType === "data" && e.data.Fatalities > 0)
                         e.rowElement.css("border-left", "3px solid #b71c1c");
                 }
             });

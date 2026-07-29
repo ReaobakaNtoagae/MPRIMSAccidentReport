@@ -9,16 +9,18 @@ public class ImportController : Controller
 {
     private readonly ExcelImportService _importService;
     private readonly ILogger<ImportController> _logger;
-    public ImportController(ExcelImportService importService, ILogger<ImportController> logger)
+    private readonly IWebHostEnvironment _env;
+    public ImportController(ExcelImportService importService, ILogger<ImportController> logger, IWebHostEnvironment env)
     {
         _importService = importService;
         _logger = logger;
+        _env = env;
     }
 
     [Authorize(Policy = Privileges.Import.Excel)]
     public IActionResult Index() => View();
 
-   
+
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Upload(IFormFile file, string province = "MP")
@@ -33,7 +35,7 @@ public class ImportController : Controller
             return RedirectToAction(nameof(Index));
         }
 
-        
+
 
         var ext = Path.GetExtension(file.FileName).ToLower();
         if (ext != ".xlsx" && ext != ".xls")
@@ -49,7 +51,7 @@ public class ImportController : Controller
         return RedirectToAction(nameof(Result));
     }
 
-  
+
     public IActionResult Result()
     {
         var json = TempData["ImportResult"]?.ToString();
@@ -58,5 +60,17 @@ public class ImportController : Controller
 
         var result = System.Text.Json.JsonSerializer.Deserialize<ImportResult>(json);
         return View(result);
+    }
+
+    [HttpGet]
+    public IActionResult DownloadTemplate()
+    {
+        var path = Path.Combine(_env.WebRootPath, "templates", "Crash_Import_Template_Modified.xlsx");
+
+        if (!System.IO.File.Exists(path))
+            return NotFound("Template file is not available. Please contact the system administrator.");
+
+        var bytes = System.IO.File.ReadAllBytes(path);
+        return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Crash_Import_Template_Modified.xlsx");
     }
 }

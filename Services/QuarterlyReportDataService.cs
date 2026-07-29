@@ -5,7 +5,8 @@ namespace CrashReport.Services
 {
     public class QuarterlyReportDataService : MonthlyMemoDataService
     {
-        public QuarterlyReportDataService(AppDbContext context) : base(context) { }
+        public QuarterlyReportDataService(AppDbContext context, IStationDistrictLookup stationDistrict)
+            : base(context, stationDistrict) { }
 
         private static readonly string[] QuarterLabel =
         {

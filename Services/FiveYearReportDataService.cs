@@ -1,5 +1,7 @@
 ﻿using CrashReport.Data;
 using CrashReport.ViewModels;
+using CrashReport.Models;
+using CrashReport.Services;
 using Microsoft.EntityFrameworkCore;
 using static CrashReport.ViewModels.FiveYearReportRequest;
 
@@ -8,7 +10,8 @@ namespace CrashReport.Services;
 
 public class FiveYearReportDataService : MonthlyMemoDataService
 {
-    public FiveYearReportDataService(AppDbContext context) : base(context) { }
+    public FiveYearReportDataService(AppDbContext context, IStationDistrictLookup stationDistrict)
+        : base(context, stationDistrict) { }
 
     private static readonly Dictionary<string, string> RegionDisplayNames = new()
     {
@@ -18,7 +21,7 @@ public class FiveYearReportDataService : MonthlyMemoDataService
         ["Nkangala"] = "NKANGALA",
     };
 
-  
+
 
     private static readonly string[] CrashTypeList =
     {
@@ -268,16 +271,6 @@ public class FiveYearReportDataService : MonthlyMemoDataService
     }
 
     // ── Section 6 helper — "shock weekend" ──────────────────────
-    //
-    // A "weekend" here means Friday–Sunday. Each year's weekends-within-
-    // the-month are matched up by ORDINAL POSITION (1st, 2nd, 3rd... Fri-
-    // Sun span of the month) rather than by matching calendar dates,
-    // since the same weekend number falls on different dates each year.
-    // The printed date-range label (e.g. "02-04 MAY") is taken from the
-    // most recent year in the range — matching the reference document's
-    // own convention of showing one illustrative date range per row while
-    // each year's column counts crashes within THAT year's corresponding
-    // Nth weekend.
     private static (RankedTable Crashes, RankedTable Fatalities) BuildWeekendRanking(
         int month, int[] years, Dictionary<int, List<Row>> rowsByYear)
     {

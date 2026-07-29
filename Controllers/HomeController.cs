@@ -1,6 +1,7 @@
 ﻿using CrashReport.Data;
 using CrashReport.Models;
 using CrashReport.Security;
+using CrashReport.Services;
 using CrashReport.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -12,19 +13,23 @@ namespace CrashReport.Controllers;
 public class HomeController : Controller
 {
     private readonly AppDbContext _context;
+    private readonly MonthlyMemoDataService _memoData;
 
     private static readonly HashSet<short> ValidSpeedLimits = new() { 30, 40, 50, 60, 80, 100, 120 };
 
     private static readonly HashSet<string> PedestrianCrashTypes =
         new(StringComparer.OrdinalIgnoreCase) { "PEDESTRIAN", "PED" };
 
-    public HomeController(AppDbContext context)
+    public HomeController(AppDbContext context, MonthlyMemoDataService memoData)
     {
         _context = context;
+        _memoData = memoData;
     }
 
     public async Task<IActionResult> Index()
     {
+       
+
         ViewBag.TotalCrashes = await _context.Crashes.CountAsync();
         ViewBag.FatalCount = await _context.CrashPeople
                                    .CountAsync(cp => cp.SeverityOfInjury == "Fatal");
@@ -37,11 +42,16 @@ public class HomeController : Controller
         var monthStart = new DateOnly(now.Year, now.Month, 1);
         var monthEnd = monthStart.AddMonths(1).AddDays(-1);
 
-        ViewBag.ThisMonthCrashes = await _context.Crashes
-            .CountAsync(c => c.CrashDate >= monthStart && c.CrashDate <= monthEnd);
-        ViewBag.ThisMonthFatal = await _context.CrashPeople
-            .CountAsync(cp => cp.SeverityOfInjury == "Fatal" &&
-                cp.Crash.CrashDate >= monthStart && cp.Crash.CrashDate <= monthEnd);
+        var allTime = await _memoData.LoadAsync(new DateOnly(2020, 1, 1), monthEnd);
+        var thisMonth = allTime.Where(r => r.Date >= monthStart && r.Date <= monthEnd).ToList();
+        
+        ViewBag.TotalCrashes = allTime.Count;
+        ViewBag.FatalCount = allTime.Sum(r => r.Fatalities);
+        ViewBag.SeriousCount = allTime.Sum(r => r.Serious);
+        ViewBag.SlightCount = allTime.Sum(r => r.Slight);
+
+        ViewBag.ThisMonthCrashes = thisMonth.Count;
+        ViewBag.ThisMonthFatal = thisMonth.Sum(r => r.Fatalities);
         ViewBag.CurrentMonth = now.ToString("MMMM yyyy");
 
         return View();
@@ -152,6 +162,7 @@ public class HomeController : Controller
             var root = document.RootElement;
 
             var crash = new Crash();
+            _context.Crashes.Add(crash);
 
             // ========== 1. CRASH INFO ==========
             if (root.TryGetProperty("CrashInfo", out var crashInfo))
@@ -522,8 +533,48 @@ public class HomeController : Controller
                 }
             }
 
-            // ========== SAVE & COMMIT ==========
-            _context.Crashes.Add(crash);
+            // ========== OFFICIAL USE ==========
+            if (root.TryGetProperty("OfficialUse", out var officialUse))
+            {
+                var official = new OfficialUse
+                {
+                    Crash = crash,
+                    OfficeWhereOccurred = GetString(officialUse, "OfficeWhereOccurred"),
+                    OccurrenceBookNo = GetString(officialUse, "OccurrenceBookNo"),
+                    AccidentRegisterNo = GetString(officialUse, "AccidentRegisterNo"),
+                    SapsCasNo = GetString(officialUse, "SapsCasNo"),
+                    DepartmentNameOccurred = GetString(officialUse, "DepartmentNameOccurred"),
+                    InspectedByInitials = GetString(officialUse, "InspectedByInitials"),
+                    InspectedByRank = GetString(officialUse, "InspectedByRank"),
+                    InspectedBySurname = GetString(officialUse, "InspectedBySurname"),
+                    InspectedByServiceNumber = GetString(officialUse, "InspectedByServiceNumber"),
+                    InspectedBySignature = GetString(officialUse, "InspectedBySignature"),
+                    OfficeWhereReported = GetString(officialUse, "OfficeWhereReported"),
+                    DepartmentNameReported = GetString(officialUse, "DepartmentNameReported"),
+                    CompletedBy = GetString(officialUse, "CompletedBy"),
+                    CompletedInitials = GetString(officialUse, "CompletedInitials"),
+                    CompletedRank = GetString(officialUse, "CompletedRank"),
+                    CompletedSurname = GetString(officialUse, "CompletedSurname"),
+                    CompletedServiceNumber = GetString(officialUse, "CompletedServiceNumber"),
+                    CompletedSignature = GetString(officialUse, "CompletedSignature"),
+                    CapturingNumber = GetString(officialUse, "CapturingNumber"),
+                    Comments = GetString(officialUse, "Comments")
+                };
+
+                // Handle dates
+                if (officialUse.TryGetProperty("DateStamp", out var dateStampEl) && dateStampEl.ValueKind == JsonValueKind.String)
+                    official.DateStamp = DateOnly.TryParse(dateStampEl.GetString(), out var ds) ? ds : null;
+
+                if (officialUse.TryGetProperty("CompletedDate", out var compDateEl) && compDateEl.ValueKind == JsonValueKind.String)
+                    official.CompletedDate = DateOnly.TryParse(compDateEl.GetString(), out var cd) ? cd : null;
+
+                if (officialUse.TryGetProperty("CompletedTime", out var compTimeEl) && compTimeEl.ValueKind == JsonValueKind.String)
+                    official.CompletedTime = TimeOnly.TryParse(compTimeEl.GetString(), out var ct) ? ct : null;
+
+                _context.OfficialUses.Add(official);
+            }
+
+
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
 
@@ -533,7 +584,7 @@ public class HomeController : Controller
         catch (Exception ex)
         {
             await transaction.RollbackAsync();
-            TempData["ErrorMessage"] = $"An error occurred: {ex.Message}";
+            TempData["ErrorMessage"] = $"An error occurred: {ex.Message} | Inner: {ex.InnerException?.Message}";
             return RedirectToAction(nameof(Create));
         }
     }
@@ -661,7 +712,7 @@ public class HomeController : Controller
         var ci = vm.CrashInfo;
         var today = DateOnly.FromDateTime(DateTime.Today);
 
-        // ── Step 1: Crash Info ────────────────────────────────
+        
 
         if (string.IsNullOrWhiteSpace(ci.CrNo) && string.IsNullOrWhiteSpace(ci.CasNo))
             errors.Add("At least one of CR No. or CAS No. is required.");
@@ -679,7 +730,6 @@ public class HomeController : Controller
                 errors.Add("Crash date cannot be more than 5 years in the past.");
         }
 
-        // Duplicate CR No. (skip own record when editing)
         if (!string.IsNullOrWhiteSpace(ci.CrNo))
         {
             var duplicate = await _context.Crashes
@@ -694,7 +744,7 @@ public class HomeController : Controller
             errors.Add($"Speed limit {ci.SpeedLimitKmh} km/h is not a valid South African " +
                        $"speed limit. Must be one of: {string.Join(", ", ValidSpeedLimits.Order())}.");
 
-        // ── Step 2: Location ──────────────────────────────────
+        
 
         var loc = vm.Location;
         bool hasLocation = !string.IsNullOrWhiteSpace(loc?.StreetRoadName) ||
@@ -1026,7 +1076,7 @@ public class HomeController : Controller
 
             var person = new Person
             {
-                IdType = "RSA_ID",//ID shouldn't be default to sa id
+                IdType = "RSA_ID",
                 IdNumber = pe.IdNumber,
                 Surname = pe.Surname,
                 FullNames = pe.FullNames ?? string.Empty,

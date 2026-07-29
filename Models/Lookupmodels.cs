@@ -3,6 +3,31 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace CrashReport.Models;
 
+[Table("lkp_district")]
+public class LookupDistrict
+{
+    [Key]
+    [Column("district_id")]
+    public int DistrictId { get; set; }
+
+    [Required, MaxLength(100)]
+    [Column("district_name")]
+    public string DistrictName { get; set; } = string.Empty;
+
+    [MaxLength(5)]
+    [Column("province_code")]
+    public string? ProvinceCode { get; set; }
+
+    [Column("is_active")]
+    public bool IsActive { get; set; } = true;
+
+    [Column("created_at")]
+    public DateTime CreatedAt { get; set; } = DateTime.Now;
+
+    // Reverse nav — all stations assigned to this district
+    public ICollection<SapsStation> Stations { get; set; } = new List<SapsStation>();
+}
+
 [Table("lkp_saps_stations")]
 public class SapsStation
 {
@@ -18,15 +43,24 @@ public class SapsStation
     [Column("province_code")]
     public string? ProvinceCode { get; set; }
 
+    // Free-text column, kept during the transition — see the seed script
+    // that added district_id alongside this. Once callers read DistrictId /
+    // District (the nav property below) instead, this column can be dropped.
     [MaxLength(100)]
     [Column("district")]
     public string? District { get; set; }
+
+    [Column("district_id")]
+    public int? DistrictId { get; set; }
 
     [Column("is_active")]
     public bool IsActive { get; set; } = true;
 
     [Column("created_at")]
     public DateTime CreatedAt { get; set; } = DateTime.Now;
+
+    [ForeignKey(nameof(DistrictId))]
+    public LookupDistrict? DistrictLookup { get; set; }
 }
 
 [Table("lkp_locations")]

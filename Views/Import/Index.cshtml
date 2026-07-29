@@ -1,16 +1,5 @@
 ﻿@{
     ViewData["Title"] = "Import Excel Accident Report";
-    var provinces = new[] {
-        new { Code="EC",  Name="Eastern Cape"   },
-        new { Code="FS",  Name="Free State"     },
-        new { Code="GP",  Name="Gauteng"        },
-        new { Code="KZN", Name="KwaZulu-Natal"  },
-        new { Code="LP",  Name="Limpopo"        },
-        new { Code="MP",  Name="Mpumalanga"     },
-        new { Code="NC",  Name="Northern Cape"  },
-        new { Code="NW",  Name="North West"     },
-        new { Code="WC",  Name="Western Cape"   }
-    };
 }
 
 <style>
@@ -56,33 +45,6 @@
         display: block;
         margin-bottom: 5px;
     }
-
-    /* Guide */
-    .imp-guide-row {
-        display: grid;
-        grid-template-columns: 80px 1fr;
-        gap: 4px 14px;
-        padding: 7px 0;
-        border-bottom: 1px solid #e8f5e9;
-        align-items: start;
-    }
-
-        .imp-guide-row:last-child {
-            border-bottom: none;
-        }
-
-    .imp-guide-key {
-        font-size: .70rem;
-        color: #888;
-        font-weight: 600;
-        padding-top: 2px;
-    }
-
-    .imp-guide-val {
-        font-size: .79rem;
-        color: #333;
-        line-height: 1.5;
-    }
 </style>
 
 <div class="imp-wrap">
@@ -123,36 +85,14 @@
     </div>
 
     <div class="imp-card">
-        <div class="imp-card-head">Expected Workbook Format</div>
+        <div class="imp-card-head">Standard Import Template</div>
         <div class="imp-card-body">
-            <div class="imp-guide-row">
-                <div class="imp-guide-key">Row 1</div>
-                <div class="imp-guide-val">Report title and period (e.g. ACCIDENT REPORT: 01 – 28 FEBRUARY 2025)</div>
-            </div>
-            <div class="imp-guide-row">
-                <div class="imp-guide-key">Row 3</div>
-                <div class="imp-guide-val">District name (e.g. EHLANZENI)</div>
-            </div>
-            <div class="imp-guide-row">
-                <div class="imp-guide-key">Row 6</div>
-                <div class="imp-guide-val">Headers: SAPS | AR NO | CAS | DATE | DAY | TIME | ROUTE | LOCATION | TYPE | …</div>
-            </div>
-            <div class="imp-guide-row">
-                <div class="imp-guide-key">Row 7+</div>
-                <div class="imp-guide-val">One accident per row</div>
-            </div>
-            <div class="imp-guide-row">
-                <div class="imp-guide-key">Cols J – W</div>
-                <div class="imp-guide-val">Injury counts (Fatal / Serious / Slight) by role — Driver, Passenger, Pedestrian, Cyclist</div>
-            </div>
-            <div class="imp-guide-row">
-                <div class="imp-guide-key">Col X</div>
-                <div class="imp-guide-val">Vehicles involved (e.g. SED / TAXI)</div>
-            </div>
-            <div class="imp-guide-row">
-                <div class="imp-guide-key">Stop row</div>
-                <div class="imp-guide-val">Row beginning with TOTAL or GRAND TOTAL — import stops here</div>
-            </div>
+            <p style="font-size:.82rem; color:#444; line-height:1.5; margin:0 0 14px;">
+                Use the standard template to avoid formatting issues on import. It has the same
+                layout your station already uses, plus a District column and Fatal Age/Race
+                breakdown fields (highlighted in green) that older workbooks may be missing.
+            </p>
+            <div id="btnDownloadTemplate"></div>
         </div>
     </div>
 
@@ -166,21 +106,30 @@
             var errMsg = $("#errMsg").data("msg");
             if (errMsg) DevExpress.ui.notify(errMsg, "error", 5000);
 
-            // ── Province select ───────────────────────────────────────
-            var provinceItems = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
-                            provinces.Select(p => new { text = $"{p.Code} — {p.Name}", value = p.Code })
-                    ));
+            // ── Province select — sourced from formOptions.Province (the
+            // same seeded list the CR1 wizard uses), not hardcoded here.
+            // Defaults to "MP" once loaded, matching the hidden field's
+            // fallback value for the brief moment before the fetch resolves.
+            $.getJSON("/api/lookup/formoptions").done(function (formOptions) {
+                var provinceCodes = formOptions.Province || [];
 
-        $("#provinceSelect").dxSelectBox({
-            items:          provinceItems,
-            displayExpr:    "text",
-            valueExpr:      "value",
-            value:          "MP",
-            width:          "100%",
-            onValueChanged: function (e) {
-                $("#provinceHidden").val(e.value);
-            }
-        });
+                $("#provinceSelect").dxSelectBox({
+                    items:          provinceCodes,
+                    value:          provinceCodes.indexOf("MP") > -1 ? "MP" : (provinceCodes[0] || null),
+                    width:          "100%",
+                    searchEnabled:  true,
+                    onValueChanged: function (e) {
+                        $("#provinceHidden").val(e.value);
+                    }
+                });
+
+                // Keep the hidden field in sync with whatever the default
+                // selection ends up being once the dropdown actually renders.
+                var inst = $("#provinceSelect").dxSelectBox("instance");
+                $("#provinceHidden").val(inst.option("value"));
+            }).fail(function () {
+                DevExpress.ui.notify("Could not load the province list. Please refresh and try again.", "error", 4000);
+            });
 
             // ── File uploader ─────────────────────────────────────────
             // uploadMode:"useForm" means the widget does NOT upload
@@ -222,6 +171,18 @@
                     document.getElementById("uploadForm").submit();
                 }
             }).dxButton("instance");
+
+            // ── Download template button ───────────────────────────────
+            $("#btnDownloadTemplate").dxButton({
+                text: "Download standard template",
+                icon: "download",
+                type: "normal",
+                stylingMode: "outlined",
+                width: "100%",
+                onClick: function () {
+                    window.location.href = "/Import/DownloadTemplate";
+                }
+            });
 
         });
     </script>

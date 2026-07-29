@@ -1,6 +1,8 @@
 ﻿using CrashReport.Data;
 using CrashReport.ViewModels;
+using CrashReport.Models;
 using Microsoft.EntityFrameworkCore;
+using System.ComponentModel;
 
 namespace CrashReport.Services;
 
@@ -17,6 +19,7 @@ namespace CrashReport.Services;
 public class MonthlyMemoDataService
 {
     protected readonly AppDbContext _context;
+    private readonly IStationDistrictLookup _stationDistrict;
 
     protected static readonly (string key, string name, HashSet<string> stations)[] Districts =
     [
@@ -41,7 +44,11 @@ public class MonthlyMemoDataService
             "CAROLINA","LEANDRA","KWAMHLANGA","BRONKHORSTSPRUIT"
         })
     ];
-    public MonthlyMemoDataService(AppDbContext context) => _context = context;
+    public MonthlyMemoDataService(AppDbContext context, IStationDistrictLookup stationDistrict){
+        _context = context;
+        _stationDistrict = stationDistrict;
+    }
+
 
     public async Task<MonthlyMemoViewModel> BuildAsync(MemoReportRequest req)
     {
@@ -139,14 +146,32 @@ public class MonthlyMemoDataService
     }
 
 
-  
-    protected async Task<List<Row>> LoadAsync(DateOnly from, DateOnly to)
+
+    // Full replacement for MonthlyMemoDataService.LoadAsync.
+    //
+    // Changes from the previous version:
+    //   - District now resolved via one bulk query (IStationDistrictLookup.GetAllAsync)
+    //     against the real lkp_saps_stations/lkp_district tables, instead of a
+    //     hardcoded dictionary that was never actually built.
+    //   - Uses the ExtractStation helper (station = CrNo prefix before the dash).
+    //   - VehicleCount for manual rows now comes from Crash.NoOfVehiclesInvolved
+    //     (the officer-declared figure your own form validation treats as
+    //     authoritative) rather than CrashVehicles.Count (however many vehicle
+    //     records happen to be linked — can under-count if not all vehicles
+    //     were captured in detail).
+
+    public async Task<List<Row>> LoadAsync(DateOnly from, DateOnly to)
     {
+        var districtMap = await _stationDistrict.GetAllAsync();
+        string ResolveDistrict(string station) =>
+            districtMap.TryGetValue(StationDistrictLookup.Normalize(station), out var d) ? d : "Unknown";
+
         // ── Source 1: real CR1 form captures ─────────────────────
         var crashes = await _context.Crashes
             .Include(c => c.CrashConditions)
             .Include(c => c.CrashVehicles).ThenInclude(cv => cv.Vehicle)
             .Include(c => c.CrashPeople)
+            .Include(c => c.CrashLocations)
             .Where(c => c.CrashDate >= from && c.CrashDate <= to)
             .ToListAsync();
 
@@ -154,9 +179,12 @@ public class MonthlyMemoDataService
         {
             var people = c.CrashPeople.ToList();
             var cond = c.CrashConditions.FirstOrDefault();
+            var loc = c.CrashLocations.FirstOrDefault();
             var vCats = c.CrashVehicles
                             .Select(v => v.Vehicle?.VehicleCategory ?? "")
                             .ToList();
+
+            var station = ExtractStation(c.CrNo);
 
             int Count(string role, string sev) =>
                 people.Count(p =>
@@ -165,13 +193,25 @@ public class MonthlyMemoDataService
 
             return new Row
             {
+                CrashId = c.CrashId,
                 CrNo = c.CrNo ?? "",
-                Station = ExtractStation(c.CrNo),
+                CasNo = c.CasNo ?? "",
+                ArNo = "",
+                Station = station,
+                District = ResolveDistrict(station),
+                ProvinceCode = c.ProvinceCode ?? "",
+                Location = BuildLocation(loc),
+                Source = "Manual",
                 Date = c.CrashDate,
                 Time = c.CrashTime,
                 Route = c.RoadNumber ?? "",
                 CrashType = cond?.CrashType ?? "",
                 VehicleCats = vCats,
+
+                // Officer-declared count, not linked-record count — see note above.
+                // NoOfVehiclesInvolved is a nullable byte on Crash; default to 0
+                // rather than leaving it null, since Row.VehicleCount is a plain int.
+                VehicleCount = c.NoOfVehiclesInvolved ?? 0,
 
                 Fatalities = people.Count(p => p.SeverityOfInjury == "Fatal"),
                 Serious = people.Count(p => p.SeverityOfInjury == "Serious"),
@@ -206,13 +246,22 @@ public class MonthlyMemoDataService
             .Where(s => !formCrNos.Contains(s.CrNo))
             .Select(s => new Row
             {
+                CrashId = null,
+                SummaryId = s.SummaryId,
                 CrNo = s.CrNo,
+                CasNo = s.CasNo ?? "",
+                ArNo = s.ArNo?? " ",
                 Station = s.Station,
+                District = ResolveDistrict(s.Station),
+                ProvinceCode = "",
+                Location = s.Location ?? "",
+                Source = "Import",
                 Date = s.CrashDate,
                 Time = s.CrashTime,
                 Route = s.Route ?? "",
                 CrashType = s.CrashType ?? "",
                 VehicleCats = MapVehicleCodes(s.VehiclesString),
+                VehicleCount = s.VehicleCount, // already the declared count on this table — no change needed here
 
                 Fatalities = s.Fatalities,
                 Serious = s.Serious,
@@ -236,13 +285,22 @@ public class MonthlyMemoDataService
         return formRows;
     }
 
-    /// <summary>
-    /// Maps the Excel INVOLVED string's vehicle codes ("SED / LDV / M/C")
-    /// onto the same VehicleCategory names used by form-captured vehicles,
-    /// so BuildVehicleCats counts both sources identically. Unrecognised
-    /// codes pass through unchanged (they simply won't match any report
-    /// category — same behaviour as before the split).
-    /// </summary>
+    private static string BuildLocation(CrashLocation? loc)
+    {
+        if (loc == null) return "";
+        var parts = new[] { loc.StreetRoadName, loc.Suburb, loc.CityTown }
+            .Where(p => !string.IsNullOrWhiteSpace(p));
+        return string.Join(", ", parts);
+    }
+
+    private static string ExtractStation(string? crNo)
+    {
+        if (string.IsNullOrWhiteSpace(crNo)) return "";
+        var trimmed = crNo.Trim();
+        var dashIndex = trimmed.IndexOf('-');
+        return dashIndex > 0 ? trimmed.Substring(0, dashIndex).Trim() : trimmed;
+    }
+    
     protected static List<string> MapVehicleCodes(string? involved)
     {
         if (string.IsNullOrWhiteSpace(involved)) return new List<string>();
@@ -424,10 +482,7 @@ public class MonthlyMemoDataService
         return start < end ? h >= start && h < end : h >= start || h < end;
     }
 
-    protected static string ExtractStation(string? crNo)
-        => string.IsNullOrEmpty(crNo) ? "" :
-           crNo.Contains('-') ? crNo.Split('-')[0].Trim() : crNo.Trim();
-
+ 
     protected static string FormatDate(DateOnly d)
     {
         var months = new[] { "","JANUARY","FEBRUARY","MARCH","APRIL","MAY","JUNE",
@@ -444,29 +499,9 @@ public class MonthlyMemoDataService
             : $"{months[from.Month]}–{months[to.Month]} {to.Year}";
     }
 
-    protected class Row
-    {
-        public string CrNo { get; set; } = "";
-        public string Station { get; set; } = "";
-        public DateOnly Date { get; set; }
-        public TimeOnly? Time { get; set; }
-        public string Route { get; set; } = "";
-        public string CrashType { get; set; } = "";
-        public List<string> VehicleCats { get; set; } = new();
-        public int Fatalities { get; set; }
-        public int Serious { get; set; }
-        public int Slight { get; set; }
-        public int FatalDrivers { get; set; }
-        public int FatalPassengers { get; set; }
-        public int FatalPedestrians { get; set; }
-        public int FatalCyclists { get; set; }
-        public int SeriousDrivers { get; set; }
-        public int SeriousPassengers { get; set; }
-        public int SeriousPedestrians { get; set; }
-        public int SeriousCyclists { get; set; }
-        public int SlightDrivers { get; set; }
-        public int SlightPassengers { get; set; }
-        public int SlightPedestrians { get; set; }
-        public int SlightCyclists { get; set; }
-    }
+
+    
+
+
+
 }

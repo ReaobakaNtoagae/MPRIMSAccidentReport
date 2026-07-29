@@ -31,11 +31,14 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
      public DbSet<CrashSummary> CrashSummaries { get; set; }
 
     // ── Lookup DbSets ────────────────────────────────────────
+    public DbSet<LookupDistrict> LookupDistricts { get; set; }
     public DbSet<SapsStation> SapsStations { get; set; }
     public DbSet<LookupLocation> LookupLocations { get; set; }
     public DbSet<LookupRoute> LookupRoutes { get; set; }
     public DbSet<LookupCrashType> LookupCrashTypes { get; set; }
     public DbSet<LookupVehicleType> LookupVehicleTypes { get; set; }
+
+    public DbSet<OptionListItem> OptionListItems { get; set; }
 
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

@@ -74,6 +74,10 @@ public class CrashSummary
     [Column("imported_at")]
     public DateTime ImportedAt { get; set; } = DateTime.UtcNow;
 
+    [Column("ar_no")]
+    [MaxLength(50)]
+    public string? ArNo { get; set; }
+
     // ── Convenience totals (not mapped — computed) ──
     [NotMapped] public int Fatalities => FatalDrivers + FatalPassengers + FatalPedestrians + FatalCyclists;
     [NotMapped] public int Serious => SeriousDrivers + SeriousPassengers + SeriousPedestrians + SeriousCyclists;

@@ -1,13 +1,13 @@
 ﻿@{
     ViewData["Title"] = "Sign in";
-    Layout = null;   // login page has its own layout — no nav, no sidebar
+    Layout = null;   
 }
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Sign in — SAPS Crash Registry</title>
+    <title>-</title>
     <link rel="stylesheet"
           href="https://cdn3.devexpress.com/jslib/25.2.7/css/dx.light.css" />
     <style>
@@ -90,10 +90,7 @@
 <body>
 
     <div class="login-card">
-        <div class="login-brand">
-            <div class="login-brand-title">SAPS Crash Registry</div>
-            <div class="login-brand-sub">Mpumalanga Province Traffic Management Unit</div>
-        </div>
+
         <hr class="login-divider" />
 
         @if (TempData["LoginError"] != null)
@@ -134,7 +131,7 @@
     <script>
         $(function () {
         var emailInst = $("#emailBox").dxTextBox({
-        placeholder: "you@saps.local",
+        placeholder: "you@email.com",
         mode: "email",
         showClearButton: true,
         onValueChanged: function (e) { $("#emailVal").val(e.value); }

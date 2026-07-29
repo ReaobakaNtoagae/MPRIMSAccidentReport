@@ -2,6 +2,8 @@
 using CrashReport.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using static CrashReport.Models.FixedEnum;
+
 
 namespace CrashReport.Controllers;
 
@@ -12,7 +14,19 @@ public class LookupController : ControllerBase
     private readonly AppDbContext _context;
     public LookupController(AppDbContext context) => _context = context;
 
-    
+
+    [HttpGet("districts")]
+    public async Task<IActionResult> Districts()
+    {
+        var names = await _context.LookupDistricts
+            .Where(d => d.IsActive)
+            .OrderBy(d => d.DistrictName)
+            .Select(d => d.DistrictName)
+            .ToListAsync();
+
+        return Ok(names);
+    }
+
 
     [HttpGet("stations")]
     public async Task<IActionResult> SearchStations(string? q = null)
@@ -54,7 +68,7 @@ public class LookupController : ControllerBase
         return Ok(new { id = station.StationId, text = station.StationName });
     }
 
-   
+
 
     [HttpGet("locations")]
     public async Task<IActionResult> SearchLocations(string? q = null)
@@ -90,7 +104,7 @@ public class LookupController : ControllerBase
         return Ok(new { id = loc.LocationId, text = loc.LocationName });
     }
 
-    
+
 
     [HttpGet("routes")]
     public async Task<IActionResult> SearchRoutes(string? q = null)
@@ -167,7 +181,7 @@ public class LookupController : ControllerBase
         return Ok(new { id = ct.CrashTypeId, text = ct.CrashTypeCode });
     }
 
-    
+
 
     [HttpGet("vehicletypes")]
     public async Task<IActionResult> SearchVehicleTypes(string? q = null)
@@ -245,6 +259,33 @@ public class LookupController : ControllerBase
         await _context.SaveChangesAsync();
         return Ok();
     }
+
+    [HttpGet("formoptions")]
+    public async Task<IActionResult> FormOptions()
+    {
+        var items = await _context.OptionListItems
+            .Where(o => o.IsActive)
+            .OrderBy(o => o.ListName)
+            .ThenBy(o => o.DisplayOrder)
+            .ToListAsync();
+
+        var grouped = items
+            .GroupBy(o => o.ListName)
+            .ToDictionary(g => g.Key, g => g.Select(o => o.OptionValue).ToList());
+
+        return Ok(grouped);
+
+    }
+
+    [HttpGet("fixedvalues")]
+    public IActionResult FixedValues()
+    {
+        return Ok(new
+        {
+            InjurySeverity = Enum.GetValues<InjurySeverity>().Select(v => v.Display()).ToList(),
+            PersonRole = Enum.GetValues<PersonRole>().Select(v => v.Display()).ToList()
+        });
+    }
 }
 
 
@@ -252,5 +293,5 @@ public class AddLookupRequest
 {
     public string Text { get; set; } = string.Empty;
     public string? Province { get; set; }
-    public string? Extra { get; set; } 
+    public string? Extra { get; set; }
 }
