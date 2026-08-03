@@ -6,16 +6,7 @@ using System.ComponentModel;
 
 namespace CrashReport.Services;
 
-// ── UPDATED for the core/summary split ────────────────────────
-// LoadAsync now merges two data sources into the same Row shape:
-//   1. crashes graph        — real CR1 form captures (the wizard)
-//   2. crash_summaries      — Excel-imported summary rows
-// deduplicated by CrNo with form captures taking precedence.
-// Because Quarterly and Five-Year data services inherit this method,
-// all reports automatically see the union of both sources.
-//
-// Members remain `protected` (not private) so QuarterlyReportDataService
-// and FiveYearReportDataService can reuse the queries and helpers.
+
 public class MonthlyMemoDataService
 {
     protected readonly AppDbContext _context;
@@ -146,20 +137,6 @@ public class MonthlyMemoDataService
     }
 
 
-
-    // Full replacement for MonthlyMemoDataService.LoadAsync.
-    //
-    // Changes from the previous version:
-    //   - District now resolved via one bulk query (IStationDistrictLookup.GetAllAsync)
-    //     against the real lkp_saps_stations/lkp_district tables, instead of a
-    //     hardcoded dictionary that was never actually built.
-    //   - Uses the ExtractStation helper (station = CrNo prefix before the dash).
-    //   - VehicleCount for manual rows now comes from Crash.NoOfVehiclesInvolved
-    //     (the officer-declared figure your own form validation treats as
-    //     authoritative) rather than CrashVehicles.Count (however many vehicle
-    //     records happen to be linked — can under-count if not all vehicles
-    //     were captured in detail).
-
     public async Task<List<Row>> LoadAsync(DateOnly from, DateOnly to)
     {
         var districtMap = await _stationDistrict.GetAllAsync();
@@ -261,7 +238,7 @@ public class MonthlyMemoDataService
                 Route = s.Route ?? "",
                 CrashType = s.CrashType ?? "",
                 VehicleCats = MapVehicleCodes(s.VehiclesString),
-                VehicleCount = s.VehicleCount, // already the declared count on this table — no change needed here
+                VehicleCount = s.VehicleCount,
 
                 Fatalities = s.Fatalities,
                 Serious = s.Serious,

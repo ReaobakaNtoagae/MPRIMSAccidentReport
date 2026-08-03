@@ -22,6 +22,7 @@ public static class Privileges
     {
         public const string View = "Crashes.View";
         public const string Create = "Crashes.Create";
+        public const string CreateSummary = "Crashes.CreateSummary";
         public const string Edit = "Crashes.Edit";
         public const string Delete = "Crashes.Delete";
     }
@@ -54,6 +55,7 @@ public static class Privileges
     [
         (Crashes.View,      "View crash records",          "Crash Management"),
         (Crashes.Create,    "Create new crash records",    "Crash Management"),
+        (Crashes.CreateSummary, "Quick capture", "Crash Management"),
         (Crashes.Edit,      "Edit existing crash records", "Crash Management"),
         (Crashes.Delete,    "Delete crash records",        "Crash Management"),
         (Import.Excel,      "Import from Excel workbooks", "Data Import"),
@@ -66,27 +68,41 @@ public static class Privileges
         (Admin.Lookups,     "Manage lookup tables",        "Administration"),
     ];
 
-    /// <summary>Default privilege sets assigned during seeding.</summary>
+   
     public static class Defaults
     {
-        public static readonly string[] Administrator =
+    
+        public static readonly string[] SapsOfficer =
         [
-            Crashes.View, Crashes.Create, Crashes.Edit, Crashes.Delete,
-            Import.Excel,
-            Reports.Standby, Reports.Monthly, Reports.FiveYear, Reports.Quarterly,
-            Admin.Users, Admin.Roles, Admin.Lookups
+            Crashes.View, Crashes.Create
         ];
 
-        public static readonly string[] Supervisor =
+        
+        public static readonly string[] CostCentreAdministrator =
+        [
+            Crashes.View, Crashes.CreateSummary, Crashes.Edit
+        ];
+
+        public static readonly string[] RegionalStaff =
+        [
+            Crashes.View, Crashes.Edit, Crashes.CreateSummary
+        ];
+
+
+        public static readonly string[] ProvincialStaff =
         [
             Crashes.View,
+            Import.Excel,
             Reports.Standby, Reports.Monthly, Reports.FiveYear, Reports.Quarterly
         ];
 
-        public static readonly string[] DataCapturer =
+   
+        public static readonly string[] SystemAdministrator =
         [
-            Crashes.View, Crashes.Create, Crashes.Edit,
-            Import.Excel
+            Crashes.View, Crashes.Create, Crashes.CreateSummary, Crashes.Edit, Crashes.Delete,
+            Import.Excel,
+            Reports.Standby, Reports.Monthly, Reports.FiveYear, Reports.Quarterly,
+            Admin.Users, Admin.Roles, Admin.Lookups
         ];
     }
 }

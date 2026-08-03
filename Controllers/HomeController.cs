@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
+using System.Security.Claims;
 
 namespace CrashReport.Controllers;
 
@@ -44,15 +45,71 @@ public class HomeController : Controller
 
         var allTime = await _memoData.LoadAsync(new DateOnly(2020, 1, 1), monthEnd);
         var thisMonth = allTime.Where(r => r.Date >= monthStart && r.Date <= monthEnd).ToList();
-        
-        ViewBag.TotalCrashes = allTime.Count;
-        ViewBag.FatalCount = allTime.Sum(r => r.Fatalities);
-        ViewBag.SeriousCount = allTime.Sum(r => r.Serious);
-        ViewBag.SlightCount = allTime.Sum(r => r.Slight);
+        // Replace the role-detection block in HomeController.Index with this.
+        // Add "using CrashReport.Security;" at the top if not already present.
 
-        ViewBag.ThisMonthCrashes = thisMonth.Count;
-        ViewBag.ThisMonthFatal = thisMonth.Sum(r => r.Fatalities);
-        ViewBag.CurrentMonth = now.ToString("MMMM yyyy");
+        // Replace the role/privilege-detection block in HomeController.Index with this.
+        // Add "using CrashReport.Security;" and "using System.Security.Claims;" at
+        // the top if not already present.
+
+        bool Has(string privilege) => User.HasClaim(Privileges.ClaimType, privilege);
+
+        var canView = Has(Privileges.Crashes.View);
+        var canCreateFull = Has(Privileges.Crashes.Create);
+        var canQuickAdd = Has(Privileges.Crashes.CreateSummary);
+        var canEdit = Has(Privileges.Crashes.Edit);
+        var canDelete = Has(Privileges.Crashes.Delete);
+        var canImport = Has(Privileges.Import.Excel);
+        var canStandby = Has(Privileges.Reports.Standby);
+        var canMonthly = Has(Privileges.Reports.Monthly);
+        var canFiveYear = Has(Privileges.Reports.FiveYear);
+        var canQuarterly = Has(Privileges.Reports.Quarterly);
+        var canAnyReport = canStandby || canMonthly || canFiveYear || canQuarterly;
+        var canAdminister = Has(Privileges.Admin.Users) || Has(Privileges.Admin.Roles) || Has(Privileges.Admin.Lookups);
+
+        ViewBag.CanView = canView;
+        ViewBag.CanCreateFull = canCreateFull;
+        ViewBag.CanQuickAdd = canQuickAdd;
+        ViewBag.CanEdit = canEdit;
+        ViewBag.CanDelete = canDelete;
+        ViewBag.CanImport = canImport;
+        ViewBag.CanStandby = canStandby;
+        ViewBag.CanMonthly = canMonthly;
+        ViewBag.CanFiveYear = canFiveYear;
+        ViewBag.CanQuarterly = canQuarterly;
+        ViewBag.CanAnyReport = canAnyReport;
+        ViewBag.CanAdminister = canAdminister;
+
+        // Role label — display only, drives which dashboard layout/copy renders.
+        // Precedence: System Administrator > Provincial Staff > Regional Staff >
+        // Cost Centre Administrator > SAPS Officer.
+        var roleLabel =
+            User.IsInRole("System Administrator") ? "System Administrator" :
+            User.IsInRole("Provincial Staff") ? "Provincial Staff" :
+            User.IsInRole("Regional Staff") ? "Regional Staff" :
+            User.IsInRole("Cost Centre Administrator") ? "Cost Centre Administrator" :
+            "SAPS Officer";
+        ViewBag.RoleLabel = roleLabel;
+
+        // Scope claims (District/Station), added by AppUserClaimsPrincipalFactory.
+        // These are LABELS ONLY right now — nothing in the actual data queries
+        // filters by them yet. Shown on the dashboard so the intended scope is
+        // visible ahead of the real enforcement, and the "not yet enforced"
+        // message is explicit rather than letting the UI imply a filtering that
+        // isn't real.
+        ViewBag.UserDistrict = User.FindFirst("District")?.Value;
+        ViewBag.UserStation = User.FindFirst("Station")?.Value;
+
+        // Dashboard shape by role, not just by privilege combination — System
+        // Administrator and Provincial Staff both get "analytics" (unrestricted,
+        // all districts). Regional Staff gets "review", scoped in intent to their
+        // district. Cost Centre Administrator and SAPS Officer both get "capture",
+        // but Cost Centre Administrator also has Edit — see the dashboard view for
+        // how that's reflected in which panels render.
+        ViewBag.DashboardMode =
+            (roleLabel == "System Administrator" || roleLabel == "Provincial Staff") ? "analytics" :
+            roleLabel == "Regional Staff" ? "review" :
+            "capture"; // Cost Centre Administrator, SAPS Officer
 
         return View();
     }

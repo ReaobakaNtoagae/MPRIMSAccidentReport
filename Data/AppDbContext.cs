@@ -27,8 +27,10 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<CrashSketch> CrashSketches { get; set; }
     public DbSet<CrashDemographicRecord> CrashDemographics { get; set; }
 
+    public DbSet<CrashFatality> CrashFatalities { get; set; }
 
-     public DbSet<CrashSummary> CrashSummaries { get; set; }
+
+    public DbSet<CrashSummary> CrashSummaries { get; set; }
 
     // ── Lookup DbSets ────────────────────────────────────────
     public DbSet<LookupDistrict> LookupDistricts { get; set; }

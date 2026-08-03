@@ -19,7 +19,7 @@ public class CrashesController : Controller
     }
 
 
-    [Authorize(Policy = Privileges.Crashes.View)]
+
     public IActionResult Index() => View();
 
     
@@ -250,7 +250,7 @@ public class CrashesController : Controller
 
 
 
-   
+    [HttpGet]
     public async Task<IActionResult> Edit(int? id)
     {
         if (id == null) return NotFound();
@@ -263,6 +263,7 @@ public class CrashesController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [Authorize(Policy = Privileges.Crashes.Edit)]
     public async Task<IActionResult> Edit(int id,
         [Bind("CrashId,CasNo,CrNo,IncidentReportNo,CapturingNumber,CrashDate,CrashTime," +
               "NoOfAppendices,NoOfVehiclesInvolved,ProvinceCode,SpeedLimitKmh," +
@@ -288,6 +289,7 @@ public class CrashesController : Controller
 
 
 
+    [HttpGet]
     public async Task<IActionResult> Delete(int? id)
     {
         if (id == null) return NotFound();
@@ -301,6 +303,7 @@ public class CrashesController : Controller
 
     [HttpPost, ActionName("Delete")]
     [ValidateAntiForgeryToken]
+    [Authorize(Policy = Privileges.Crashes.Delete)]
     public async Task<IActionResult> DeleteConfirmed(int id)
     {
         var crash = await _context.Crashes.FindAsync(id);

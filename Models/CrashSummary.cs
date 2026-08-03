@@ -57,6 +57,18 @@ public class CrashSummary
     [Column("fatal_male")] public byte FatalMale { get; set; }
     [Column("fatal_female")] public byte FatalFemale { get; set; }
 
+    [Column("fatal_age_0_7")] public byte FatalAge0to7 { get; set; }
+    [Column("fatal_age_8_12")] public byte FatalAge8to12 { get; set; }
+    [Column("fatal_age_13_18")] public byte FatalAge13to18 { get; set; }
+    [Column("fatal_age_19_35")] public byte FatalAge19to35 { get; set; }
+    [Column("fatal_age_36_plus")] public byte FatalAge36Plus { get; set; }
+
+    [Column("fatal_african")] public byte FatalAfrican { get; set; }
+    [Column("fatal_coloured")] public byte FatalColoured { get; set; }
+    [Column("fatal_indian")] public byte FatalIndian { get; set; }
+    [Column("fatal_white")] public byte FatalWhite { get; set; }
+    [Column("fatal_other_race")] public byte FatalOtherRace { get; set; }
+
     [Column("serious_drivers")] public byte SeriousDrivers { get; set; }
     [Column("serious_passengers")] public byte SeriousPassengers { get; set; }
     [Column("serious_pedestrians")] public byte SeriousPedestrians { get; set; }
@@ -83,4 +95,3 @@ public class CrashSummary
     [NotMapped] public int Serious => SeriousDrivers + SeriousPassengers + SeriousPedestrians + SeriousCyclists;
     [NotMapped] public int Slight => SlightDrivers + SlightPassengers + SlightPedestrians + SlightCyclists;
 }
-

@@ -89,8 +89,7 @@ public class RolesController : Controller
             : new { success = false, message = string.Join(" ", result.Errors.Select(e => e.Description)) });
     }
 
-    // POST: /Roles/SetPrivileges
-    // Replaces the full privilege set for a role with the posted list.
+
     [HttpPost]
     [ValidateAntiForgeryToken]
     [Authorize(Policy = Privileges.Admin.Roles)]
@@ -110,9 +109,11 @@ public class RolesController : Controller
         foreach (var priv in privileges ?? [])
             await _roles.AddClaimAsync(role, new Claim(Privileges.ClaimType, priv));
 
-        return Json(new { success = true, message = $"Privileges for '{role.Name}' updated." });
+        return Json(new { success = true, message = $"Privileges for '{role.Name}' updated. Changes take effect next time affected users sign in." });
     }
 
+
     private static bool IsCore(string? name) =>
-        name is "Administrator" or "Supervisor" or "DataCapturer";
+        name is "System Administrator" or "Provincial Staff" or "Regional Staff"
+             or "Cost Centre Administrator" or "SAPS Officer";
 }

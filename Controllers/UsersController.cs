@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CrashReport.Controllers;
 
-[Authorize(Roles = "Administrator")]
+[Authorize(Policy = Privileges.Admin.Users)]
 public class UsersController : Controller
 {
     private readonly UserManager<ApplicationUser> _users;

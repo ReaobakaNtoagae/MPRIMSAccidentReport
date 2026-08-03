@@ -1,262 +1,674 @@
 ﻿@{
     ViewData["Title"] = "Dashboard";
+    var mode = ViewBag.DashboardMode as string ?? "none";
+    var roleLabel = ViewBag.RoleLabel as string ?? "";
+    var userDistrict = ViewBag.UserDistrict as string;
+    var userStation = ViewBag.UserStation as string;
+    bool canView = ViewBag.CanView;
+    bool canCreateFull = ViewBag.CanCreateFull;
+    bool canQuickAdd = ViewBag.CanQuickAdd;
+    bool canEdit = ViewBag.CanEdit;
+    bool canImport = ViewBag.CanImport;
+    bool canStandby = ViewBag.CanStandby;
+    bool canMonthly = ViewBag.CanMonthly;
+    bool canFiveYear = ViewBag.CanFiveYear;
+    bool canQuarterly = ViewBag.CanQuarterly;
+    bool canAnyReport = ViewBag.CanAnyReport;
+    bool canAdminister = ViewBag.CanAdminister;
 }
 
-<div style="position:relative;">
+@if (TempData["SuccessMessage"] != null)
+{
+    <div id="successMsg" data-message="@TempData["SuccessMessage"]"></div>
+}
+@if (TempData["ErrorMessage"] != null)
+{
+    <div id="errorMsg" data-message="@TempData["ErrorMessage"]"></div>
+}
 
-    <div style="position:absolute; inset:0; background:rgba(80,80,80,0.35); z-index:1000;
-        display:flex; align-items:center; justify-content:center; border-radius:10px;">
-        <div style="background:#fff; border-radius:10px; padding:24px 32px; text-align:center; box-shadow:0 4px 20px rgba(0,0,0,.15);">
-            <i class="ti ti-tools" style="font-size:28px; color:#5f5e5a;" aria-hidden="true"></i>
-            <p style="font-size:.95rem; font-weight:600; color:#374151; margin:12px 0 4px;">Dashboard under implementation</p>
-            <p style="font-size:.8rem; color:#9ca3af; margin:0;">This page isn't ready for use yet.</p>
-        </div>
-    </div>
-
-    @if (TempData["SuccessMessage"] != null)
-    {
-        <div id="successMsg" data-message="@TempData["SuccessMessage"]"></div>
-    }
-    @if (TempData["ErrorMessage"] != null)
-    {
-        <div id="errorMsg" data-message="@TempData["ErrorMessage"]"></div>
+<style>
+    .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+        margin-bottom: 20px;
     }
 
-    <style>
-            .kpi-grid {
-                display: grid;
-                grid-template-columns: repeat(4, 1fr);
-                gap: 16px;
-                margin-bottom: 20px;
+    .kpi-card {
+        border-radius: 12px;
+        padding: 18px 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,.07);
+        border-left: 5px solid transparent;
+    }
+
+        .kpi-card .num {
+            font-size: 1.9rem;
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        .kpi-card .label {
+            font-size: .78rem;
+            color: #666;
+            margin-top: 4px;
+        }
+
+        .kpi-card .sub {
+            font-size: .7rem;
+            color: #999;
+            margin-top: 6px;
+        }
+
+    .qa-section {
+        margin-bottom: 20px;
+    }
+
+    .qa-section-label {
+        font-size: .68rem;
+        text-transform: uppercase;
+        letter-spacing: .8px;
+        color: #888;
+        font-weight: 700;
+        margin-bottom: 8px;
+    }
+
+    .qa-row {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        align-items: flex-start;
+    }
+
+        .qa-row .dx-button {
+            width: 180px;
+        }
+
+        .qa-row.horizontal {
+            flex-direction: row;
+            flex-wrap: wrap;
+        }
+
+            .qa-row.horizontal .dx-button {
+                width: auto;
             }
 
-            .kpi-card {
-                border-radius: 12px;
-                padding: 18px 20px;
-                box-shadow: 0 2px 8px rgba(0,0,0,.07);
-                border-left: 5px solid transparent;
+    .panel-row-actions {
+        display: grid;
+        grid-template-columns: 1fr 1.6fr;
+        gap: 16px;
+        margin-bottom: 20px;
+    }
+
+    .panel-row {
+        display: grid;
+        grid-template-columns: 1.4fr 1fr;
+        gap: 16px;
+        margin-bottom: 20px;
+    }
+
+    .panel {
+        background: #fff;
+        border-radius: 10px;
+        border: 1px solid #c8e6c9;
+        box-shadow: 0 2px 8px rgba(0,0,0,.06);
+        overflow: hidden;
+        margin-bottom: 20px;
+    }
+
+    .panel-head {
+        padding: 14px 20px;
+        border-bottom: 2px solid #e8f5e9;
+        font-size: .78rem;
+        text-transform: uppercase;
+        letter-spacing: .7px;
+        color: #2e7d32;
+        font-weight: 700;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .panel-body {
+        padding: 16px 20px;
+    }
+
+    /* ── Recent activity — compact table, not stacked rows ─────────── */
+    .activity-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: .78rem;
+    }
+
+        .activity-table th {
+            text-align: left;
+            font-size: .65rem;
+            text-transform: uppercase;
+            letter-spacing: .4px;
+            color: #9ca3af;
+            font-weight: 600;
+            padding: 4px 8px;
+            border-bottom: 1px solid #f0f4f0;
+        }
+
+        .activity-table td {
+            padding: 7px 8px;
+            border-bottom: 1px solid #f6f8f6;
+            vertical-align: middle;
+        }
+
+        .activity-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .activity-table tr.clickable {
+            cursor: pointer;
+        }
+
+            .activity-table tr.clickable:hover td {
+                background: #f4fbf5;
             }
 
-                .kpi-card .num {
-                    font-size: 1.9rem;
-                    font-weight: 800;
-                    line-height: 1;
-                }
+        .activity-table .cr-no {
+            font-weight: 700;
+            color: #1a1a1a;
+        }
 
-                .kpi-card .label {
-                    font-size: .78rem;
-                    color: #666;
-                    margin-top: 4px;
-                }
+        .activity-table .where {
+            color: #777;
+            font-size: .74rem;
+        }
 
-                .kpi-card .sub {
-                    font-size: .7rem;
-                    color: #999;
-                    margin-top: 6px;
-                }
+    .src-badge {
+        font-size: .62rem;
+        padding: 2px 6px;
+        border-radius: 5px;
+        white-space: nowrap;
+    }
 
-            #quickActions {
-                display: flex;
-                gap: 10px;
-                margin-bottom: 20px;
+    .src-manual {
+        background: #e8f5e9;
+        color: #2e7d32;
+    }
+
+    .src-import {
+        background: #f5f5f5;
+        color: #9e9e9e;
+    }
+
+    .sev-badge {
+        font-size: .62rem;
+        padding: 2px 6px;
+        border-radius: 8px;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    .sev-fatal {
+        background: #b71c1c;
+        color: #fff;
+    }
+
+    .sev-serious {
+        background: #e65100;
+        color: #fff;
+    }
+
+    .sev-none {
+        color: #c0c0c0;
+        font-size: .72rem;
+    }
+
+    .view-all-link {
+        font-size: .78rem;
+        color: #2e7d32;
+        font-weight: 600;
+        text-decoration: none;
+    }
+
+    .capture-hero {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        margin-bottom: 20px;
+    }
+
+    .capture-tile {
+        background: #fff;
+        border-radius: 12px;
+        border: 1px solid #c8e6c9;
+        box-shadow: 0 2px 8px rgba(0,0,0,.06);
+        padding: 28px 24px;
+        text-align: center;
+        cursor: pointer;
+        transition: box-shadow .15s;
+    }
+
+        .capture-tile:hover {
+            box-shadow: 0 4px 16px rgba(0,0,0,.1);
+        }
+
+        .capture-tile .icon {
+            font-size: 32px;
+            color: #2e7d32;
+            margin-bottom: 10px;
+        }
+
+        .capture-tile .title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 4px;
+        }
+
+        .capture-tile .desc {
+            font-size: .78rem;
+            color: #888;
+        }
+
+    .scope-banner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: #fff;
+        border: 1px solid #c8e6c9;
+        border-radius: 10px;
+        padding: 10px 18px;
+        margin-bottom: 20px;
+        font-size: .82rem;
+    }
+
+        .scope-banner .role-tag {
+            font-size: .68rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            color: #2e7d32;
+            background: #e8f5e9;
+            padding: 4px 10px;
+            border-radius: 6px;
+        }
+
+        .scope-banner .scope-value {
+            color: #444;
+        }
+
+        .scope-banner .not-enforced {
+            font-size: .72rem;
+            color: #a15c00;
+            background: #fff3e0;
+            padding: 3px 9px;
+            border-radius: 6px;
+        }
+
+    .review-note {
+        background: #e6f1fb;
+        border: 1px solid #b5d4f4;
+        border-radius: 8px;
+        padding: 10px 14px;
+        font-size: .8rem;
+        color: #0c447c;
+        margin-bottom: 20px;
+    }
+</style>
+
+<!-- Scope banner — every role's intended data scope, honestly labeled as
+     not-yet-enforced where that's true. -->
+<div class="scope-banner">
+    <div>
+        <span class="role-tag">@roleLabel</span>
+        <span class="scope-value" style="margin-left:10px;">
+            @if (mode == "analytics")
+            {
+                <text>All districts &middot; province-wide</text>
             }
-    </style>
-
-    <div class="kpi-grid">
-        <div class="kpi-card" style="background:#e8f5e9;border-left-color:#2e7d32;">
-            <div class="num" style="color:#2e7d32;">@ViewBag.TotalCrashes</div>
-            <div class="label">Total crash reports</div>
-            <div class="sub">@ViewBag.ThisMonthCrashes new in @ViewBag.CurrentMonth</div>
-        </div>
-        <div class="kpi-card" style="background:#ffebee;border-left-color:#b71c1c;">
-            <div class="num" style="color:#b71c1c;">@ViewBag.FatalCount</div>
-            <div class="label">Fatal injuries (all time)</div>
-            <div class="sub">@ViewBag.ThisMonthFatal this month</div>
-        </div>
-        <div class="kpi-card" style="background:#fff3e0;border-left-color:#e65100;">
-            <div class="num" style="color:#e65100;">@ViewBag.SeriousCount</div>
-            <div class="label">Serious injuries (all time)</div>
-        </div>
-        <div class="kpi-card" style="background:#e3f2fd;border-left-color:#0277bd;">
-            <div class="num" style="color:#0277bd;">@ViewBag.SlightCount</div>
-            <div class="label">Slight injuries (all time)</div>
-        </div>
+            else if (roleLabel == "Regional Staff")
+            {
+                <text>Your region: @(userDistrict ?? "not set")</text>
+            }
+            else if (roleLabel == "Cost Centre Administrator")
+            {
+                <text>Stations near: @(userStation ?? "not set")</text>
+            }
+            else
+            {
+                <text>Your station: @(userStation ?? "not set")</text>
+            }
+        </span>
     </div>
-
-    <div id="quickActions"></div>
-
-    <div style="background:#fff;border-radius:10px;border:1px solid #c8e6c9;
-        box-shadow:0 2px 8px rgba(0,0,0,.06);overflow:hidden;">
-        <div style="padding:14px 20px;border-bottom:2px solid #e8f5e9;
-            font-size:.78rem;text-transform:uppercase;letter-spacing:.7px;
-            color:#2e7d32;font-weight:700;">
-            Crash reports
-            <span style="float:right;font-size:.68rem;text-transform:none;letter-spacing:0;color:#9ca3af;font-weight:400;">
-                Includes manually captured and imported records
-            </span>
-        </div>
-        <div id="crashHistoryGrid"></div>
-    </div>
-
-    <form id="deleteForm" method="post" style="display:none;">
-        @Html.AntiForgeryToken()
-    </form>
-
+    @if (mode != "analytics")
+    {
+        <span class="not-enforced">Scope shown for reference — not yet enforced on data</span>
+    }
 </div>
 
+<div class="kpi-grid">
+    <div class="kpi-card" style="background:#e8f5e9;border-left-color:#2e7d32;">
+        <div class="num" style="color:#2e7d32;">@ViewBag.TotalCrashes</div>
+        <div class="label">Total crash reports</div>
+        <div class="sub">@ViewBag.ThisMonthCrashes new in @ViewBag.CurrentMonth</div>
+    </div>
+    <div class="kpi-card" style="background:#ffebee;border-left-color:#b71c1c;">
+        <div class="num" style="color:#b71c1c;">@ViewBag.FatalCount</div>
+        <div class="label">Fatal injuries (all time)</div>
+        <div class="sub">@ViewBag.ThisMonthFatal this month</div>
+    </div>
+    <div class="kpi-card" style="background:#fff3e0;border-left-color:#e65100;">
+        <div class="num" style="color:#e65100;">@ViewBag.SeriousCount</div>
+        <div class="label">Serious injuries (all time)</div>
+    </div>
+    <div class="kpi-card" style="background:#e3f2fd;border-left-color:#0277bd;">
+        <div class="num" style="color:#0277bd;">@ViewBag.SlightCount</div>
+        <div class="label">Slight injuries (all time)</div>
+    </div>
+</div>
+
+@if (mode == "analytics")
+{
+    <!-- Charts sit directly under the KPI cards now, before quick actions
+         or recent activity — the most important glance-value content
+         comes first. -->
+    <div class="panel-row">
+        <div class="panel" style="margin-bottom:0;">
+            <div class="panel-head">Crashes by district</div>
+            <div class="panel-body">
+                <div style="position:relative; height:220px;"><canvas id="districtChart"></canvas></div>
+            </div>
+        </div>
+        <div class="panel" style="margin-bottom:0;">
+            <div class="panel-head">Severity breakdown</div>
+            <div class="panel-body">
+                <div style="position:relative; height:220px;"><canvas id="severityChart"></canvas></div>
+            </div>
+        </div>
+    </div>
+    <div class="panel-row-actions">
+        <div class="panel" style="margin-bottom:0;">
+            <div class="panel-head">Quick actions</div>
+            <div class="panel-body">
+                <div class="qa-row" id="quickActionsAll"></div>
+            </div>
+        </div>
+        <div class="panel" style="margin-bottom:0;">
+            <div class="panel-head">
+                Recent activity
+                @if (canView)
+                {
+                    <a href="/Crashes" class="view-all-link">View all crash reports →</a>
+                }
+            </div>
+            <div class="panel-body" id="recentActivityBody">
+                <div style="color:#999; font-size:.8rem;">Loading…</div>
+            </div>
+        </div>
+    </div>
+}
+@if (mode != "analytics")
+{
+    if (mode == "capture")
+    {
+        <!-- ══════════ Capture: SAPS Officer or Cost Centre Administrator.
+             Tiles are strictly per-privilege — SAPS Officer never sees Quick
+             add (no CreateSummary), Cost Centre Administrator never sees
+             New CR1 (no Create). ══════════ -->
+        <div class="capture-hero">
+            @if (canCreateFull)
+            {
+                <div class="capture-tile" onclick="window.location.href='/Home/Create'">
+                    <div class="icon">📝</div>
+                    <div class="title">New CR1 report</div>
+                    <div class="desc">Full crash report form</div>
+                </div>
+            }
+            @if (canQuickAdd)
+            {
+                <div class="capture-tile" onclick="window.location.href='/Crashes/CreateSummary'">
+                    <div class="icon">⚡</div>
+                    <div class="title">Quick add</div>
+                    <div class="desc">Fast capture from a completed form</div>
+                </div>
+            }
+        </div>
+
+        @if (canImport)
+        {
+            <div class="panel">
+                <div class="panel-head">Import</div>
+                <div class="panel-body">
+                    <div class="qa-row horizontal" id="quickActionsImport"></div>
+                </div>
+            </div>
+        }
+
+        <div class="panel">
+            <div class="panel-head">
+                @(roleLabel == "Cost Centre Administrator" ? "Recent activity — stations near you" : "Recent activity — your station")
+                @if (canView)
+                {
+                    <a href="/Crashes" class="view-all-link">View all crash reports →</a>
+                }
+            </div>
+            <div class="panel-body" id="recentActivityBody">
+                <div style="color:#999; font-size:.8rem;">Loading…</div>
+            </div>
+        </div>
+    }
+    else if (mode == "review")
+    {
+        <!-- ══════════ Review: Regional Staff. View/Edit, plus Quick Add
+             (added per the explicit per-role spec — needs Crashes.
+             CreateSummary in the privilege model to actually work, not
+             just display). No New CR1/full-report generation. ══════════ -->
+        @if (canQuickAdd)
+        {
+            <div class="capture-hero" style="grid-template-columns: 1fr;">
+                <div class="capture-tile" onclick="window.location.href='/Crashes/CreateSummary'">
+                    <div class="icon">⚡</div>
+                    <div class="title">Quick add</div>
+                    <div class="desc">Fast capture from a completed form</div>
+                </div>
+            </div>
+        }
+
+        <div class="review-note">
+            Showing recent crash records for review across your region. District-level
+            filtering isn't implemented yet — this list currently covers all districts,
+            not just @(userDistrict ?? "yours").
+        </div>
+
+        <div class="panel">
+            <div class="panel-head">
+                Records to review
+                @if (canView)
+                {
+                    <a href="/Crashes" class="view-all-link">Open Crash Reports →</a>
+                }
+            </div>
+            <div class="panel-body" id="recentActivityBody">
+                <div style="color:#999; font-size:.8rem;">Loading…</div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="panel">
+            <div class="panel-body">
+                <div style="color:#999; font-size:.85rem;">
+                    Your account doesn't have any dashboard-relevant privileges assigned yet.
+                    Contact a System Administrator if this seems wrong.
+                </div>
+            </div>
+        </div>
+    }
+}
+
+<form id="deleteForm" method="post" style="display:none;">
+    @Html.AntiForgeryToken()
+</form>
+
 @section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
     <script>
         $(function () {
 
-            var successMsg = $("#successMsg").data("message");
-            var errorMsg   = $("#errorMsg").data("message");
-            if (successMsg) DevExpress.ui.notify(successMsg, "success", 4000);
-            if (errorMsg)   DevExpress.ui.notify(errorMsg,   "error",   5000);
+        var mode = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(mode));
+        var roleLabel = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(roleLabel));
+        var canView       = @Html.Raw(canView.ToString().ToLower());
+        var canCreateFull = @Html.Raw(canCreateFull.ToString().ToLower());
+        var canQuickAdd   = @Html.Raw(canQuickAdd.ToString().ToLower());
+        var canEdit       = @Html.Raw(canEdit.ToString().ToLower());
+        var canImport     = @Html.Raw(canImport.ToString().ToLower());
+        var canStandby    = @Html.Raw(canStandby.ToString().ToLower());
+        var canMonthly    = @Html.Raw(canMonthly.ToString().ToLower());
+        var canFiveYear   = @Html.Raw(canFiveYear.ToString().ToLower());
+        var canQuarterly  = @Html.Raw(canQuarterly.ToString().ToLower());
+        var canAdminister = @Html.Raw(canAdminister.ToString().ToLower());
 
-            [
-                { text: "New CR1 report",  type: "default", icon: "plus",   url: "/Home/Create" },
-                { text: "Search crashes",  type: "normal",  icon: "find",   url: "/Crashes"      },
-                { text: "Monthly report",  type: "normal",  icon: "chart",  url: "/Report"       },
-                { text: "Import Excel",    type: "normal",  icon: "upload", url: "/Import"       }
-            ].forEach(function (a) {
-                $("<div>").appendTo("#quickActions").dxButton({
-                    text: a.text, type: a.type, icon: a.icon,
-                    onClick: function () { window.location.href = a.url; }
-                });
-            });
+        var successMsg = $("#successMsg").data("message");
+        var errorMsg   = $("#errorMsg").data("message");
+        if (successMsg) DevExpress.ui.notify(successMsg, "success", 4000);
+        if (errorMsg)   DevExpress.ui.notify(errorMsg,   "error",   5000);
 
-            // CustomStore against /Crashes/Grid, not a bare dataSource string.
-            // GetAll sorts by Date desc + Take(200) — fine for a small "recent
-            // activity" glance, but if manual-entry volume is high, that cap
-            // fills up with recent manual rows before any imported rows (often
-            // older, added in batches) ever get a look-in. Grid paginates
-            // properly instead, so both sources are reliably reachable here.
-            var crashStore = new DevExpress.data.CustomStore({
-                key: "RowKey",
-                load: function (loadOptions) {
-                    var page = Math.floor((loadOptions.skip || 0) / (loadOptions.take || 15)) + 1;
-                    var params = {
-                        page: page,
-                        pageSize: loadOptions.take || 15,
-                        sortBy: (loadOptions.sort && loadOptions.sort[0]) ? loadOptions.sort[0].selector : "Date",
-                        sortDesc: (loadOptions.sort && loadOptions.sort[0]) ? !!loadOptions.sort[0].desc : true
-                    };
-                    return $.getJSON("/Crashes/Grid", params).then(function (result) {
-                        var rows = result.rows.map(function (r) {
-                            r.RowKey = r.Source === "Import" ? "I-" + r.SummaryId : "M-" + r.CrashId;
-                            return r;
-                        });
-                        return { data: rows, totalCount: result.total };
-                    });
-                }
-            });
+        function addButtons(containerId, items) {
+        items.forEach(function (a) {
+        $("<div>").appendTo(containerId).dxButton({
+        text: a.text, type: a.type, icon: a.icon,
+        onClick: function () { window.location.href = a.url; }
+        });
+        });
+        }
 
-            $("#crashHistoryGrid").dxDataGrid({
-                dataSource: { store: crashStore },
-                remoteOperations: { paging: true, sorting: true },
-                columns: [
-                    { dataField: "CrNo",     caption: "CR No.",   width: 120 },
-                    {
-                        dataField: "Date",   caption: "Date",
-                        dataType: "date",    format: "dd MMM yyyy", width: 130
-                    },
-                    { dataField: "District", caption: "District", width: 140 },
-                    { dataField: "Station",  caption: "Station",  width: 130 },
-                    { dataField: "Route",    caption: "Route",    width: 90  },
-                    { dataField: "CrashType", caption: "Crash type", width: 130 },
-                    { dataField: "VehicleCount", caption: "Vehicles", width: 80, alignment: "center" },
-                    {
-                        caption: "Injuries", width: 200, alignment: "center",
-                        allowSorting: false,
-                        cellTemplate: function (container, options) {
-                            var parts = [];
-                            if (options.data.Fatalities > 0)
-                                parts.push('<span style="background:#b71c1c;color:#fff;' +
-                                    'border-radius:10px;padding:1px 9px;font-size:.72rem;' +
-                                    'font-weight:700;margin-right:3px">' +
-                                    options.data.Fatalities + ' fatal</span>');
-                            if (options.data.Serious > 0)
-                                parts.push('<span style="background:#e65100;color:#fff;' +
-                                    'border-radius:10px;padding:1px 9px;font-size:.72rem;' +
-                                    'margin-right:3px">' +
-                                    options.data.Serious + ' serious</span>');
-                            container.html(parts.length ? parts.join("") :
-                                '<span style="color:#bbb;font-size:.75rem">—</span>');
-                        }
-                    },
-                    {
-                        dataField: "Source", caption: "Source", width: 90, alignment: "center",
-                        cellTemplate: function (container, options) {
-                            var isImport = options.value === "Import";
-                            container.html(
-                                '<span style="font-size:.68rem;padding:2px 8px;border-radius:6px;' +
-                                (isImport
-                                    ? 'background:#f5f5f5;color:#9e9e9e;'
-                                    : 'background:#e8f5e9;color:#2e7d32;') +
-                                '">' + options.value + '</span>'
-                            );
-                        }
-                    },
-                    {
-                        caption: "Actions", width: 145, alignment: "center",
-                        allowSorting: false, allowFiltering: false,
-                        cellTemplate: function (container, options) {
-                            var data = options.data;
-                            var isImport = data.Source === "Import";
-                            var id = isImport ? data.SummaryId : data.CrashId;
-                            var crNo = data.CrNo || ("#" + (id || ""));
+        if (mode === "analytics") {
+        // Every button here is gated on its own privilege flag —
+        // nothing is pushed unconditionally, including "Search
+        // crashes" (requires canView) which previously always
+        // appeared regardless of privilege.
+        // Quick Actions content is now an exact, explicit list per
+        // role — not "whatever the privilege flags happen to allow."
+        // System Administrator: management only. Provincial Staff:
+        // reports + import only. Neither shows capture buttons even
+        // though System Administrator technically holds those
+        // privileges too — this is a deliberate curation choice for
+        // this panel, not a privilege restriction (the sidebar nav
+        // still reflects full privileges separately).
+        var allButtons = [];
+        if (roleLabel === "System Administrator") {
+        allButtons = [
+        { text: "Manage users",   type: "default", icon: "user",  url: "/Users" },
+        { text: "Manage roles",   type: "normal",  icon: "key",   url: "/Roles" },
+        { text: "Manage lookups", type: "normal",  icon: "align", url: "/Lookups" }
+        ];
+        } else if (roleLabel === "Provincial Staff") {
+        allButtons = [
+        { text: "Weekly standby",   type: "default", icon: "clock", url: "/StandbyReport" },
+        { text: "Monthly memo",     type: "normal",  icon: "chart", url: "/MemoReport" },
+        { text: "Quarterly report", type: "normal",  icon: "chart", url: "/QuarterlyReport" },
+        { text: "Five year report", type: "normal",  icon: "chart", url: "/FiveYearReport" },
+        { text: "Import Excel",     type: "normal",  icon: "upload", url: "/Import" }
+        ];
+        }
+        addButtons("#quickActionsAll", allButtons);
 
-                            if (!id) {
-                                container.html('<span style="color:#bbb;font-size:.75rem">—</span>');
-                                return;
-                            }
+        $.getJSON("/Crashes/Grid", { pageSize: 5000, sortBy: "Date", sortDesc: true }).done(function (result) {
+        var rows = result.rows || [];
 
-                            var editUrl   = isImport ? "/Crashes/EditSummary/" + id   : "/Home/Edit/" + id;
-                            var deleteUrl = isImport ? "/Crashes/DeleteSummary/" + id : "/Home/Delete/" + id;
+        var byDistrict = {};
+        var bySeverity = { Fatal: 0, Serious: 0, Minor: 0 };
+        rows.forEach(function (r) {
+        var d = r.District || "Unknown";
+        byDistrict[d] = (byDistrict[d] || 0) + 1;
+        if (r.Fatalities > 0) bySeverity.Fatal++;
+        else if (r.Serious > 0) bySeverity.Serious++;
+        else bySeverity.Minor++;
+        });
 
-                            $("<div>").css({ display:"flex", gap:"5px", justifyContent:"center" })
-                                .appendTo(container)
-                                .append(
-                                    $("<div>").dxButton({
-                                        icon:"edit", hint: isImport ? "Edit imported record" : "Edit",
-                                        type:"normal", stylingMode:"outlined",
-                                        onClick: function() { window.location.href = editUrl; }
-                                    }),
-                                    $("<div>").dxButton({
-                                        icon:"trash", hint: isImport ? "Delete imported record" : "Delete",
-                                        type:"danger", stylingMode:"outlined",
-                                        onClick: function() {
-                                            var warning = isImport
-                                                ? "Permanently delete imported record <b>" + crNo + "</b>?"
-                                                : "Permanently delete crash report <b>" + crNo + "</b>?<br/>" +
-                                                  "<small style='color:#888'>All linked records will also be removed.</small>";
-                                            DevExpress.ui.dialog.confirm(warning, "Confirm Delete").then(function(confirmed) {
-                                                if (!confirmed) return;
-                                                $("#deleteForm").attr("action", deleteUrl);
-                                                $("#deleteForm").submit();
-                                            });
-                                        }
-                                    })
-                                );
-                        }
-                    }
-                ],
-                paging:               { pageSize: 15 },
-                pager: {
-                    showPageSizeSelector: true,
-                    allowedPageSizes: [10, 15, 25, 50],
-                    showInfo: true,
-                    infoText: "{0}–{1} of {2} reports"
-                },
-                sorting:               { mode: "multiple" },
-                showBorders:           false,
-                rowAlternationEnabled: true,
-                hoverStateEnabled:     true,
-                onRowPrepared: function (e) {
-                    if (e.rowType === "data" && e.data.Fatalities > 0)
-                        e.rowElement.css("border-left", "3px solid #b71c1c");
-                }
-            });
+        var districtLabels = Object.keys(byDistrict);
+        var districtValues = districtLabels.map(function (d) { return byDistrict[d]; });
+
+        new Chart(document.getElementById('districtChart'), {
+        type: 'bar',
+        data: { labels: districtLabels, datasets: [{ data: districtValues, backgroundColor: '#2a78d6', borderRadius: 4, maxBarThickness: 32 }] },
+        options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, grid: { color: '#e1e0d9' } }, x: { grid: { display: false } } }
+        }
+        });
+
+        new Chart(document.getElementById('severityChart'), {
+        type: 'doughnut',
+        data: {
+        labels: ['Fatal', 'Serious', 'Minor'],
+        datasets: [{ data: [bySeverity.Fatal, bySeverity.Serious, bySeverity.Minor], backgroundColor: ['#b71c1c', '#e65100', '#2a78d6'] }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } } }
+        });
+
+        renderRecentActivity(rows.slice(0, 8), false);
+        }).fail(function () {
+        $("#recentActivityBody").html('<div style="color:#b71c1c; font-size:.8rem;">Could not load recent activity.</div>');
+        });
+
+        } else if (mode === "capture") {
+        if (canImport) {
+        addButtons("#quickActionsImport", [
+        { text: "Import Excel", type: "default", icon: "upload", url: "/Import" }
+        ]);
+        }
+        $.getJSON("/Crashes/Grid", { pageSize: 8, sortBy: "Date", sortDesc: true })
+        .done(function (result) { renderRecentActivity(result.rows || [], canEdit); })
+        .fail(function () { $("#recentActivityBody").html('<div style="color:#b71c1c; font-size:.8rem;">Could not load recent activity.</div>'); });
+
+        } else if (mode === "review") {
+        $.getJSON("/Crashes/Grid", { pageSize: 8, sortBy: "Date", sortDesc: true })
+        .done(function (result) { renderRecentActivity(result.rows || [], canEdit); })
+        .fail(function () { $("#recentActivityBody").html('<div style="color:#b71c1c; font-size:.8rem;">Could not load recent activity.</div>'); });
+        }
+
+        // ── Recent activity — compact table, not stacked cards ──────
+        function renderRecentActivity(recent, clickableToEdit) {
+        var body = $("#recentActivityBody").empty();
+        if (recent.length === 0) {
+        body.append('<div style="color:#999; font-size:.8rem;">No crash reports yet.</div>');
+        return;
+        }
+
+        var table = $('<table class="activity-table"></table>');
+        table.append(
+        '<thead><tr>' +
+        '<th>CR No.</th><th>Where</th><th>Severity</th><th>Source</th>' +
+        '</tr></thead>'
+        );
+
+        var tbody = $('<tbody></tbody>').appendTo(table);
+
+        recent.forEach(function (r) {
+        var sevBadge = r.Fatalities > 0
+        ? '<span class="sev-badge sev-fatal">' + r.Fatalities + ' fatal</span>'
+        : (r.Serious > 0
+        ? '<span class="sev-badge sev-serious">' + r.Serious + ' serious</span>'
+        : '<span class="sev-none">—</span>');
+        var srcBadge = r.Source === "Import"
+        ? '<span class="src-badge src-import">Import</span>'
+        : '<span class="src-badge src-manual">Manual</span>';
+
+        var $tr = $('<tr' + (clickableToEdit ? ' class="clickable"' : '') + '>' +
+        '<td class="cr-no">' + r.CrNo + '</td>' +
+        '<td class="where">' + r.District + ', ' + r.Station + '</td>' +
+        '<td>' + sevBadge + '</td>' +
+        '<td>' + srcBadge + '</td>' +
+        '</tr>');
+
+        if (clickableToEdit) {
+        $tr.on("click", function () {
+        var editUrl = r.Source === "Import" ? "/Crashes/EditSummary/" + r.SummaryId : "/Crashes/Edit/" + r.CrashId;
+        window.location.href = editUrl;
+        });
+        }
+        tbody.append($tr);
+        });
+
+        body.append(table);
+        }
         });
     </script>
 }

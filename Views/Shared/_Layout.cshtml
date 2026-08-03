@@ -405,6 +405,29 @@
 </head>
 <body>
 
+    @{
+        // ── Privilege checks, computed once ────────────────────────────
+        // Every nav item below gates on what the signed-in user can
+        // actually do (per CrashReport.Security.Privileges), not on role
+        // name — a Provincial Staff user and a System Administrator can
+        // both reach this layout, but should see very different menus.
+        bool Has(string privilege) => User.HasClaim(CrashReport.Security.Privileges.ClaimType, privilege);
+
+        var canView       = Has(CrashReport.Security.Privileges.Crashes.View);
+        var canCreateFull = Has(CrashReport.Security.Privileges.Crashes.Create);
+        var canQuickAdd   = Has(CrashReport.Security.Privileges.Crashes.CreateSummary);
+        var canImport     = Has(CrashReport.Security.Privileges.Import.Excel);
+        var canStandby    = Has(CrashReport.Security.Privileges.Reports.Standby);
+        var canMonthly    = Has(CrashReport.Security.Privileges.Reports.Monthly);
+        var canFiveYear   = Has(CrashReport.Security.Privileges.Reports.FiveYear);
+        var canQuarterly  = Has(CrashReport.Security.Privileges.Reports.Quarterly);
+        var canAnyReport  = canStandby || canMonthly || canFiveYear || canQuarterly;
+        var canAdminUsers   = Has(CrashReport.Security.Privileges.Admin.Users);
+        var canAdminRoles   = Has(CrashReport.Security.Privileges.Admin.Roles);
+        var canAdminLookups = Has(CrashReport.Security.Privileges.Admin.Lookups);
+        var canAdminister   = canAdminUsers || canAdminRoles || canAdminLookups;
+    }
+
     <aside class="sidebar" id="sidebar">
 
         <div class="sidebar-brand">
@@ -431,101 +454,140 @@
                 </a>
             </div>
 
-            <div class="nav-item" data-label="New CR1 Report">
-                <a class="nav-link" asp-controller="Home" asp-action="Create">
-                    <span class="nav-dot"></span>
-                    <span class="nav-label">New CR1 Report</span>
-                </a>
-            </div>
-
-            <div class="nav-item" data-label="Import Excel">
-                <a class="nav-link" asp-controller="Import" asp-action="Index">
-                    <span class="nav-dot"></span>
-                    <span class="nav-label">Import Excel</span>
-                </a>
-            </div>
-
-            <div class="nav-section-label"><span>Reports</span></div>
-
-            <div class="nav-item" data-label="Weekly Standby Report">
-                <a class="nav-link" asp-controller="StandbyReport" asp-action="Index">
-                    <span class="nav-dot"></span>
-                    <span class="nav-label">Weekly Standby Report</span>
-                </a>
-            </div>
-
-            <div class="nav-item" data-label="Monthly Memo Report">
-                <a class="nav-link" asp-controller="MemoReport" asp-action="Index">
-                    <span class="nav-dot"></span>
-                    <span class="nav-label">Monthly Memo Report</span>
-                </a>
-            </div>
-
-            <div class="nav-item" data-label="Quarterly Report">
-                <a class="nav-link" asp-controller="QuarterlyReport" asp-action="Index">
-                    <span class="nav-dot"></span>
-                    <span class="nav-label">Quarterly Report</span>
-                </a>
-            </div>
-
-
-            <div class="nav-item" data_label="Five Year Report">
-               <a class="nav-link" asp-controller="FiveYearReport" asp-action="Index">
-                    <span class="nav-dot"></span>
-                    <span class="nav-label">Five Year Report</span>
-               </a>
-
-            </div>
-
-            <div class="nav-section-label"><span>Records</span></div>
-
-            <div class="nav-item" data-label="Crash Reports">
-                <a class="nav-link" asp-controller="Crashes" asp-action="Index">
-                    <span class="nav-dot"></span>
-                    <span class="nav-label">Crash Reports</span>
-                </a>
-            </div>
-
-            <div class="nav-item" data-label="Persons">
-                <a class="nav-link" asp-controller="Persons" asp-action="Index">
-                    <span class="nav-dot"></span>
-                    <span class="nav-label">Persons</span>
-                </a>
-            </div>
-
-            <div class="nav-item" data-label="Vehicles">
-                <a class="nav-link" asp-controller="Vehicles" asp-action="Index">
-                    <span class="nav-dot"></span>
-                    <span class="nav-label">Vehicles</span>
-                </a>
-            </div>
-
-          
-
-            @if (User.IsInRole("Administrator"))
+            @if (canCreateFull)
             {
-                  <div class="nav-section-label"><span>Admin</span></div>
-
-            <div class="nav-item" data-label="Manage Lookups">
-                <a class="nav-link" asp-controller="Lookups" asp-action="Index">
-                    <span class="nav-dot"></span>
-                    <span class="nav-label">Manage Lookups</span>
-                </a>
-            </div>
-
-                <div class="nav-item" data-label="Manage Users">
-                    <a class="nav-link" asp-controller="Users" asp-action="Index">
+                <div class="nav-item" data-label="New CR1 Report">
+                    <a class="nav-link" asp-controller="Home" asp-action="Create">
                         <span class="nav-dot"></span>
-                        <span class="nav-label">Manage Users</span>
+                        <span class="nav-label">New CR1 Report</span>
+                    </a>
+                </div>
+            }
+
+            @if (canImport)
+            {
+                <div class="nav-item" data-label="Import Excel">
+                    <a class="nav-link" asp-controller="Import" asp-action="Index">
+                        <span class="nav-dot"></span>
+                        <span class="nav-label">Import Excel</span>
+                    </a>
+                </div>
+            }
+
+            @if (canQuickAdd)
+            {
+                <div class="nav-item" data-label="Quick Add">
+                    <a class="nav-link" asp-controller="CreateSummary" asp-action="CreateSummary">
+                        <span class="nav-dot"></span>
+                        <span class="nav-label">Quick Add</span>
+                    </a>
+                </div>
+            }
+
+            @if (canAnyReport)
+            {
+                <div class="nav-section-label"><span>Reports</span></div>
+
+                @if (canStandby)
+                {
+                    <div class="nav-item" data-label="Weekly Standby Report">
+                        <a class="nav-link" asp-controller="StandbyReport" asp-action="Index">
+                            <span class="nav-dot"></span>
+                            <span class="nav-label">Weekly Standby Report</span>
+                        </a>
+                    </div>
+                }
+
+                @if (canMonthly)
+                {
+                    <div class="nav-item" data-label="Monthly Memo Report">
+                        <a class="nav-link" asp-controller="MemoReport" asp-action="Index">
+                            <span class="nav-dot"></span>
+                            <span class="nav-label">Monthly Memo Report</span>
+                        </a>
+                    </div>
+                }
+
+                @if (canQuarterly)
+                {
+                    <div class="nav-item" data-label="Quarterly Report">
+                        <a class="nav-link" asp-controller="QuarterlyReport" asp-action="Index">
+                            <span class="nav-dot"></span>
+                            <span class="nav-label">Quarterly Report</span>
+                        </a>
+                    </div>
+                }
+
+                @if (canFiveYear)
+                {
+                    <div class="nav-item" data-label="Five Year Report">
+                        <a class="nav-link" asp-controller="FiveYearReport" asp-action="Index">
+                            <span class="nav-dot"></span>
+                            <span class="nav-label">Five Year Report</span>
+                        </a>
+                    </div>
+                }
+            }
+
+            @if (canView)
+            {
+                <div class="nav-section-label"><span>Records</span></div>
+
+                <div class="nav-item" data-label="Crash Reports">
+                    <a class="nav-link" asp-controller="Crashes" asp-action="Index">
+                        <span class="nav-dot"></span>
+                        <span class="nav-label">Crash Reports</span>
                     </a>
                 </div>
 
-                <div class="nav-item" data-label="Manage Roles">
-                    <a class="nav-link" asp-controller="Roles" asp-action="Index">
+                <div class="nav-item" data-label="Persons">
+                    <a class="nav-link" asp-controller="Persons" asp-action="Index">
                         <span class="nav-dot"></span>
-                        <span class="nav-label">Manage Roles</span>
+                        <span class="nav-label">Persons</span>
                     </a>
                 </div>
+
+                <div class="nav-item" data-label="Vehicles">
+                    <a class="nav-link" asp-controller="Vehicles" asp-action="Index">
+                        <span class="nav-dot"></span>
+                        <span class="nav-label">Vehicles</span>
+                    </a>
+                </div>
+            }
+
+            @if (canAdminister)
+            {
+                <div class="nav-section-label"><span>Admin</span></div>
+
+                @if (canAdminLookups)
+                {
+                    <div class="nav-item" data-label="Manage Lookups">
+                        <a class="nav-link" asp-controller="Lookups" asp-action="Index">
+                            <span class="nav-dot"></span>
+                            <span class="nav-label">Manage Lookups</span>
+                        </a>
+                    </div>
+                }
+
+                @if (canAdminUsers)
+                {
+                    <div class="nav-item" data-label="Manage Users">
+                        <a class="nav-link" asp-controller="Users" asp-action="Index">
+                            <span class="nav-dot"></span>
+                            <span class="nav-label">Manage Users</span>
+                        </a>
+                    </div>
+                }
+
+                @if (canAdminRoles)
+                {
+                    <div class="nav-item" data-label="Manage Roles">
+                        <a class="nav-link" asp-controller="Roles" asp-action="Index">
+                            <span class="nav-dot"></span>
+                            <span class="nav-label">Manage Roles</span>
+                        </a>
+                    </div>
+                }
             }
 
         </nav>
@@ -544,15 +606,20 @@
                 var fullName = User.FindFirst("FullName")?.Value
                                ?? User.Identity.Name
                                ?? "User";
-                var role     = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "";
+                // A user can hold more than one role — show all of them,
+                // not just whichever ClaimTypes.Role happens to be first.
+                var roleNames = User.FindAll(System.Security.Claims.ClaimTypes.Role)
+                                    .Select(c => c.Value)
+                                    .ToList();
+                var roleDisplay = roleNames.Count > 0 ? string.Join(" · ", roleNames) : "";
                 var initial  = fullName.Length > 0 ? fullName[0].ToString().ToUpper() : "U";
 
                 <div class="topbar-user">
                     <div class="user-info">
                         <div class="user-name">@fullName</div>
-                        @if (!string.IsNullOrEmpty(role))
+                        @if (!string.IsNullOrEmpty(roleDisplay))
                         {
-                            <div class="user-role">@role</div>
+                            <div class="user-role">@roleDisplay</div>
                         }
                     </div>
                     <div class="user-avatar">@initial</div>

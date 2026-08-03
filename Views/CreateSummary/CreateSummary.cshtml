@@ -78,6 +78,23 @@
         .qa-vehicle-item .qa-vehicle-stepper {
             width: 90px;
         }
+
+    .qa-fatality-row {
+        display: grid;
+        grid-template-columns: 100px 140px 160px 40px;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+
+    .qa-subsection-label {
+        font-size: .68rem;
+        text-transform: uppercase;
+        letter-spacing: .5px;
+        color: #888;
+        font-weight: 700;
+        margin: 14px 0 8px;
+    }
 </style>
 
 <div class="qa-card">
@@ -118,7 +135,9 @@
     <div class="qa-section-title">Vehicles involved</div>
     <div class="qa-checkbox-grid" id="vehicleTypeCheckboxes"></div>
 
-    <div class="qa-section-title">Fatal injuries</div>
+    <div class="qa-section-title">Fatalities</div>
+
+    <div class="qa-subsection-label">By role</div>
     <div class="qa-row">
         <div class="qa-field"><label>Drivers</label><div id="fatalDriversBox"></div></div>
         <div class="qa-field"><label>Passengers</label><div id="fatalPassengersBox"></div></div>
@@ -126,9 +145,15 @@
     </div>
     <div class="qa-row">
         <div class="qa-field"><label>Cyclists</label><div id="fatalCyclistsBox"></div></div>
-        <div class="qa-field"><label>Male</label><div id="fatalMaleBox"></div></div>
-        <div class="qa-field"><label>Female</label><div id="fatalFemaleBox"></div></div>
     </div>
+
+    <div class="qa-subsection-label">Victim details (age, gender, race)</div>
+    <div style="font-size:.75rem;color:#9ca3af;margin-bottom:10px;">
+        Add one entry per fatality — age, gender, and race are grouped and totalled
+        automatically. The number of entries here must match the total entered above.
+    </div>
+    <div id="fatalityRows"></div>
+    <div id="btnAddFatality" style="margin-bottom: 20px;"></div>
 
     <div class="qa-section-title">Serious injuries</div>
     <div class="qa-row">
@@ -163,7 +188,6 @@
             var data = {
                 CrashDate: null, CrashTime: null, VehicleCounts: {},
                 FatalDrivers: 0, FatalPassengers: 0, FatalPedestrians: 0, FatalCyclists: 0,
-                FatalMale: 0, FatalFemale: 0,
                 SeriousDrivers: 0, SeriousPassengers: 0, SeriousPedestrians: 0, SeriousCyclists: 0,
                 SlightDrivers: 0, SlightPassengers: 0, SlightPedestrians: 0, SlightCyclists: 0
             };
@@ -213,9 +237,6 @@
                         return;
                     }
 
-                    // Station filtered by district — the lookup endpoint already
-                    // returns each station's district, so this is a real filter,
-                    // not just a visibility toggle.
                     allStationsLoaded.done(function () {
                         var filtered = stationsCache.filter(function (s) {
                             return (s.district || "").toLowerCase() === chosen.toLowerCase();
@@ -237,8 +258,6 @@
                         }
                     });
 
-                    // Route and Location have no district field in their data —
-                    // gated on visibility only, not actually filtered by district.
                     if (!routeInst) {
                         routeInst = $("#routeBox").dxSelectBox({
                             dataSource: {
@@ -282,15 +301,7 @@
                 onValueChanged: function (e) { data.CrashType = e.value; }
             });
 
-            // ── Vehicles involved — quantity steppers, not checkboxes. Real
-            // crash data regularly has the same type twice (e.g. "SED / SED"
-            // for a two-sedan collision), which a plain checkbox can't
-            // represent at all. Uses VehiclesInvolvedOption — real-world
-            // shorthand codes (SED, P/D, LDV...) extracted from actual crash
-            // records — rather than the CR1 form's longer formal vehicle
-            // category names, since that's how staff actually record this.
-            // VehicleCount and VehiclesString (the actual CrashSummary
-            // columns) are derived from the counts on save. ───────────────
+            // ── Vehicles involved — quantity steppers ─────────────────
             $.getJSON("/api/lookup/formoptions").done(function (formOptions) {
                 (formOptions.VehiclesInvolvedOption || []).forEach(function (label) {
                     data.VehicleCounts[label] = 0;
@@ -308,13 +319,11 @@
                 });
             });
 
-            // ── Injury counts ────────────────────────────────────────
+
             numberBox("#fatalDriversBox", function (v) { data.FatalDrivers = v; });
             numberBox("#fatalPassengersBox", function (v) { data.FatalPassengers = v; });
             numberBox("#fatalPedestriansBox", function (v) { data.FatalPedestrians = v; });
             numberBox("#fatalCyclistsBox", function (v) { data.FatalCyclists = v; });
-            numberBox("#fatalMaleBox", function (v) { data.FatalMale = v; });
-            numberBox("#fatalFemaleBox", function (v) { data.FatalFemale = v; });
 
             numberBox("#seriousDriversBox", function (v) { data.SeriousDrivers = v; });
             numberBox("#seriousPassengersBox", function (v) { data.SeriousPassengers = v; });
@@ -325,6 +334,55 @@
             numberBox("#slightPassengersBox", function (v) { data.SlightPassengers = v; });
             numberBox("#slightPedestriansBox", function (v) { data.SlightPedestrians = v; });
             numberBox("#slightCyclistsBox", function (v) { data.SlightCyclists = v; });
+
+            
+            var fatalityRows = [];
+
+            function addFatalityRow() {
+                var entry = { Age: null, Gender: null, Race: null };
+                fatalityRows.push(entry);
+
+                var row = $("<div class='qa-fatality-row'>").appendTo("#fatalityRows");
+
+                $("<div>").appendTo(row).dxNumberBox({
+                    placeholder: "Age", min: 0, max: 120,
+                    onValueChanged: function (e) { entry.Age = e.value; }
+                });
+
+                $("<div>").appendTo(row).dxSelectBox({
+                    items: [{ text: "Male (M)", value: "M" }, { text: "Female (F)", value: "F" }],
+                    displayExpr: "text", valueExpr: "value",
+                    placeholder: "Gender",
+                    onValueChanged: function (e) { entry.Gender = e.value; }
+                });
+
+                $("<div>").appendTo(row).dxSelectBox({
+                    items: [
+                        { text: "African (B)", value: "B" },
+                        { text: "Coloured (C)", value: "C" },
+                        { text: "Indian (I)", value: "I" },
+                        { text: "White (W)", value: "W" },
+                        { text: "Other (O)", value: "O" }
+                    ],
+                    displayExpr: "text", valueExpr: "value",
+                    placeholder: "Race",
+                    onValueChanged: function (e) { entry.Race = e.value; }
+                });
+
+                $("<div>").appendTo(row).dxButton({
+                    icon: "trash", type: "danger", stylingMode: "outlined",
+                    onClick: function () {
+                        var idx = fatalityRows.indexOf(entry);
+                        if (idx > -1) fatalityRows.splice(idx, 1);
+                        row.remove();
+                    }
+                });
+            }
+
+            $("#btnAddFatality").dxButton({
+                text: "Add fatality", icon: "plus", type: "default", stylingMode: "outlined",
+                onClick: addFatalityRow
+            });
 
             // ── Save / Cancel ────────────────────────────────────────
             $("#btnSave").dxButton({
@@ -337,9 +395,26 @@
                         return;
                     }
 
-                    // Expand counts into a repeated list — e.g. {SED: 2, LDV: 1}
-                    // becomes "SED, SED, LDV" and a count of 3 — matching how
-                    // this data actually looks in real crash records ("SED / SED").
+                    var roleTotal = (data.FatalDrivers || 0) + (data.FatalPassengers || 0) +
+                                     (data.FatalPedestrians || 0) + (data.FatalCyclists || 0);
+
+                    if (fatalityRows.length !== roleTotal) {
+                        DevExpress.ui.notify(
+                            "Fatality details entered (" + fatalityRows.length + ") don't match the fatal " +
+                            "injuries by role (" + roleTotal + "). Please add or remove entries to match.",
+                            "error", 5000
+                        );
+                        return;
+                    }
+
+                    for (var i = 0; i < fatalityRows.length; i++) {
+                        var f = fatalityRows[i];
+                        if (f.Age === null || f.Gender === null || f.Race === null) {
+                            DevExpress.ui.notify("Every fatality needs an age, gender, and race.", "error", 4000);
+                            return;
+                        }
+                    }
+
                     var expanded = [];
                     Object.keys(data.VehicleCounts).forEach(function (label) {
                         var n = data.VehicleCounts[label] || 0;
@@ -348,11 +423,12 @@
 
                     var payload = $.extend({}, data, {
                         VehicleCount: expanded.length,
-                        VehiclesString: expanded.join(", ")
+                        VehiclesString: expanded.join(", "),
+                        fatalitiesJson: JSON.stringify(fatalityRows)
                     });
-                    delete payload.VehicleCounts; // not a CrashSummary column — flattened into the two above
+                    delete payload.VehicleCounts;
 
-                    $.post("/Crashes/CreateSummary", $.extend({
+                    $.post("/CreateSummary/CreateSummary", $.extend({
                         __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').first().val()
                     }, payload))
                     .done(function (res) {

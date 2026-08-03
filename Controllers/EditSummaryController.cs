@@ -1,5 +1,7 @@
 ﻿using CrashReport.Data;
 using CrashReport.Models;
+using CrashReport.Security;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CrashReport.Controllers

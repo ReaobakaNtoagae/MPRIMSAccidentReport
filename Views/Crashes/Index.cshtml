@@ -3,48 +3,29 @@
 }
 
 <style>
-    .search-panel {
+    .toolbar-panel {
         background: #fff;
         border-radius: 10px;
         border: 1px solid #c8e6c9;
         box-shadow: 0 2px 8px rgba(0,0,0,.06);
-        padding: 20px 24px;
+        padding: 14px 20px;
         margin-bottom: 16px;
-    }
-
-    .search-panel-title {
-        font-size: .75rem;
-        text-transform: uppercase;
-        letter-spacing: .7px;
-        color: #2e7d32;
-        font-weight: 700;
-        margin-bottom: 14px;
         display: flex;
-        align-items: center;
-        justify-content: space-between;
-        cursor: pointer;
-        user-select: none;
-    }
-
-        .search-panel-title .toggle-icon {
-            font-size: .85rem;
-            transition: transform .2s;
-        }
-
-            .search-panel-title .toggle-icon.collapsed {
-                transform: rotate(-90deg);
-            }
-
-    .search-row {
-        display: grid;
-        grid-template-columns: repeat(4,1fr);
+        align-items: flex-end;
         gap: 12px;
-        margin-bottom: 12px;
+        flex-wrap: wrap;
     }
 
-        .search-row.two-col {
-            grid-template-columns: 1fr 1fr auto auto;
-            align-items: end;
+    .toolbar-field {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        min-width: 160px;
+    }
+
+        .toolbar-field label {
+            font-size: .7rem;
+            color: #666;
         }
 
     .filter-badge {
@@ -72,6 +53,7 @@
         flex-wrap: wrap;
         gap: 6px;
         margin-top: 10px;
+        width: 100%;
     }
 
     .result-count {
@@ -79,62 +61,39 @@
         color: #555;
         font-weight: 500;
     }
+
+    /* Filter row hint — the column filter inputs are DevExtreme's own,
+           styled to match the rest of the app via the DevExtreme overrides
+           already in _Layout. */
+    .dx-datagrid-filter-row .dx-editor-cell {
+        background: #fafcf8;
+    }
 </style>
 
-<!-- Search & Filter Panel -->
-<div class="search-panel">
-    <div class="search-panel-title" id="toggleFilters">
-        <span>🔍 Search &amp; Filter</span>
-        <span class="toggle-icon" id="toggleIcon">▼</span>
+<!-- Slim toolbar — only what doesn't fit a single column: keyword (spans
+     several fields with OR logic), date range (two values), and severity
+     (computed, not a real stored column). Everything else moved into the
+     grid's own filter row. -->
+<div class="toolbar-panel">
+    <div class="toolbar-field" style="min-width:220px;">
+        <label>Keyword search</label>
+        <div id="keywordBox"></div>
     </div>
-    <div id="filterBody">
-        <div class="search-row">
-            <div>
-                <div style="font-size:.72rem;color:#666;margin-bottom:4px;">Keyword search</div>
-                <div id="keywordBox"></div>
-            </div>
-            <div>
-                <div style="font-size:.72rem;color:#666;margin-bottom:4px;">District</div>
-                <div id="districtBox"></div>
-            </div>
-            <div>
-                <div style="font-size:.72rem;color:#666;margin-bottom:4px;">SAPS station</div>
-                <div id="sapsBox"></div>
-            </div>
-            <div>
-                <div style="font-size:.72rem;color:#666;margin-bottom:4px;">Route</div>
-                <div id="routeBox"></div>
-            </div>
-        </div>
-        <div class="search-row">
-            <div>
-                <div style="font-size:.72rem;color:#666;margin-bottom:4px;">Date from</div>
-                <div id="dateFromBox"></div>
-            </div>
-            <div>
-                <div style="font-size:.72rem;color:#666;margin-bottom:4px;">Date to</div>
-                <div id="dateToBox"></div>
-            </div>
-            <div>
-                <div style="font-size:.72rem;color:#666;margin-bottom:4px;">Crash type</div>
-                <div id="crashTypeBox"></div>
-            </div>
-            <div>
-                <div style="font-size:.72rem;color:#666;margin-bottom:4px;">Severity</div>
-                <div id="severityBox"></div>
-            </div>
-        </div>
-        <div class="search-row two-col">
-            <div>
-                <div style="font-size:.72rem;color:#666;margin-bottom:4px;">Source</div>
-                <div id="sourceBox"></div>
-            </div>
-            <div></div>
-            <div id="btnSearch" style="min-width:120px;"></div>
-            <div id="btnClear" style="min-width:100px;"></div>
-        </div>
-        <div class="active-filters" id="activeBadges"></div>
+    <div class="toolbar-field">
+        <label>Date from</label>
+        <div id="dateFromBox"></div>
     </div>
+    <div class="toolbar-field">
+        <label>Date to</label>
+        <div id="dateToBox"></div>
+    </div>
+    <div class="toolbar-field">
+        <label>Severity</label>
+        <div id="severityBox"></div>
+    </div>
+    <div id="btnSearch" style="min-width:110px;"></div>
+    <div id="btnClear" style="min-width:90px;"></div>
+    <div class="active-filters" id="activeBadges"></div>
 </div>
 
 <!-- Results -->
@@ -146,7 +105,7 @@
             color:#2e7d32;font-weight:700;">
             Crash reports
             <span style="font-size:.68rem;text-transform:none;letter-spacing:0;color:#9ca3af;font-weight:400;">
-                &nbsp;&middot; includes manually captured and imported records
+                &nbsp;&middot; includes manually captured and imported records &middot; filter by District/Station/Route/Type/Source in the column headers below
             </span>
         </div>
         <div style="display:flex;align-items:center;gap:12px;">
@@ -169,45 +128,15 @@
             var districts = [];
             $.getJSON("/api/lookup/districts").done(function (data) {
                 districts = data || [];
-                districtInst.option("dataSource", districts);
+                gridInst.columnOption("District", "lookup", { dataSource: districts });
             });
 
+            // ── Top bar fields (keyword / date range / severity only) ────
             var keywordInst = $("#keywordBox").dxTextBox({
                 placeholder: "CR number, route, or location",
                 showClearButton: true,
                 onEnterKey: function () { runSearch(); }
             }).dxTextBox("instance");
-
-            var districtInst = $("#districtBox").dxSelectBox({
-                dataSource: districts,
-                placeholder: "Any district",
-                showClearButton: true,
-                searchEnabled: true
-            }).dxSelectBox("instance");
-
-            var sapsInst = $("#sapsBox").dxSelectBox({
-                dataSource: {
-                    load: function (loadOptions) { return $.getJSON("/api/lookup/stations", { q: loadOptions.searchValue }); }
-                },
-                displayExpr: "text",
-                valueExpr: "text",
-                placeholder: "Any station",
-                showClearButton: true,
-                searchEnabled: true,
-                acceptCustomValue: true
-            }).dxSelectBox("instance");
-
-            var routeInst = $("#routeBox").dxSelectBox({
-                dataSource: {
-                    load: function (loadOptions) { return $.getJSON("/api/lookup/routes", { q: loadOptions.searchValue }); }
-                },
-                displayExpr: "text",
-                valueExpr: "text",
-                placeholder: "Any route",
-                showClearButton: true,
-                searchEnabled: true,
-                acceptCustomValue: true
-            }).dxSelectBox("instance");
 
             var dateFromInst = $("#dateFromBox").dxDateBox({
                 type: "date", displayFormat: "dd/MM/yyyy", pickerType: "calendar",
@@ -219,26 +148,10 @@
                 placeholder: "To date", showClearButton: true, max: new Date()
             }).dxDateBox("instance");
 
-            var crashTypeInst = $("#crashTypeBox").dxSelectBox({
-                dataSource: {
-                    load: function (loadOptions) { return $.getJSON("/api/lookup/crashtypes", { q: loadOptions.searchValue }); }
-                },
-                displayExpr: "text",
-                valueExpr: "text",
-                placeholder: "Any crash type",
-                showClearButton: true,
-                searchEnabled: true,
-                acceptCustomValue: true
-            }).dxSelectBox("instance");
-
             var severityInst = $("#severityBox").dxSelectBox({
                 dataSource: ["Minor", "Serious", "Fatal"],
-                placeholder: "Any severity", showClearButton: true
-            }).dxSelectBox("instance");
-
-            var sourceInst = $("#sourceBox").dxSelectBox({
-                dataSource: ["Manual", "Import"],
-                placeholder: "Any source", showClearButton: true
+                placeholder: "Any severity", showClearButton: true,
+                onValueChanged: function () { runSearch(); }
             }).dxSelectBox("instance");
 
             $("#btnSearch").dxButton({
@@ -257,17 +170,7 @@
                 onClick: function () { window.location.href = "/Home/Create"; }
             });
 
-            var filterOpen = true;
-            $("#toggleFilters").on("click", function () {
-                filterOpen = !filterOpen;
-                $("#filterBody").slideToggle(200);
-                $("#toggleIcon").toggleClass("collapsed", !filterOpen);
-            });
-
-            // ── Same grid as the dashboard's crashHistoryGrid — same columns,
-            // same CustomStore against /Crashes/Grid, same RowKey trick. Kept
-            // identical deliberately so the two pages can't drift apart into
-            // two different ideas of what a "crash row" looks like.
+           
             var currentSearchParams = {};
 
             var crashStore = new DevExpress.data.CustomStore({
@@ -295,23 +198,54 @@
                 }
             });
 
+            // Column -> query-param name, for the ones now filtered via the
+            // column header row instead of the top toolbar.
+            var columnParamMap = {
+                District: "district",
+                Station: "sapsStation",
+                Route: "route",
+                CrashType: "crashType",
+                Source: "source"
+            };
+
+            // Prevents DevExtreme from also trying to apply its own
+            // (client-side, page-only) filter on top of what the server
+            // already filtered — the column "consumes" its filterValue via
+            // our own handling instead.
+            function neutralizeFilterExpression() { return null; }
+
             var gridInst = $("#crashHistoryGrid").dxDataGrid({
                 dataSource: { store: crashStore },
                 remoteOperations: { paging: true, sorting: true },
+                filterRow: { visible: true, applyFilter: "auto" },
                 columns: [
-                    { dataField: "CrNo",     caption: "CR No.",   width: 120 },
+                    { dataField: "CrNo",     caption: "CR No.",   width: 120, allowFiltering: false },
                     {
                         dataField: "Date",   caption: "Date",
-                        dataType: "date",    format: "dd MMM yyyy", width: 130
+                        dataType: "date",    format: "dd MMM yyyy", width: 130,
+                        allowFiltering: false // date range stays in the top bar (two values, not one)
                     },
-                    { dataField: "District", caption: "District", width: 140 },
-                    { dataField: "Station",  caption: "Station",  width: 130 },
-                    { dataField: "Route",    caption: "Route",    width: 90  },
-                    { dataField: "CrashType", caption: "Crash type", width: 130 },
-                    { dataField: "VehicleCount", caption: "Vehicles", width: 80, alignment: "center" },
+                    {
+                        dataField: "District", caption: "District", width: 140,
+                        calculateFilterExpression: neutralizeFilterExpression,
+                        lookup: { dataSource: [] } // populated once /api/lookup/districts resolves
+                    },
+                    {
+                        dataField: "Station",  caption: "Station",  width: 130,
+                        calculateFilterExpression: neutralizeFilterExpression
+                    },
+                    {
+                        dataField: "Route",    caption: "Route",    width: 90,
+                        calculateFilterExpression: neutralizeFilterExpression
+                    },
+                    {
+                        dataField: "CrashType", caption: "Crash type", width: 130,
+                        calculateFilterExpression: neutralizeFilterExpression
+                    },
+                    { dataField: "VehicleCount", caption: "Vehicles", width: 80, alignment: "center", allowFiltering: false },
                     {
                         caption: "Injuries", width: 200, alignment: "center",
-                        allowSorting: false,
+                        allowSorting: false, allowFiltering: false,
                         cellTemplate: function (container, options) {
                             var parts = [];
                             if (options.data.Fatalities > 0)
@@ -330,6 +264,8 @@
                     },
                     {
                         dataField: "Source", caption: "Source", width: 90, alignment: "center",
+                        calculateFilterExpression: neutralizeFilterExpression,
+                        lookup: { dataSource: ["Manual", "Import"] },
                         cellTemplate: function (container, options) {
                             var isImport = options.value === "Import";
                             container.html(
@@ -396,27 +332,44 @@
                 onRowPrepared: function (e) {
                     if (e.rowType === "data" && e.data.Fatalities > 0)
                         e.rowElement.css("border-left", "3px solid #b71c1c");
+                },
+                // Reads whichever column's filterValue just changed and
+                // merges it into the same server-side param the old
+                // sidebar used to send — this is what makes the filter
+                // row actually talk to /Crashes/Grid correctly.
+                onOptionChanged: function (e) {
+                    if (e.fullName && /^columns\[\d+\]\.filterValue$/.test(e.fullName)) {
+                        var colIndex = parseInt(e.fullName.match(/\d+/)[0], 10);
+                        var col = gridInst.columnOption(colIndex);
+                        var paramName = columnParamMap[col.dataField];
+                        if (!paramName) return;
+
+                        if (e.value) currentSearchParams[paramName] = e.value;
+                        else delete currentSearchParams[paramName];
+
+                        updateBadges(currentSearchParams);
+                        gridInst.refresh();
+                    }
                 }
             }).dxDataGrid("instance");
 
             function runSearch() {
-                currentSearchParams = buildParams();
+                // Top-bar fields merge in on top of whatever the column
+                // filter row currently has set, rather than replacing it.
+                if (keywordInst.option("value")) currentSearchParams.keyword = keywordInst.option("value");
+                else delete currentSearchParams.keyword;
+
+                if (dateFromInst.option("value")) currentSearchParams.dateFrom = formatDate(dateFromInst.option("value"));
+                else delete currentSearchParams.dateFrom;
+
+                if (dateToInst.option("value")) currentSearchParams.dateTo = formatDate(dateToInst.option("value"));
+                else delete currentSearchParams.dateTo;
+
+                if (severityInst.option("value")) currentSearchParams.severity = severityInst.option("value");
+                else delete currentSearchParams.severity;
+
                 updateBadges(currentSearchParams);
                 gridInst.refresh();
-            }
-
-            function buildParams() {
-                var p = {};
-                if (keywordInst.option("value"))   p.keyword    = keywordInst.option("value");
-                if (districtInst.option("value"))  p.district   = districtInst.option("value");
-                if (sapsInst.option("value"))       p.sapsStation = sapsInst.option("value");
-                if (routeInst.option("value"))      p.route      = routeInst.option("value");
-                if (crashTypeInst.option("value"))  p.crashType  = crashTypeInst.option("value");
-                if (severityInst.option("value"))   p.severity   = severityInst.option("value");
-                if (sourceInst.option("value"))      p.source     = sourceInst.option("value");
-                if (dateFromInst.option("value"))   p.dateFrom   = formatDate(dateFromInst.option("value"));
-                if (dateToInst.option("value"))     p.dateTo     = formatDate(dateToInst.option("value"));
-                return p;
             }
 
             function formatDate(d) {
@@ -443,34 +396,43 @@
                     container.append(badge);
                 });
                 container.find(".remove").on("click", function () {
-                    clearFilter($(this).data("key"));
-                    runSearch();
+                    clearOneFilter($(this).data("key"));
                 });
             }
 
-            function clearFilter(key) {
-                var map = {
-                    keyword:     function () { keywordInst.option("value", null); },
-                    district:    function () { districtInst.option("value", null); },
-                    sapsStation: function () { sapsInst.option("value", null); },
-                    route:       function () { routeInst.option("value", null); },
-                    crashType:   function () { crashTypeInst.option("value", null); },
-                    severity:    function () { severityInst.option("value", null); },
-                    source:      function () { sourceInst.option("value", null); },
-                    dateFrom:    function () { dateFromInst.option("value", null); },
-                    dateTo:      function () { dateToInst.option("value", null); }
-                };
-                if (map[key]) map[key]();
+            function clearOneFilter(key) {
+                delete currentSearchParams[key];
+
+                // Keep the visible control in sync with whichever badge got removed.
+                if (key === "keyword") keywordInst.option("value", null);
+                else if (key === "dateFrom") dateFromInst.option("value", null);
+                else if (key === "dateTo") dateToInst.option("value", null);
+                else if (key === "severity") severityInst.option("value", null);
+                else {
+                    
+                    var entry = Object.entries(columnParamMap).find(function (e) { return e[1] === key; });
+                    if (entry) {
+                        gridInst.columnOption(entry[0], "filterValue", null);
+                        return; // onOptionChanged handles the refresh
+                    }
+                }
+
+                updateBadges(currentSearchParams);
+                gridInst.refresh();
             }
 
             function clearAll() {
-                Object.keys(badgeLabels).forEach(clearFilter);
-                $("#activeBadges").empty();
-                runSearch();
+                keywordInst.option("value", null);
+                dateFromInst.option("value", null);
+                dateToInst.option("value", null);
+                severityInst.option("value", null);
+                gridInst.clearFilter("row");
+                currentSearchParams = {};
+                updateBadges(currentSearchParams);
+                gridInst.refresh();
             }
 
             runSearch();
         });
     </script>
 }
-
