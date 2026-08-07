@@ -189,13 +189,16 @@ public class LookupController : ControllerBase
         var query = _context.LookupVehicleTypes.Where(v => v.IsActive);
         if (!string.IsNullOrEmpty(q))
             query = query.Where(v => v.VehicleTypeCode.Contains(q) ||
-                                     (v.Description != null && v.Description.Contains(q)));
+                                     (v.Description != null && v.Description.Contains(q)) ||
+                                     (v.FullName != null && v.FullName.Contains(q)));
 
         var items = await query
             .OrderBy(v => v.VehicleTypeCode)
             .Select(v => new {
                 id = v.VehicleTypeId,
-                text = v.VehicleTypeCode,
+                value = v.VehicleTypeCode,
+                text = v.FullName ?? v.VehicleTypeCode, 
+                                                        
                 description = v.Description
             })
             .ToListAsync();

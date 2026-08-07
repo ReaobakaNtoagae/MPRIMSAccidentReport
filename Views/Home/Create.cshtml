@@ -1,251 +1,251 @@
-﻿    @{
-        ViewData["Title"] = "New CR1 Crash Report";
+﻿@{
+    ViewData["Title"] = "New CR1 Crash Report";
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <strong>Error!</strong>
+        <div style="white-space: pre-line;">@TempData["ErrorMessage"]</div>
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+}
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <strong>Success!</strong> @TempData["SuccessMessage"]
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+}
+
+
+<form id="wizardForm" method="post" asp-action="Submit">
+    @Html.AntiForgeryToken()
+    <input type="hidden" id="formJsonInput" name="formJson" />
+</form>
+
+<style>
+    .wizard-steps {
+        display: flex;
+        align-items: center;
+        margin-bottom: 28px;
+        background: #fff;
+        border-radius: 10px;
+        padding: 18px 24px;
+        box-shadow: 0 2px 8px rgba(0,0,0,.08);
+        border: 1px solid #c8e6c9;
+        overflow-x: auto;
     }
 
-    @if (TempData["ErrorMessage"] != null)
-    {
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <strong>Error!</strong>
-            <div style="white-space: pre-line;">@TempData["ErrorMessage"]</div>
-            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                <span aria-hidden="true">&times;</span>
-            </button>
-        </div>
+    .step-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        flex: 1;
+        position: relative;
+        min-width: 80px;
     }
 
-    @if (TempData["SuccessMessage"] != null)
-    {
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <strong>Success!</strong> @TempData["SuccessMessage"]
-            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                <span aria-hidden="true">&times;</span>
-            </button>
-        </div>
-    }
-
-
-    <form id="wizardForm" method="post" asp-action="Submit">
-        @Html.AntiForgeryToken()
-        <input type="hidden" id="formJsonInput" name="formJson" />
-    </form>
-
-    <style>
-        .wizard-steps {
-            display: flex;
-            align-items: center;
-            margin-bottom: 28px;
-            background: #fff;
-            border-radius: 10px;
-            padding: 18px 24px;
-            box-shadow: 0 2px 8px rgba(0,0,0,.08);
-            border: 1px solid #c8e6c9;
-            overflow-x: auto;
+        .step-item:not(:last-child)::after {
+            content: "";
+            position: absolute;
+            top: 16px;
+            left: 60%;
+            width: 80%;
+            height: 2px;
+            background: #c8e6c9;
+            z-index: 0;
         }
 
-        .step-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            flex: 1;
-            position: relative;
-            min-width: 80px;
-        }
-
-            .step-item:not(:last-child)::after {
-                content: "";
-                position: absolute;
-                top: 16px;
-                left: 60%;
-                width: 80%;
-                height: 2px;
-                background: #c8e6c9;
-                z-index: 0;
-            }
-
-            .step-item.completed:not(:last-child)::after {
-                background: #2e7d32;
-            }
-
-        .step-circle {
-            width: 34px;
-            height: 34px;
-            border-radius: 50%;
-            border: 2px solid #c8e6c9;
-            background: #fff;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: .82rem;
-            font-weight: 700;
-            color: #aaa;
-            position: relative;
-            z-index: 1;
-            transition: all .25s;
-        }
-
-        .step-item.active .step-circle {
+        .step-item.completed:not(:last-child)::after {
             background: #2e7d32;
-            border-color: #2e7d32;
-            color: #fff;
         }
 
-        .step-item.completed .step-circle {
-            background: #43a047;
-            border-color: #43a047;
-            color: #fff;
+    .step-circle {
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        border: 2px solid #c8e6c9;
+        background: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: .82rem;
+        font-weight: 700;
+        color: #aaa;
+        position: relative;
+        z-index: 1;
+        transition: all .25s;
+    }
+
+    .step-item.active .step-circle {
+        background: #2e7d32;
+        border-color: #2e7d32;
+        color: #fff;
+    }
+
+    .step-item.completed .step-circle {
+        background: #43a047;
+        border-color: #43a047;
+        color: #fff;
+    }
+
+    .step-label {
+        margin-top: 6px;
+        font-size: .7rem;
+        color: #aaa;
+        text-align: center;
+        font-weight: 500;
+        white-space: nowrap;
+    }
+
+    .step-item.active .step-label {
+        color: #2e7d32;
+        font-weight: 700;
+    }
+
+    .step-item.completed .step-label {
+        color: #43a047;
+    }
+
+    .step-panel {
+        display: none;
+    }
+
+        .step-panel.active {
+            display: block;
         }
 
-        .step-label {
-            margin-top: 6px;
-            font-size: .7rem;
-            color: #aaa;
-            text-align: center;
-            font-weight: 500;
-            white-space: nowrap;
-        }
+    .panel-card {
+        background: #fff;
+        border-radius: 10px;
+        padding: 24px 28px 16px;
+        box-shadow: 0 2px 10px rgba(0,0,0,.07);
+        border: 1px solid #c8e6c9;
+        margin-bottom: 16px;
+    }
 
-        .step-item.active .step-label {
+        .panel-card h6 {
+            font-size: .78rem;
+            text-transform: uppercase;
+            letter-spacing: .7px;
             color: #2e7d32;
             font-weight: 700;
-        }
-
-        .step-item.completed .step-label {
-            color: #43a047;
-        }
-
-        .step-panel {
-            display: none;
-        }
-
-            .step-panel.active {
-                display: block;
-            }
-
-        .panel-card {
-            background: #fff;
-            border-radius: 10px;
-            padding: 24px 28px 16px;
-            box-shadow: 0 2px 10px rgba(0,0,0,.07);
-            border: 1px solid #c8e6c9;
             margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #e8f5e9;
         }
 
-            .panel-card h6 {
-                font-size: .78rem;
-                text-transform: uppercase;
-                letter-spacing: .7px;
-                color: #2e7d32;
-                font-weight: 700;
-                margin-bottom: 16px;
-                padding-bottom: 8px;
-                border-bottom: 2px solid #e8f5e9;
-            }
+    .wizard-nav {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: #fff;
+        border-radius: 10px;
+        padding: 14px 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,.07);
+        border: 1px solid #c8e6c9;
+    }
 
-        .wizard-nav {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: #fff;
-            border-radius: 10px;
-            padding: 14px 20px;
-            box-shadow: 0 2px 8px rgba(0,0,0,.07);
-            border: 1px solid #c8e6c9;
+    .field-row {
+        display: grid;
+        gap: 12px;
+        margin-bottom: 12px;
+    }
+
+        .field-row.cols-4 {
+            grid-template-columns: repeat(4, 1fr);
         }
 
-        .field-row {
-            display: grid;
-            gap: 12px;
-            margin-bottom: 12px;
+        .field-row.cols-3 {
+            grid-template-columns: repeat(3, 1fr);
         }
 
-            .field-row.cols-4 {
-                grid-template-columns: repeat(4, 1fr);
-            }
-
-            .field-row.cols-3 {
-                grid-template-columns: repeat(3, 1fr);
-            }
-
-            .field-row.cols-2 {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-        .field-label {
-            font-size: .72rem;
-            color: #555;
-            font-weight: 600;
-            margin-bottom: 4px;
+        .field-row.cols-2 {
+            grid-template-columns: repeat(2, 1fr);
         }
 
-        .entry-tabs {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 12px;
-            flex-wrap: wrap;
+    .field-label {
+        font-size: .72rem;
+        color: #555;
+        font-weight: 600;
+        margin-bottom: 4px;
+    }
+
+    .entry-tabs {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 12px;
+        flex-wrap: wrap;
+    }
+
+    .entry-tab {
+        padding: 6px 14px;
+        border-radius: 20px;
+        border: 1px solid #a5d6a7;
+        background: #f1f8f1;
+        color: #2e7d32;
+        font-size: .8rem;
+        cursor: pointer;
+        font-weight: 600;
+    }
+
+        .entry-tab.active {
+            background: #2e7d32;
+            color: #fff;
+            border-color: #2e7d32;
         }
 
-        .entry-tab {
-            padding: 6px 14px;
-            border-radius: 20px;
-            border: 1px solid #a5d6a7;
-            background: #f1f8f1;
+    .entry-form {
+        display: none;
+    }
+
+        .entry-form.active {
+            display: block;
+        }
+
+    .review-section {
+        margin-bottom: 14px;
+    }
+
+        .review-section h6 {
+            font-size: .75rem;
+            text-transform: uppercase;
+            letter-spacing: .6px;
             color: #2e7d32;
-            font-size: .8rem;
-            cursor: pointer;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+    .review-grid {
+        display: grid;
+        grid-template-columns: repeat(3,1fr);
+        gap: 8px;
+    }
+
+    .review-item {
+        background: #f1f8f1;
+        border-radius: 6px;
+        padding: 8px 12px;
+        font-size: .8rem;
+    }
+
+        .review-item .r-label {
+            color: #666;
+            margin-bottom: 2px;
+            font-size: .72rem;
+        }
+
+        .review-item .r-value {
+            color: #1b5e20;
             font-weight: 600;
         }
-
-            .entry-tab.active {
-                background: #2e7d32;
-                color: #fff;
-                border-color: #2e7d32;
-            }
-
-        .entry-form {
-            display: none;
-        }
-
-            .entry-form.active {
-                display: block;
-            }
-
-        .review-section {
-            margin-bottom: 14px;
-        }
-
-            .review-section h6 {
-                font-size: .75rem;
-                text-transform: uppercase;
-                letter-spacing: .6px;
-                color: #2e7d32;
-                font-weight: 700;
-                margin-bottom: 8px;
-            }
-
-        .review-grid {
-            display: grid;
-            grid-template-columns: repeat(3,1fr);
-            gap: 8px;
-        }
-
-        .review-item {
-            background: #f1f8f1;
-            border-radius: 6px;
-            padding: 8px 12px;
-            font-size: .8rem;
-        }
-
-            .review-item .r-label {
-                color: #666;
-                margin-bottom: 2px;
-                font-size: .72rem;
-            }
-
-            .review-item .r-value {
-                color: #1b5e20;
-                font-weight: 600;
-            }
-    </style>
+</style>
 
 <div class="wizard-steps" id="stepBar"></div>
 
@@ -255,7 +255,7 @@
         <h6>Reference Numbers</h6>
         <div class="field-row cols-4">
             <div><div class="field-label">SAPS Station</div><div id="sapsSelect"></div></div>
-            <div><div class="field-label">AR Number</div><div id="arNoBox"></div></div>
+            <div><div class="field-label">CR Number</div><div id="crNoBox"></div></div>
             <div><div class="field-label">CAS Number</div><div id="casNoBox"></div></div>
             <div><div class="field-label">Capturing Number</div><div id="capturingBox"></div></div>
             <div><div class="field-label">Incident Report No.</div><div id="incidentReportBox"></div></div>
@@ -513,7 +513,7 @@
 <div class="step-panel" id="panel-9">
     <div class="panel-card">
         <h6>Attachments</h6>
-        
+
         <div class="field-row cols-1">
             <div>
                 <div class="field-label">Upload Supporting Documents</div>
@@ -581,13 +581,7 @@
             var personCount  = 0;
             var factorRows   = [];
 
-            // ── Form option lists ──────────────────────────────────────
-            // Everything that used to be a hardcoded "var xyz = [...]" array
-            // now comes from the server: /api/lookup/formoptions for
-            // editable dropdown content, /api/lookup/fixedvalues for the
-            // small set of values (severity, role) that are real C# enums
-            // compared as string literals in the backend — those must not
-            // drift from what the server actually checks against.
+
             var formOptions = {};
             var fixedValues = {};
 
@@ -596,13 +590,10 @@
                 $.getJSON("/api/lookup/fixedvalues").done(function (data) { fixedValues = data; })
             );
 
-            // Everything that touches formOptions/fixedValues — including
-            // the initial form build — waits for both calls to resolve.
+           
             optionsReady.done(function () {
 
-                // Nested groupings reconstructed client-side from the flat
-                // lists that came back, matching the category names the
-                // rest of this script already expects.
+                
              window.factorMap = {
                     "Human": formOptions.ContributoryFactor_Human,
                     "Vehicle": formOptions.ContributoryFactor_Vehicle,
@@ -741,13 +732,9 @@
 
             lookupSelect("#sapsSelect", "stations", "Search SAPS station...", function(v) {
                 formData.CrashInfo.SapsStation = v;
-                var ar = formData.CrashInfo.ArNo || "";
-                formData.CrashInfo.CrNo = v ? (v + (ar ? "-" + ar : "")) : ar;
             });
-            textBox("#arNoBox", "AR Number", function(v) {
-                formData.CrashInfo.ArNo  = v;
-                var saps = formData.CrashInfo.SapsStation || "";
-                formData.CrashInfo.CrNo  = saps ? (saps + (v ? "-" + v : "")) : v;
+            textBox("#crNoBox", "01/02/2025", function(v) {
+                formData.CrashInfo.CrNo = v;
             });
             textBox("#casNoBox",     "CAS Number",       function(v) { formData.CrashInfo.CasNo            = v; });
             textBox("#capturingBox", "Capturing Number", function(v) { formData.CrashInfo.CapturingNumber  = v; });
@@ -806,8 +793,6 @@
             staticSelectWithOther("#roadSignsBox",  formOptions.RoadSignsCondition,"Road signs...",function(v){ formData.Conditions.RoadSignsCondition = v; });
             staticSelect("#roadMarkingsBox",formOptions.RoadMarkingVisibility,"Road markings...",function(v){ formData.Conditions.RoadMarkingVisibility = v; });
 
-            // Overall crash-level classification — distinct from per-person
-            // injury severity (fixedValues.InjurySeverity), now DB-backed too.
             staticSelect("#crashSeverityBox", formOptions.CrashSeverityLevel, "Severity", function(v){ formData.CrashInfo.CrashSeverity = v; });
 
             lookupSelect("#crashTypeSelect","crashtypes","e.g. HEAD ON, SIDE SWIPE...",function(v){ formData.Conditions.CrashType = v; });
@@ -887,7 +872,6 @@
                 onValueChanged: function(e) { formData.OfficialUse.Comments = e.value; }
             });
 
-            // ========== ATTACHMENT CONTROLS ==========
             var attachmentFiles = [];
 
             $("#attachmentUpload").dxFileUploader({

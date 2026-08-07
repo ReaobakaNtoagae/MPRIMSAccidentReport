@@ -41,6 +41,7 @@ builder.Services.AddScoped<QuarterlyReportDocService>();
 builder.Services.AddScoped<FiveYearReportDataService>();
 builder.Services.AddScoped<FiveYearReportDocService>();
 builder.Services.AddScoped<IStationDistrictLookup, StationDistrictLookup>();
+builder.Services.AddScoped<ICrashFormValidationService, CrashFormValidationService>();
 
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 {

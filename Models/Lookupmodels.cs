@@ -154,6 +154,10 @@ public class LookupVehicleType
     [Column("description")]
     public string? Description { get; set; }
 
+    [MaxLength(60)]
+    [Column("full_name")]
+    public string? FullName { get; set; }
+
     [Column("is_active")]
     public bool IsActive { get; set; } = true;
 

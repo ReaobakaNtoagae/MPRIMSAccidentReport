@@ -18,14 +18,19 @@ public class CrashFatality
 
     [Column("gender")]
     [MaxLength(1)]
-    public string Gender { get; set; } = string.Empty; // "M" or "F"
+    public string Gender { get; set; } = string.Empty; 
 
     [Column("race")]
     [MaxLength(1)]
-    public string Race { get; set; } = string.Empty; // "B","C","I","W","O"
+    public string Race { get; set; } = string.Empty; 
 
     [Column("created_at")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    [Column("role")]
+    [MaxLength(20)]
+    public string? Role { get; set; } 
+
 
     [ForeignKey(nameof(SummaryId))]
     public CrashSummary? Summary { get; set; }

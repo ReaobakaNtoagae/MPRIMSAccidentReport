@@ -39,7 +39,7 @@ public class ExcelImportService
 
     private static string NormalizeHeader(string raw) =>
         (raw ?? "").Trim().ToUpperInvariant()
-                   .Replace(" ", "").Replace("-", "").Replace(".", "").Replace("_", "");
+                   .Replace(" ", "").Replace("-", "").Replace(".", "").Replace("_", "").Replace("/", "");
 
     private (int HeaderRowNumber, ColumnMap Map)? BuildColumnMap(IXLWorksheet ws)
     {
@@ -51,13 +51,25 @@ public class ExcelImportService
         for (int i = 0; i < rows.Count && subHeaderIdx == -1; i++)
         {
             var row = rows[i];
+            var rowAbove = i > 0 ? rows[i - 1] : null;
+
             for (int c = 1; c <= scanCols; c++)
             {
-                if (NormalizeHeader(row.Cell(c).GetString()) != "SAPS") continue;
+                // FIX: was an exact match against "SAPS" — some files have
+                // "SAPS STATION" in one cell instead of bare "SAPS", which
+                // never matched at all.
+                if (!NormalizeHeader(row.Cell(c).GetString()).StartsWith("SAPS")) continue;
 
                 for (int c2 = c + 1; c2 <= c + 5; c2++)
                 {
-                    if (NormalizeHeader(row.Cell(c2).GetString()) == "ARNO")
+                    // FIX: AR NO's label sometimes sits split across two
+                    // rows ("A/R" in the row above, "NO" in the header row
+                    // itself) rather than as one "AR NO" cell — check both
+                    // rows, not just the header row alone.
+                    var headerCell = NormalizeHeader(row.Cell(c2).GetString());
+                    var aboveCell = rowAbove != null ? NormalizeHeader(rowAbove.Cell(c2).GetString()) : "";
+
+                    if (headerCell == "ARNO" || aboveCell == "AR")
                     {
                         subHeaderIdx = i;
                         break;
@@ -76,15 +88,22 @@ public class ExcelImportService
 
         for (int c = 1; c <= scanCols; c++)
         {
-            switch (NormalizeHeader(headerRow.Cell(c).GetString()))
+            var headerText = NormalizeHeader(headerRow.Cell(c).GetString());
+            var aboveText = groupRow != null ? NormalizeHeader(groupRow.Cell(c).GetString()) : "";
+
+            
+            if (headerText.StartsWith("SAPS")) { map.Saps = c; continue; }
+
+            
+            if (headerText == "ARNO" || aboveText == "AR") { map.ArNo = c; continue; }
+            if (headerText == "ROUTE" || aboveText == "ROUTE") { map.Route = c; continue; }
+
+            switch (headerText)
             {
-                case "SAPS": map.Saps = c; break;
-                case "ARNO": map.ArNo = c; break;
                 case "CAS": map.Cas = c; break;
                 case "DATE": map.Date = c; break;
                 case "DAY": map.Day = c; break;
                 case "TIME": map.Time = c; break;
-                case "ROUTE": map.Route = c; break;
                 case "LOCATION": map.Location = c; break;
                 case "TYPE": map.Type = c; break;
                 case "INVOLVED": map.Involved = c; break;
@@ -196,6 +215,11 @@ public class ExcelImportService
         @"(\d{1,2})\s*-\s*(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})",
         RegexOptions.Compiled);
 
+    
+    private static readonly Regex MonthYearOnlyPattern = new(
+        @"\b([A-Za-z]+)\s+(\d{4})\b",
+        RegexOptions.Compiled);
+
     private ReportHeaderInfo ExtractReportHeaderInfo(IXLWorksheet ws)
     {
         var info = new ReportHeaderInfo();
@@ -226,6 +250,23 @@ public class ExcelImportService
                             catch { }
                         }
                     }
+                    else
+                    {
+                        // FIX: fallback for titles with no day-range, just
+                        // "SEPTEMBER 2024" — period becomes the whole month.
+                        var m2 = MonthYearOnlyPattern.Match(text);
+                        if (m2.Success && MonthNameToNumber.TryGetValue(m2.Groups[1].Value, out var monthNum2) &&
+                            int.TryParse(m2.Groups[2].Value, out var year2))
+                        {
+                            try
+                            {
+                                var from = new DateOnly(year2, monthNum2, 1);
+                                info.PeriodFrom = from;
+                                info.PeriodTo = from.AddMonths(1).AddDays(-1);
+                            }
+                            catch { }
+                        }
+                    }
                 }
 
                 if (info.District == null && !info.IsProvincial)
@@ -248,164 +289,239 @@ public class ExcelImportService
     }
 
 
+    
     public async Task<ImportResult> ImportAsync(Stream stream, string fileName, string province = "MP")
     {
         var result = new ImportResult { FileName = fileName };
 
         using var wb = new XLWorkbook(stream);
-        var ws = wb.Worksheets.First();
 
-        var located = BuildColumnMap(ws);
-        if (located == null)
-        {
-            result.AddError("Could not find header row with SAPS/AR NO/CAS columns.");
-            return result;
-        }
+        var sheetsProcessed = new List<string>();
+        var sheetsSkipped = new List<string>();
 
-        var (headerRowNumber, map) = located.Value;
-
-        var missing = map.MissingCriticalFields();
-        if (missing.Count > 0)
-        {
-            result.AddError(
-                "Header row was found, but these required columns could not be located: " +
-                string.Join(", ", missing) + ".");
-            return result;
-        }
-
-        var headerInfo = ExtractReportHeaderInfo(ws);
-
-        DateOnly periodFrom, periodTo;
-        if (headerInfo.PeriodFrom.HasValue && headerInfo.PeriodTo.HasValue)
-        {
-            periodFrom = headerInfo.PeriodFrom.Value;
-            periodTo = headerInfo.PeriodTo.Value;
-        }
-        else
-        {
-            (periodFrom, periodTo) = ExtractPeriodFromFileName(fileName);
-            _logger.LogWarning(
-                "No period found in worksheet header — falling back to filename: {From} to {To}",
-                periodFrom, periodTo);
-        }
-
-        result.DetectedPeriodFrom = periodFrom;
-        result.DetectedPeriodTo = periodTo;
-        result.DetectedDistrict = headerInfo.District;
-        result.DetectedIsProvincial = headerInfo.IsProvincial;
-
-        var allRows = ws.RowsUsed().Skip(headerRowNumber).ToList();
-
-        // ── Split data rows from summary/demographics rows ──
-        var dataRows = new List<IXLRow>();
-        var summaryRows = new List<IXLRow>();
-        bool inSummary = false;
-
-        foreach (var row in allRows)
-        {
-            var saps = row.Cell(map.Saps).GetString().Trim();
-
-            if (string.IsNullOrWhiteSpace(saps) || saps.Equals("TOTAL", StringComparison.OrdinalIgnoreCase))
-            {
-                if (inSummary) summaryRows.Add(row);
-                else inSummary = true;
-                continue;
-            }
-
-            var col7 = row.Cell(map.Location > 0 ? map.Location : 8).GetString().Trim();
-
-            if (col7.Equals("GRAND TOTAL", StringComparison.OrdinalIgnoreCase) ||
-                saps.StartsWith("TOTAL:", StringComparison.OrdinalIgnoreCase))
-            {
-                inSummary = true;
-                continue;
-            }
-
-            if (!inSummary)
-            {
-                if (saps.StartsWith("VICTIMS", StringComparison.OrdinalIgnoreCase) ||
-                    saps.StartsWith("AGE", StringComparison.OrdinalIgnoreCase) ||
-                    saps.StartsWith("RACE", StringComparison.OrdinalIgnoreCase) ||
-                    saps.StartsWith("DRIVER", StringComparison.OrdinalIgnoreCase) ||
-                    saps.StartsWith("PASSENGER", StringComparison.OrdinalIgnoreCase) ||
-                    saps.StartsWith("PEDESTRIAN", StringComparison.OrdinalIgnoreCase) ||
-                    saps.StartsWith("CYLIST", StringComparison.OrdinalIgnoreCase))
-                {
-                    inSummary = true;
-                    summaryRows.Add(row);
-                    continue;
-                }
-
-                dataRows.Add(row);
-            }
-            else
-            {
-                summaryRows.Add(row);
-            }
-        }
-
-        // ── Handle demographics ──
-        result.Demographics = ParseDemographics(summaryRows, ws);
-        await SaveDemographicsAsync(result.Demographics, periodFrom, periodTo, province);
-
-        // ── Pre‑fetch full-form CrNos (these are sacred – no duplicates allowed) ──
         var existingFormCrNos = await _context.Crashes
             .Where(c => c.CrNo != null)
             .Select(c => c.CrNo!)
             .ToHashSetAsync();
 
-        // ── Track duplicates within the same file (local check) ──
-        var processedInThisFile = new HashSet<string>();
+        // FIX: AR numbers are NOT reliably unique per station within a
+        // file — confirmed against real data (e.g. two genuinely different
+        // WITBANK crashes on the same day both filed under AR "158/09";
+        // two TWEEFONTEIN crashes SIX DAYS apart both under "11/09").
+        // Treating every AR collision as an automatic duplicate silently
+        // discards real crash records. Instead: group by the AR-based
+        // CrNo, and only treat a collision as a genuine duplicate if the
+        // colliding rows' actual details (date/time/location/type) match —
+        // otherwise it's a different crash reusing the same AR number,
+        // which gets a disambiguated CrNo and is imported, with a visible
+        // warning so it's auditable rather than silently guessed at.
+        var crNoGroups = new Dictionary<string, List<CrashSummary>>();
+        var stationSequenceCounters = new Dictionary<string, int>();
 
-        foreach (var row in dataRows)
+        foreach (var ws in wb.Worksheets)
         {
-            result.TotalRows++;
-            try
+            var located = BuildColumnMap(ws);
+            if (located == null)
             {
-                var summary = ParseSummaryRow(row, map, fileName, periodFrom.Year);
-                if (summary == null)
-                {
-                    result.Skipped++;
-                    result.AddWarning($"Row {row.RowNumber()}: could not parse — skipped.");
-                    continue;
-                }
-
-                // 1. Block if this CrNo already exists as a full CR1 form
-                if (existingFormCrNos.Contains(summary.CrNo))
-                {
-                    result.Skipped++;
-                    result.AddWarning(
-                        $"Row {row.RowNumber()}: CrNo '{summary.CrNo}' already exists as a full CR1 form — skipped.");
-                    continue;
-                }
-
-                // 2. Block duplicates within the same source file
-                if (!processedInThisFile.Add(summary.CrNo))
-                {
-                    result.Skipped++;
-                    result.AddWarning(
-                        $"Row {row.RowNumber()}: duplicate CrNo '{summary.CrNo}' in the same file — skipped.");
-                    continue;
-                }
-
-                // 3. Optional date‑range warning
-                if (summary.CrashDate < periodFrom || summary.CrashDate > periodTo)
-                {
-                    result.AddWarning(
-                        $"Row {row.RowNumber()}: crash date {summary.CrashDate:dd/MM/yyyy} outside period " +
-                        $"({periodFrom:dd/MM/yyyy} – {periodTo:dd/MM/yyyy}) — imported anyway.");
-                }
-
-                _context.CrashSummaries.Add(summary);
-                result.Imported++;
+                sheetsSkipped.Add(ws.Name);
+                continue;
             }
-            catch (Exception ex)
+
+            var (headerRowNumber, map) = located.Value;
+
+            var missing = map.MissingCriticalFields();
+            if (missing.Count > 0)
             {
-                result.Errors++;
-                result.AddError($"Row {row.RowNumber()}: {ex.Message}");
-                _logger.LogWarning(ex, "Import error on row {row}", row.RowNumber());
+                sheetsSkipped.Add(ws.Name);
+                result.AddWarning(
+                    $"Sheet '{ws.Name}': header row found, but missing required columns " +
+                    $"({string.Join(", ", missing)}) — skipped.");
+                continue;
+            }
+
+            sheetsProcessed.Add(ws.Name);
+
+            var headerInfo = ExtractReportHeaderInfo(ws);
+
+            if (headerInfo.District == null && !headerInfo.IsProvincial)
+            {
+                var sheetNameNormalized = ws.Name.Trim().ToUpperInvariant();
+                var sheetMatch = KnownDistricts.FirstOrDefault(d => sheetNameNormalized.Contains(d));
+                if (sheetMatch != null)
+                    headerInfo.District = sheetMatch;
+            }
+
+            DateOnly periodFrom, periodTo;
+            bool periodGenuinelyDetected;
+            if (headerInfo.PeriodFrom.HasValue && headerInfo.PeriodTo.HasValue)
+            {
+                periodFrom = headerInfo.PeriodFrom.Value;
+                periodTo = headerInfo.PeriodTo.Value;
+                periodGenuinelyDetected = true;
+            }
+            else
+            {
+                (periodFrom, periodTo) = ExtractPeriodFromFileName(fileName);
+                periodGenuinelyDetected = false;
+                _logger.LogWarning(
+                    "Sheet '{Sheet}': no period found in worksheet header — falling back to filename: {From} to {To}",
+                    ws.Name, periodFrom, periodTo);
+            }
+
+            // Only trust bare day-of-month date cells (see ParseCrashDate)
+            // when the period came from the sheet's own header, not a
+            // filename/today guess — otherwise a wrong guessed month would
+            // silently propagate into every crash date in the sheet.
+            int? fallbackMonth = periodGenuinelyDetected ? periodFrom.Month : null;
+
+            result.DetectedPeriodFrom ??= periodFrom;
+            result.DetectedPeriodTo ??= periodTo;
+            result.DetectedDistrict ??= headerInfo.District;
+            if (headerInfo.IsProvincial) result.DetectedIsProvincial = true;
+
+            var allRows = ws.RowsUsed().Skip(headerRowNumber).ToList();
+
+            var dataRows = new List<IXLRow>();
+            var summaryRows = new List<IXLRow>();
+            bool inSummary = false;
+
+            foreach (var row in allRows)
+            {
+                var saps = row.Cell(map.Saps).GetString().Trim();
+
+                if (string.IsNullOrWhiteSpace(saps) || saps.Equals("TOTAL", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (inSummary) summaryRows.Add(row);
+                    else inSummary = true;
+                    continue;
+                }
+
+                var col7 = row.Cell(map.Location > 0 ? map.Location : 8).GetString().Trim();
+
+                if (col7.Equals("GRAND TOTAL", StringComparison.OrdinalIgnoreCase) ||
+                    saps.StartsWith("TOTAL:", StringComparison.OrdinalIgnoreCase))
+                {
+                    inSummary = true;
+                    continue;
+                }
+
+                if (!inSummary)
+                {
+                    if (saps.StartsWith("VICTIMS", StringComparison.OrdinalIgnoreCase) ||
+                        saps.StartsWith("AGE", StringComparison.OrdinalIgnoreCase) ||
+                        saps.StartsWith("RACE", StringComparison.OrdinalIgnoreCase) ||
+                        saps.StartsWith("DRIVER", StringComparison.OrdinalIgnoreCase) ||
+                        saps.StartsWith("PASSENGER", StringComparison.OrdinalIgnoreCase) ||
+                        saps.StartsWith("PEDESTRIAN", StringComparison.OrdinalIgnoreCase) ||
+                        saps.StartsWith("CYLIST", StringComparison.OrdinalIgnoreCase))
+                    {
+                        inSummary = true;
+                        summaryRows.Add(row);
+                        continue;
+                    }
+
+                    dataRows.Add(row);
+                }
+                else
+                {
+                    summaryRows.Add(row);
+                }
+            }
+
+            var demographics = ParseDemographics(summaryRows, ws, ws.Name);
+            await SaveDemographicsAsync(demographics, periodFrom, periodTo, province);
+            if (result.Demographics.AgeTotal == 0 && result.Demographics.GenderTotal == 0 && result.Demographics.RaceTotal == 0)
+                result.Demographics = demographics;
+
+            foreach (var row in dataRows)
+            {
+                result.TotalRows++;
+                try
+                {
+                    var summary = ParseSummaryRow(row, map, fileName, periodFrom.Year, fallbackMonth, ws.Name, stationSequenceCounters);
+                    if (summary == null)
+                    {
+                        result.Skipped++;
+                        result.AddWarning($"Sheet '{ws.Name}', row {row.RowNumber()}: could not parse — skipped.");
+                        continue;
+                    }
+
+                    if (existingFormCrNos.Contains(summary.CrNo))
+                    {
+                        result.Skipped++;
+                        result.AddWarning(
+                            $"Sheet '{ws.Name}', row {row.RowNumber()}: CrNo '{summary.CrNo}' already exists as a full CR1 form — skipped.");
+                        continue;
+                    }
+
+                    if (crNoGroups.TryGetValue(summary.CrNo, out var existingGroup))
+                    {
+                        // Only a genuine duplicate if date/time/location/type all
+                        // match an already-imported row under this same CrNo —
+                        // otherwise this is a different crash that happens to
+                        // reuse the same AR number, and gets disambiguated
+                        // rather than silently dropped.
+                        var isGenuineDuplicate = existingGroup.Any(existing =>
+                            existing.CrashDate == summary.CrashDate &&
+                            existing.CrashTime == summary.CrashTime &&
+                            string.Equals(existing.Location, summary.Location, StringComparison.OrdinalIgnoreCase) &&
+                            string.Equals(existing.CrashType, summary.CrashType, StringComparison.OrdinalIgnoreCase));
+
+                        if (isGenuineDuplicate)
+                        {
+                            result.Skipped++;
+                            result.AddWarning(
+                                $"Sheet '{ws.Name}', row {row.RowNumber()}: CrNo '{summary.CrNo}' matches an already-" +
+                                $"imported row with the same date/time/location/type — genuine duplicate, skipped.");
+                            continue;
+                        }
+
+                        // Different crash, same reused AR number — disambiguate
+                        // rather than lose this row. Suffix letter based on how
+                        // many rows already share this base CrNo.
+                        var suffix = (char)('B' + existingGroup.Count - 1);
+                        var originalCrNo = summary.CrNo;
+                        summary.CrNo = $"{originalCrNo}-{suffix}";
+                        existingGroup.Add(summary);
+
+                        result.AddWarning(
+                            $"Sheet '{ws.Name}', row {row.RowNumber()}: AR number reused — '{originalCrNo}' already " +
+                            $"used by a different crash (different date/time/location/type). Imported as " +
+                            $"'{summary.CrNo}' instead. This source file's AR numbers are not unique per station; " +
+                            $"worth flagging to whoever compiled it.");
+                    }
+                    else
+                    {
+                        crNoGroups[summary.CrNo] = new List<CrashSummary> { summary };
+                    }
+
+                    if (summary.CrashDate < periodFrom || summary.CrashDate > periodTo)
+                    {
+                        result.AddWarning(
+                            $"Sheet '{ws.Name}', row {row.RowNumber()}: crash date {summary.CrashDate:dd/MM/yyyy} outside period " +
+                            $"({periodFrom:dd/MM/yyyy} – {periodTo:dd/MM/yyyy}) — imported anyway.");
+                    }
+
+                    _context.CrashSummaries.Add(summary);
+                    result.Imported++;
+                }
+                catch (Exception ex)
+                {
+                    result.Errors++;
+                    result.AddError($"Sheet '{ws.Name}', row {row.RowNumber()}: {ex.Message}");
+                    _logger.LogWarning(ex, "Import error on sheet {Sheet} row {Row}", ws.Name, row.RowNumber());
+                }
             }
         }
+
+        if (sheetsProcessed.Count == 0)
+        {
+            result.AddError("No sheet in this workbook matched the expected crash-register layout (SAPS/AR NO/CAS header row).");
+        }
+
+        _logger.LogInformation(
+            "Import of {File} complete. Sheets processed: {Processed}. Sheets skipped: {Skipped}.",
+            fileName, string.Join(", ", sheetsProcessed), string.Join(", ", sheetsSkipped));
 
         await _context.SaveChangesAsync();
         return result;
@@ -413,9 +529,76 @@ public class ExcelImportService
 
 
 
-    private CrashSummary? ParseSummaryRow(IXLRow row, ColumnMap map, string fileName, int fallbackYear)
+    private static readonly Regex StationCaseBleed1 = new(
+        @"\.?\s*CAS\s*:{1,2}\s*.*$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    private static readonly Regex StationCaseBleed2 = new(
+        @"\.?\s*CAS\s*\d.*$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    private static readonly Regex StationCaseBleed3 = new(
+        @"\s+\d{1,4}-\d{1,2}-\d{4}$", RegexOptions.Compiled);
+
+    private static string CleanStationName(string raw)
     {
-        var saps = row.Cell(map.Saps).GetString().Trim().ToUpper();
+        var s = raw.Trim();
+        s = StationCaseBleed1.Replace(s, "");
+        s = StationCaseBleed2.Replace(s, "");
+        s = StationCaseBleed3.Replace(s, "");
+        s = Regex.Replace(s, @"[.\s*]+$", "");
+        return s.Trim().ToUpperInvariant();
+    }
+
+    private static DateOnly? ParseCrashDate(string dateRaw, int fallbackYear, int? fallbackMonth)
+    {
+        if (string.IsNullOrWhiteSpace(dateRaw)) return null;
+
+        var parts = dateRaw.Replace('-', '/').Split('/');
+
+
+        if (parts.Length == 1)
+        {
+            if (fallbackMonth == null) return null;
+            if (!int.TryParse(parts[0], out var bareDay)) return null;
+
+            try
+            {
+                var clampedDay = Math.Min(Math.Max(bareDay, 1), DateTime.DaysInMonth(fallbackYear, fallbackMonth.Value));
+                return new DateOnly(fallbackYear, fallbackMonth.Value, clampedDay);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        if (parts.Length < 2) return null;
+
+        if (!int.TryParse(parts[0], out var dd) || !int.TryParse(parts[1], out var mm))
+            return null;
+
+        var year = fallbackYear;
+        if (parts.Length >= 3 && int.TryParse(parts[2], out var yyyy))
+            year = yyyy;
+
+        if (mm < 1 || mm > 12) return null;
+
+        try
+        {
+            dd = Math.Min(Math.Max(dd, 1), DateTime.DaysInMonth(year, mm));
+            return new DateOnly(year, mm, dd);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private CrashSummary? ParseSummaryRow(
+        IXLRow row, ColumnMap map, string fileName, int fallbackYear, int? fallbackMonth, string sheetName,
+        Dictionary<string, int> stationSequenceCounters)
+    {
+        var rawSaps = row.Cell(map.Saps).GetString().Trim();
+        if (string.IsNullOrEmpty(rawSaps)) return null;
+
+        var saps = CleanStationName(rawSaps);
         if (string.IsNullOrEmpty(saps)) return null;
 
         var arNo = map.ArNo > 0 ? row.Cell(map.ArNo).GetString().Trim() : "";
@@ -427,25 +610,8 @@ public class ExcelImportService
         var crashType = row.Cell(map.Type).GetString().Trim().ToUpper();
         var vehicles = row.Cell(map.Involved).GetString().Trim();
 
-        
-        DateOnly crashDate = new DateOnly(fallbackYear, 1, 1);
-        if (!string.IsNullOrEmpty(dateRaw))
-        {
-            var parts = dateRaw.Replace('-', '/').Split('/');
-            if (parts.Length >= 2 &&
-                int.TryParse(parts[0], out var dd) && int.TryParse(parts[1], out var mm))
-            {
-                var year = fallbackYear;
-                if (parts.Length >= 3 && int.TryParse(parts[2], out var yyyy))
-                    year = yyyy;
-
-                if (mm >= 1 && mm <= 12)
-                {
-                    dd = Math.Min(Math.Max(dd, 1), DateTime.DaysInMonth(year, mm));
-                    crashDate = new DateOnly(year, mm, dd);
-                }
-            }
-        }
+        var crashDate = ParseCrashDate(dateRaw, fallbackYear, fallbackMonth);
+        if (crashDate == null) return null;
 
         TimeOnly? crashTime = null;
         if (!string.IsNullOrEmpty(timeRaw))
@@ -453,7 +619,6 @@ public class ExcelImportService
             var norm = timeRaw.ToUpper().Replace("H", ":");
             if (TimeOnly.TryParse(norm, out var t)) crashTime = t;
         }
-
 
         var vehicleCount = vehicles
             .Split('/')
@@ -463,12 +628,52 @@ public class ExcelImportService
                         && !p.Equals("HIT N RUN", StringComparison.OrdinalIgnoreCase)
                         && !p.Equals("HIT & RUN", StringComparison.OrdinalIgnoreCase));
 
+        string crNo;
+        if (!string.IsNullOrEmpty(arNo))
+        {
+            
+            var arNoParts = arNo.Split('/').Select(p => p.Trim()).Where(p => p.Length > 0).ToArray();
+
+            string completedArNo;
+            if (arNoParts.Length >= 3 && arNoParts[2].Length == 4)
+            {
+                completedArNo = arNo;
+            }
+            else if (arNoParts.Length == 2)
+            {
+                completedArNo = $"{arNoParts[0]}/{arNoParts[1]}/{fallbackYear}";
+            }
+            else if (arNoParts.Length == 1 && fallbackMonth.HasValue)
+            {
+                completedArNo = $"{arNoParts[0]}/{fallbackMonth.Value:D2}/{fallbackYear}";
+            }
+            else
+            {
+                completedArNo = arNo;
+                _logger.LogWarning(
+                    "Sheet '{Sheet}': AR number '{ArNo}' for station '{Station}' has no month/year and " +
+                    "none could be confidently determined from the sheet's period — stored as-is, " +
+                    "incomplete. This is not the full canonical number.",
+                    sheetName, arNo, saps);
+            }
+
+            crNo = $"{saps}-{completedArNo}";
+        }
+        else
+        {
+            var key = $"{sheetName}:{saps}";
+            stationSequenceCounters.TryGetValue(key, out var seq);
+            seq++;
+            stationSequenceCounters[key] = seq;
+            crNo = $"{saps}-NOAR{seq:D3}";
+        }
+
         return new CrashSummary
         {
-            CrNo = string.IsNullOrEmpty(arNo) ? saps : $"{saps}-{arNo}",
+            CrNo = crNo,
             Station = saps,
             CasNo = string.IsNullOrEmpty(casNo) ? null : casNo,
-            CrashDate = crashDate,
+            CrashDate = crashDate.Value,
             CrashTime = crashTime,
             Route = string.IsNullOrEmpty(route) ? null : route,
             Location = string.IsNullOrEmpty(location) ? null : location,
@@ -499,14 +704,15 @@ public class ExcelImportService
     }
 
 
+    
 
-    private ImportDemographics ParseDemographics(List<IXLRow> summaryRows, IXLWorksheet ws)
+    private ImportDemographics ParseDemographics(List<IXLRow> summaryRows, IXLWorksheet ws, string sheetName)
     {
         var demo = new ImportDemographics();
 
         if (!summaryRows.Any())
         {
-            _logger.LogWarning("No summary rows found to parse demographics");
+            _logger.LogWarning("Sheet '{Sheet}': no summary rows found to parse demographics", sheetName);
             return demo;
         }
 
@@ -524,6 +730,9 @@ public class ExcelImportService
 
         ParseRaceDataFromWorksheet(ws, demo);
 
+
+        bool foundFixedLabelTotals = false;
+
         for (int i = 0; i < data.Count; i++)
         {
             if (data[i].Length == 0) continue;
@@ -534,7 +743,10 @@ public class ExcelImportService
             {
                 case "DRIVER":
                     int.TryParse(data[i][1], out int driverMale);
+                    int.TryParse(data[i][2], out int driverFemale);
                     demo.DriverMale = driverMale;
+                    demo.DriverFemale = driverFemale;
+                    foundFixedLabelTotals = true;
                     break;
 
                 case "PASSENGER":
@@ -542,6 +754,7 @@ public class ExcelImportService
                     int.TryParse(data[i][2], out int passengerFemale);
                     demo.PassengerMale = passengerMale;
                     demo.PassengerFemale = passengerFemale;
+                    foundFixedLabelTotals = true;
                     break;
 
                 case "PEDESTRIAN":
@@ -549,6 +762,7 @@ public class ExcelImportService
                     int.TryParse(data[i][2], out int pedestrianFemale);
                     demo.PedestrianMale = pedestrianMale;
                     demo.PedestrianFemale = pedestrianFemale;
+                    foundFixedLabelTotals = true;
                     break;
 
                 case "CYLIST":
@@ -557,6 +771,7 @@ public class ExcelImportService
                     int.TryParse(data[i][2], out int cyclistFemale);
                     demo.CyclistMale = cyclistMale;
                     demo.CyclistFemale = cyclistFemale;
+                    foundFixedLabelTotals = true;
                     break;
 
                 case "AGE":
@@ -581,34 +796,19 @@ public class ExcelImportService
                         }
                     }
                     break;
-
-                case "RACE":
-                    if (i + 1 < data.Count)
-                    {
-                        var raceDataRow = data[i + 1];
-                        int black = 0, coloured = 0, white = 0, indian = 0, other = 0;
-
-                        int.TryParse(raceDataRow[1], out black);
-                        int.TryParse(raceDataRow[2], out coloured);
-                        int.TryParse(raceDataRow[3], out white);
-                        int.TryParse(raceDataRow[4], out indian);
-                        int.TryParse(raceDataRow[5], out other);
-
-                        if (black == 0 && coloured == 0 && white == 0 && indian == 0 && other == 0)
-                        {
-                            int.TryParse(data[i][6], out black);
-                            int.TryParse(data[i][7], out coloured);
-                            int.TryParse(data[i][8], out white);
-                        }
-
-                        demo.RaceBlack = black;
-                        demo.RaceColoured = coloured;
-                        demo.RaceWhite = white;
-                        demo.RaceIndian = indian;
-                        demo.RaceOther = other;
-                    }
-                    break;
             }
+        }
+
+        if (!foundFixedLabelTotals)
+        {
+            ParsePerVictimGenderAgeRows(data, demo, sheetName, _logger);
+        }
+        else
+        {
+            _logger.LogInformation(
+                "Sheet '{Sheet}': fixed-label gender/role totals found in footer — per-victim listing " +
+                "(if present) treated as supplementary detail only, not re-tallied into the totals.",
+                sheetName);
         }
 
         return demo;
@@ -794,6 +994,89 @@ public class ExcelImportService
         }
         catch { }
         return 0;
+    }
+
+
+    private static readonly Regex GenderCountPattern = new(
+       @"^(\d*)\s*([MF])$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    private void ParsePerVictimGenderAgeRows(
+      List<string[]> data, ImportDemographics demo, string sheetName, ILogger logger)
+    {
+        int headerIdx = -1;
+
+        for (int i = 0; i < data.Count - 1; i++)
+        {
+            if (!string.Equals(data[i].ElementAtOrDefault(2)?.Trim(), "GENDER", StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            var subRow = data[i + 1];
+            var subLabels = subRow.Skip(3).Select(s => (s ?? "").Trim().ToUpperInvariant()).ToList();
+            if (subLabels.Any(s => s is "DRI" or "PASS" or "PED/CYL" or "PED" or "CYL"))
+            {
+                headerIdx = i;
+                break;
+            }
+        }
+
+        if (headerIdx == -1)
+            return;
+
+        var subHeader = data[headerIdx + 1].Skip(3).Select(s => (s ?? "").Trim().ToUpperInvariant()).ToList();
+        int driColOffset = subHeader.IndexOf("DRI");
+        int passColOffset = subHeader.IndexOf("PASS");
+        int pedCylColOffset = subHeader.FindIndex(s => s is "PED/CYL" or "PED" or "CYL");
+
+        int pedCylTallied = 0;
+        int rowsProcessed = 0;
+
+        for (int i = headerIdx + 2; i < data.Count; i++)
+        {
+            var row = data[i];
+            var firstCell = (row.ElementAtOrDefault(0) ?? "").Trim();
+
+            if (string.IsNullOrEmpty(firstCell) || firstCell.Contains("TOTAL", StringComparison.OrdinalIgnoreCase))
+                break;
+
+            var genderRaw = (row.ElementAtOrDefault(2) ?? "").Trim();
+            var m = GenderCountPattern.Match(genderRaw);
+            if (!m.Success) continue;
+
+            int count = string.IsNullOrEmpty(m.Groups[1].Value) ? 1 : int.Parse(m.Groups[1].Value);
+            bool isMale = m.Groups[2].Value.Equals("M", StringComparison.OrdinalIgnoreCase);
+
+            bool hasDri = driColOffset >= 0 && !string.IsNullOrWhiteSpace(row.ElementAtOrDefault(3 + driColOffset));
+            bool hasPass = passColOffset >= 0 && !string.IsNullOrWhiteSpace(row.ElementAtOrDefault(3 + passColOffset));
+            bool hasPedCyl = pedCylColOffset >= 0 && !string.IsNullOrWhiteSpace(row.ElementAtOrDefault(3 + pedCylColOffset));
+
+            if (hasDri)
+            {
+                if (isMale) demo.DriverMale++; else demo.DriverFemale++;
+            }
+            else if (hasPass)
+            {
+                if (isMale) demo.PassengerMale++; else demo.PassengerFemale++;
+            }
+            else if (hasPedCyl)
+            {
+                if (isMale) demo.PedestrianMale++; else demo.PedestrianFemale++;
+                pedCylTallied += count;
+            }
+
+            rowsProcessed++;
+        }
+
+        if (pedCylTallied > 0)
+        {
+            logger.LogWarning(
+                "Sheet '{Sheet}': {Count} pedestrian/cyclist victims tallied from a combined " +
+                "PED/CYL column — this source format cannot distinguish cyclists from pedestrians. " +
+                "All {Count} were counted as Pedestrian; CyclistMale/Female remain 0 for this sheet.",
+                sheetName, pedCylTallied, pedCylTallied);
+        }
+
+        logger.LogInformation(
+            "Sheet '{Sheet}': parsed {Rows} per-victim gender/age rows.", sheetName, rowsProcessed);
     }
 }
 

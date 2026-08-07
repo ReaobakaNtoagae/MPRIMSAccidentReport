@@ -31,8 +31,10 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
 
 
     public DbSet<CrashSummary> CrashSummaries { get; set; }
+    public DbSet<CrashSummaryVehicle> CrashSummaryVehicles { get; set; }
+    public DbSet<CrashSummaryInjury> CrashSummaryInjuries { get; set; }
 
-    // ── Lookup DbSets ────────────────────────────────────────
+    // Lookup DbSets
     public DbSet<LookupDistrict> LookupDistricts { get; set; }
     public DbSet<SapsStation> SapsStations { get; set; }
     public DbSet<LookupLocation> LookupLocations { get; set; }
@@ -412,7 +414,24 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
                 .HasConstraintName("fk_cs_crash");
         });
 
-        
+        modelBuilder.Entity<CrashSummaryVehicle>()
+       .HasOne(v => v.CrashSummary)
+       .WithMany()
+       .HasForeignKey(v => v.SummaryId)
+       .OnDelete(DeleteBehavior.NoAction);
+
+        modelBuilder.Entity<CrashSummaryInjury>()
+            .HasOne(i => i.CrashSummary)
+            .WithMany()
+            .HasForeignKey(i => i.SummaryId)
+            .OnDelete(DeleteBehavior.NoAction);
+
+        modelBuilder.Entity<CrashSummaryInjury>()
+            .HasOne(i => i.Vehicle)
+            .WithMany(v => v.Injuries)
+            .HasForeignKey(i => i.VehicleId)
+            .OnDelete(DeleteBehavior.NoAction);
+
         modelBuilder.Entity<SapsStation>().ToTable("lkp_saps_stations");
         modelBuilder.Entity<LookupLocation>().ToTable("lkp_locations");
         modelBuilder.Entity<LookupRoute>().ToTable("lkp_routes");

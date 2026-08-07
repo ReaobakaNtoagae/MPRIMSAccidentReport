@@ -31,83 +31,140 @@ namespace CrashReport.Controllers
             };
             return View(model);
         }
-
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Policy = Privileges.Crashes.CreateSummary)]
-        public async Task<IActionResult> CreateSummary(CrashSummary model, string? fatalitiesJson)
+        public async Task<IActionResult> CreateSummary(
+                    CrashSummary model, string? vehiclesJson, string? injuriesJson)
         {
-            // BUG FIXED: the original checked "is model.CrNo blank?" and failed
-            // every time, because the client never sends a CrNo — it's meant
-            // to be generated below, after Station is known. That check is
-            // removed entirely; CrNo no longer comes from the client at all.
-
             if (string.IsNullOrWhiteSpace(model.Station))
                 return Json(new { success = false, message = "Station is required." });
 
-            // BUG FIXED: this used to "return View(model)" on invalid
-            // ModelState, which sends HTML back to a caller expecting JSON
-            // (res.success would be undefined on the client). Every response
-            // from this action must be Json().
+            if (string.IsNullOrWhiteSpace(model.CrNo))
+                return Json(new { success = false, message = "CR number is required." });
+
             if (!ModelState.IsValid)
             {
                 var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
                 return Json(new { success = false, message = string.Join(" ", errors) });
             }
 
-            // ── Fatality details (age/gender/race per victim) ────────────
-            var fatalities = new List<FatalityEntryInput>();
-            if (!string.IsNullOrWhiteSpace(fatalitiesJson))
+            // ── Vehicles (instance-based: one row per real vehicle) ───────
+            var vehicles = new List<VehicleEntryInput>();
+            if (!string.IsNullOrWhiteSpace(vehiclesJson))
             {
                 try
                 {
-                    fatalities = JsonSerializer.Deserialize<List<FatalityEntryInput>>(fatalitiesJson,
+                    vehicles = JsonSerializer.Deserialize<List<VehicleEntryInput>>(vehiclesJson,
                         new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new();
                 }
                 catch
                 {
-                    return Json(new { success = false, message = "Fatality details could not be read. Please try again." });
+                    return Json(new { success = false, message = "Vehicle details could not be read. Please try again." });
                 }
             }
 
-            var roleTotal = model.FatalDrivers + model.FatalPassengers + model.FatalPedestrians + model.FatalCyclists;
-
-            if (fatalities.Count != roleTotal)
+            foreach (var v in vehicles)
             {
-                return Json(new
+                if (string.IsNullOrWhiteSpace(v.VehicleTypeCode))
+                    return Json(new { success = false, message = $"Vehicle {v.VehicleNumber}: vehicle type is required." });
+            }
+
+            var vehicleNumbers = vehicles.Select(v => v.VehicleNumber).ToList();
+            if (vehicleNumbers.Distinct().Count() != vehicleNumbers.Count)
+                return Json(new { success = false, message = "Each vehicle must have a unique vehicle number." });
+
+            // ── Injuries (all severities, per-victim) ──────────────────────
+            var injuries = new List<InjuryEntryInput>();
+            if (!string.IsNullOrWhiteSpace(injuriesJson))
+            {
+                try
                 {
-                    success = false,
-                    message = $"Fatality details entered ({fatalities.Count}) don't match the fatal injuries by role " +
-                              $"({roleTotal}). Every fatality needs an age, gender, and race, and the count must match " +
-                              $"the driver/passenger/pedestrian/cyclist fatal totals above."
-                });
+                    injuries = JsonSerializer.Deserialize<List<InjuryEntryInput>>(injuriesJson,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new();
+                }
+                catch
+                {
+                    return Json(new { success = false, message = "Casualty details could not be read. Please try again." });
+                }
             }
 
-            foreach (var f in fatalities)
+            var validSeverities = new[] { "Fatal", "Serious", "Slight" };
+            var validRoles = new[] { "Driver", "Passenger", "Pedestrian", "Cyclist" };
+
+            foreach (var inj in injuries)
             {
-                if (f.Age < 0 || f.Age > 120)
-                    return Json(new { success = false, message = $"Age {f.Age} is out of range (0–120)." });
+                if (!validSeverities.Contains(inj.Severity))
+                    return Json(new { success = false, message = $"Each casualty needs a valid severity (Fatal, Serious, or Slight) -- got '{inj.Severity}'." });
 
-                if (f.Gender != "M" && f.Gender != "F")
-                    return Json(new { success = false, message = "Each fatality needs a gender (M or F)." });
+                if (!validRoles.Contains(inj.Role))
+                    return Json(new { success = false, message = $"Each casualty needs a valid role (Driver, Passenger, Pedestrian, or Cyclist) -- got '{inj.Role}'." });
 
-                if (!new[] { "B", "C", "I", "W", "O" }.Contains(f.Race))
-                    return Json(new { success = false, message = "Each fatality needs a race code (B, C, I, W, or O)." });
+                // Demographics are optional -- a mass-casualty day still
+                // works even if nobody has time to fill these in. Only
+                // validate the ones that WERE provided.
+                if (inj.Age.HasValue && (inj.Age.Value < 0 || inj.Age.Value > 120))
+                    return Json(new { success = false, message = $"Age {inj.Age} is out of range (0-120)." });
+
+                if (!string.IsNullOrEmpty(inj.Gender) && inj.Gender != "M" && inj.Gender != "F")
+                    return Json(new { success = false, message = "Gender must be M or F if provided." });
+
+                if (!string.IsNullOrEmpty(inj.Race) && !new[] { "B", "C", "I", "W", "O" }.Contains(inj.Race))
+                    return Json(new { success = false, message = "Race must be B, C, I, W, or O if provided." });
+
+                // Driver/Passenger must reference a real submitted vehicle;
+                // Pedestrian/Cyclist must NOT (no vehicle to link to).
+                if ((inj.Role == "Driver" || inj.Role == "Passenger"))
+                {
+                    if (inj.VehicleNumber == null || !vehicleNumbers.Contains(inj.VehicleNumber.Value))
+                        return Json(new { success = false, message = $"A {inj.Role.ToLower()} casualty must reference one of the vehicles entered above." });
+                }
+                else if (inj.VehicleNumber != null)
+                {
+                    return Json(new { success = false, message = $"A {inj.Role.ToLower()} casualty cannot be linked to a vehicle." });
+                }
             }
 
-            // ── Group ages into buckets, tally gender/race onto the rollup columns ──
-            foreach (var f in fatalities)
+
+            int Count(string severity, string role) =>
+                injuries.Count(i => i.Severity == severity && i.Role == role);
+
+            model.FatalDrivers = (byte)Count("Fatal", "Driver");
+            model.FatalPassengers = (byte)Count("Fatal", "Passenger");
+            model.FatalPedestrians = (byte)Count("Fatal", "Pedestrian");
+            model.FatalCyclists = (byte)Count("Fatal", "Cyclist");
+
+            model.SeriousDrivers = (byte)Count("Serious", "Driver");
+            model.SeriousPassengers = (byte)Count("Serious", "Passenger");
+            model.SeriousPedestrians = (byte)Count("Serious", "Pedestrian");
+            model.SeriousCyclists = (byte)Count("Serious", "Cyclist");
+
+            model.SlightDrivers = (byte)Count("Slight", "Driver");
+            model.SlightPassengers = (byte)Count("Slight", "Passenger");
+            model.SlightPedestrians = (byte)Count("Slight", "Pedestrian");
+            model.SlightCyclists = (byte)Count("Slight", "Cyclist");
+
+            // ── Fatal-only demographic rollups (age bucket / gender / race)
+            // stay on crash_summaries for fast reporting -- Serious/Slight
+            // demographics live only in crash_summary_injuries, matching
+            // how the source data itself never had aggregate demographic
+            // breakdowns for non-fatal severities. ─────────────────────────
+            foreach (var inj in injuries.Where(i => i.Severity == "Fatal"))
             {
-                if (f.Age <= 7) model.FatalAge0to7++;
-                else if (f.Age <= 12) model.FatalAge8to12++;
-                else if (f.Age <= 18) model.FatalAge13to18++;
-                else if (f.Age <= 35) model.FatalAge19to35++;
-                else model.FatalAge36Plus++;
+                if (inj.Age.HasValue)
+                {
+                    var age = inj.Age.Value;
+                    if (age <= 7) model.FatalAge0to7++;
+                    else if (age <= 12) model.FatalAge8to12++;
+                    else if (age <= 18) model.FatalAge13to18++;
+                    else if (age <= 35) model.FatalAge19to35++;
+                    else model.FatalAge36Plus++;
+                }
 
-                if (f.Gender == "M") model.FatalMale++;
-                else model.FatalFemale++;
+                if (inj.Gender == "M") model.FatalMale++;
+                else if (inj.Gender == "F") model.FatalFemale++;
 
-                switch (f.Race)
+                switch (inj.Race)
                 {
                     case "B": model.FatalAfrican++; break;
                     case "C": model.FatalColoured++; break;
@@ -117,73 +174,92 @@ namespace CrashReport.Controllers
                 }
             }
 
-            model.CrNo = await GenerateNextCrNo(model.Station);
-
-            // Duplicate check now runs AFTER generation, against a real
-            // generated value — the original ran it against a client-supplied
-            // CrNo that was always null, so it could never actually catch anything.
+            // Duplicate check against the real, manually-entered CrNo.
             if (await _context.CrashSummaries.AnyAsync(s => s.CrNo == model.CrNo))
-                return Json(new { success = false, message = $"A record with CR number '{model.CrNo}' already exists. Please try again." });
+                return Json(new { success = false, message = $"A record with CR number '{model.CrNo}' already exists as a Quick Add / imported record." });
+
+            var existsAsFullReport = await _context.Crashes.AnyAsync(c => c.CrNo == model.CrNo);
 
             model.SourceFile = "Quick add (manual entry)";
             model.ImportedAt = DateTime.UtcNow;
+            model.VehicleCount = (byte)vehicles.Count;
 
-            _context.CrashSummaries.Add(model);
-            await _context.SaveChangesAsync(); // model.SummaryId is populated after this
+            await using var transaction = await _context.Database.BeginTransactionAsync();
 
-            // Persist the real per-victim rows, not just the rollup counts.
-            foreach (var f in fatalities)
+            try
             {
-                _context.CrashFatalities.Add(new CrashFatality
-                {
-                    SummaryId = model.SummaryId,
-                    Age = (byte)f.Age,
-                    Gender = f.Gender,
-                    Race = f.Race
-                });
-            }
-            if (fatalities.Count > 0)
+                _context.CrashSummaries.Add(model);
                 await _context.SaveChangesAsync();
 
-            return Json(new { success = true, message = $"Crash record '{model.CrNo}' added successfully.", crNo = model.CrNo, summaryId = model.SummaryId });
-        }
 
-        private async Task<string> GenerateNextCrNo(string station)
-        {
-            var prefix = station.Trim().ToUpperInvariant();
-
-            var fromSummaries = await _context.CrashSummaries
-                .Where(s => s.CrNo != null && s.CrNo.ToUpper().StartsWith(prefix + "-"))
-                .Select(s => s.CrNo!)
-                .ToListAsync();
-
-            var fromCrashes = await _context.Crashes
-                .Where(s => s.CrNo != null && s.CrNo.ToUpper().StartsWith(prefix + "-"))
-                .Select(s => s.CrNo!)
-                .ToListAsync();
-
-            var maxSeq = fromSummaries.Concat(fromCrashes)
-                .Select(cr =>
+                var vehicleNumberToId = new Dictionary<byte, int>();
+                foreach (var v in vehicles)
                 {
-                    var idx = cr.LastIndexOf('-');
-                    return idx >= 0 && int.TryParse(cr[(idx + 1)..], out var n) ? n : 0;
-                })
-                .DefaultIfEmpty(0)
-                .Max();
+                    var entity = new CrashSummaryVehicle
+                    {
+                        SummaryId = model.SummaryId,
+                        VehicleNumber = v.VehicleNumber,
+                        VehicleTypeCode = v.VehicleTypeCode,
+                        VehicleTypeName = v.VehicleTypeName,
+                        Registration = string.IsNullOrWhiteSpace(v.Registration) ? null : v.Registration
+                    };
+                    _context.CrashSummaryVehicles.Add(entity);
+                    await _context.SaveChangesAsync();
+                    vehicleNumberToId[v.VehicleNumber] = entity.VehicleId;
+                }
 
-            // BUG FIXED: was $"{prefix} - {(maxSeq + 1): D2}" — the space
-            // before "D2" makes an invalid format string (throws
-            // FormatException at runtime), and the spaced-out dash would
-            // have produced "TONGA - 01" instead of "TONGA-01", breaking
-            // every place that parses CR numbers by splitting on '-'.
-            return $"{prefix}-{(maxSeq + 1):D2}";
+                foreach (var inj in injuries)
+                {
+                    _context.CrashSummaryInjuries.Add(new CrashSummaryInjury
+                    {
+                        SummaryId = model.SummaryId,
+                        VehicleId = inj.VehicleNumber.HasValue ? vehicleNumberToId[inj.VehicleNumber.Value] : null,
+                        Severity = inj.Severity,
+                        Role = inj.Role,
+                        Age = (byte?)inj.Age,
+                        Gender = string.IsNullOrEmpty(inj.Gender) ? null : inj.Gender,
+                        Race = string.IsNullOrEmpty(inj.Race) ? null : inj.Race
+                    });
+                }
+                if (injuries.Count > 0)
+                    await _context.SaveChangesAsync();
+
+                await transaction.CommitAsync();
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                return Json(new
+                {
+                    success = false,
+                    message = $"Something went wrong while saving: {ex.Message} | Inner: {ex.InnerException?.Message}"
+                });
+            }
+
+            var message = $"Crash record '{model.CrNo}' added successfully.";
+            if (existsAsFullReport)
+                message += $" Note: CR number '{model.CrNo}' also exists as a full CR1 report — both are saved; " +
+                           "reports won't double-count them, but you may want to reconcile the two records.";
+
+            return Json(new { success = true, message, crNo = model.CrNo, summaryId = model.SummaryId, duplicatePair = existsAsFullReport });
         }
     }
-}
 
-public class FatalityEntryInput
-{
-    public int Age { get; set; }
-    public string Gender { get; set; } = ""; // "M" or "F"
-    public string Race { get; set; } = "";   // "B" African, "C" Coloured, "I" Indian, "W" White, "O" Other
+    public class VehicleEntryInput
+    {
+        public byte VehicleNumber { get; set; }
+        public string VehicleTypeCode { get; set; } = "";
+        public string VehicleTypeName { get; set; } = "";
+        public string? Registration { get; set; }
+    }
+
+    public class InjuryEntryInput
+    {
+        public string Severity { get; set; } = "";
+        public string Role { get; set; } = "";
+        public byte? VehicleNumber { get; set; } // null for Pedestrian/Cyclist
+        public int? Age { get; set; }
+        public string? Gender { get; set; }
+        public string? Race { get; set; }
+    }
 }

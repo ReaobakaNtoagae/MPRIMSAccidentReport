@@ -3,6 +3,21 @@
 }
 
 <style>
+     #crashHistoryGrid .dx-datagrid {
+        font-size: 12px;
+    }
+
+    #crashHistoryGrid .dx-datagrid-headers {
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+   
+    #crashHistoryGrid .dx-row > td {
+        padding-top: 6px;
+        padding-bottom: 6px;
+    }
+
     .toolbar-panel {
         background: #fff;
         border-radius: 10px;
@@ -60,20 +75,14 @@
         font-size: .8rem;
         color: #555;
         font-weight: 500;
-    }
 
-    /* Filter row hint — the column filter inputs are DevExtreme's own,
-           styled to match the rest of the app via the DevExtreme overrides
-           already in _Layout. */
+
     .dx-datagrid-filter-row .dx-editor-cell {
         background: #fafcf8;
     }
 </style>
 
-<!-- Slim toolbar — only what doesn't fit a single column: keyword (spans
-     several fields with OR logic), date range (two values), and severity
-     (computed, not a real stored column). Everything else moved into the
-     grid's own filter row. -->
+
 <div class="toolbar-panel">
     <div class="toolbar-field" style="min-width:220px;">
         <label>Keyword search</label>
@@ -96,7 +105,7 @@
     <div class="active-filters" id="activeBadges"></div>
 </div>
 
-<!-- Results -->
+
 <div style="background:#fff;border-radius:10px;border:1px solid #c8e6c9;
     box-shadow:0 2px 8px rgba(0,0,0,.06);overflow:hidden;">
     <div style="display:flex;align-items:center;justify-content:space-between;
@@ -131,7 +140,7 @@
                 gridInst.columnOption("District", "lookup", { dataSource: districts });
             });
 
-            // ── Top bar fields (keyword / date range / severity only) ────
+            
             var keywordInst = $("#keywordBox").dxTextBox({
                 placeholder: "CR number, route, or location",
                 showClearButton: true,
@@ -403,7 +412,7 @@
             function clearOneFilter(key) {
                 delete currentSearchParams[key];
 
-                // Keep the visible control in sync with whichever badge got removed.
+                
                 if (key === "keyword") keywordInst.option("value", null);
                 else if (key === "dateFrom") dateFromInst.option("value", null);
                 else if (key === "dateTo") dateToInst.option("value", null);
@@ -413,7 +422,7 @@
                     var entry = Object.entries(columnParamMap).find(function (e) { return e[1] === key; });
                     if (entry) {
                         gridInst.columnOption(entry[0], "filterValue", null);
-                        return; // onOptionChanged handles the refresh
+                        return; 
                     }
                 }
 

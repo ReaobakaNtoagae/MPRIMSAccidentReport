@@ -227,7 +227,6 @@ public class MonthlyMemoDataService
                 SummaryId = s.SummaryId,
                 CrNo = s.CrNo,
                 CasNo = s.CasNo ?? "",
-                ArNo = s.ArNo?? " ",
                 Station = s.Station,
                 District = ResolveDistrict(s.Station),
                 ProvinceCode = "",

@@ -7,7 +7,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
-using System.Security.Claims;
 
 namespace CrashReport.Controllers;
 
@@ -16,20 +15,18 @@ public class HomeController : Controller
     private readonly AppDbContext _context;
     private readonly MonthlyMemoDataService _memoData;
 
-    private static readonly HashSet<short> ValidSpeedLimits = new() { 30, 40, 50, 60, 80, 100, 120 };
+    private readonly ICrashFormValidationService _validation;
 
-    private static readonly HashSet<string> PedestrianCrashTypes =
-        new(StringComparer.OrdinalIgnoreCase) { "PEDESTRIAN", "PED" };
-
-    public HomeController(AppDbContext context, MonthlyMemoDataService memoData)
+    public HomeController(AppDbContext context, MonthlyMemoDataService memoData, ICrashFormValidationService validation)
     {
         _context = context;
         _memoData = memoData;
+        _validation = validation;
     }
 
     public async Task<IActionResult> Index()
     {
-       
+
 
         ViewBag.TotalCrashes = await _context.Crashes.CountAsync();
         ViewBag.FatalCount = await _context.CrashPeople
@@ -45,12 +42,7 @@ public class HomeController : Controller
 
         var allTime = await _memoData.LoadAsync(new DateOnly(2020, 1, 1), monthEnd);
         var thisMonth = allTime.Where(r => r.Date >= monthStart && r.Date <= monthEnd).ToList();
-        // Replace the role-detection block in HomeController.Index with this.
-        // Add "using CrashReport.Security;" at the top if not already present.
 
-        // Replace the role/privilege-detection block in HomeController.Index with this.
-        // Add "using CrashReport.Security;" and "using System.Security.Claims;" at
-        // the top if not already present.
 
         bool Has(string privilege) => User.HasClaim(Privileges.ClaimType, privilege);
 
@@ -210,8 +202,31 @@ public class HomeController : Controller
             return RedirectToAction(nameof(Create));
         }
 
+        // Validated by deserializing formJson into the ViewModel SEPARATELY
+        // from the raw JsonDocument parsing the save logic below still
+        // uses -- the ViewModel is a narrower slice of the real posted
+        // data (it doesn't cover every field the raw parse does), so it's
+        // used for validation only, never as the save path itself. This
+        // is the piece that was previously missing entirely: ValidateForm
+        // existed, fully written, but nothing in this action ever called it.
+        var vmForValidation = System.Text.Json.JsonSerializer.Deserialize<CrashReportFormViewModel>(
+            formJson, new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new();
+
+        var validationErrors = await _validation.ValidateAsync(vmForValidation, existingCrashId: null);
+        if (validationErrors.Count > 0)
+        {
+            TempData["ValidationErrors"] = validationErrors;
+            TempData["FormJson"] = formJson;
+            return RedirectToAction(nameof(CreateWithErrors));
+        }
+
         // Start a transaction to guarantee all-or-nothing
         await using var transaction = await _context.Database.BeginTransactionAsync();
+
+        // Tracks whether this CrNo already exists as a Quick Add / imported
+        // CrashSummary. NOT used to block the save -- see the check itself,
+        // set inside the CRASH INFO section below once crash.CrNo is known.
+        var existsAsSummary = false;
 
         try
         {
@@ -243,6 +258,21 @@ public class HomeController : Controller
 
                 // VehicleString will be auto-generated later; keep if sent by UI.
                 crash.VehicleString = GetString(crashInfo, "VehicleString");
+
+                // Allow-and-warn, not block -- symmetric with the same check
+                // in CreateSummaryController.CreateSummary. The same
+                // physical CR1 form can legitimately reach the system
+                // through both paths (a Cost Centre Quick Adds a summary
+                // before an officer gets around to digitizing the full
+                // form for the same crash), so blocking here would reject
+                // the richer, more authoritative record just because a
+                // thinner one arrived first. MonthlyMemoDataService.LoadAsync
+                // already deduplicates by CrNo across both tables before
+                // counting anything in a report, so this is safe from a
+                // reporting standpoint -- flagging it is for reconciliation
+                // visibility, not correctness.
+                if (!string.IsNullOrWhiteSpace(crash.CrNo))
+                    existsAsSummary = await _context.CrashSummaries.AnyAsync(s => s.CrNo == crash.CrNo);
             }
 
             // ========== 2. LOCATION ==========
@@ -362,7 +392,7 @@ public class HomeController : Controller
                         VehicleType = GetString(ve, "VehicleType"),
                         PassengersForReward = GetString(ve, "PassengersForReward"),
                         BreakdownCompany = GetString(ve, "BreakdownCompany"),
-                       
+
                     };
                     _context.CrashVehicles.Add(crashVehicle);
                     await _context.SaveChangesAsync(); // needed to get CrashVehicleId for damages
@@ -458,7 +488,7 @@ public class HomeController : Controller
                             LiquorDrugTestDone = GetString(ve, "LiquorDrugTestDone"),
                             AmbulanceServiceRef = GetString(ve, "AmbulanceServiceRef"),
                             Hospital = GetString(ve, "Hospital"),
-               
+
                         });
                     }
 
@@ -466,10 +496,10 @@ public class HomeController : Controller
                 }
             }
 
-            
+
             crash.NoOfVehiclesInvolved = (byte)(root.TryGetProperty("Vehicles", out var vArr) ? vArr.GetArrayLength() : 0);
 
-         
+
             if (string.IsNullOrEmpty(crash.VehicleString) && vehicleMakes.Any())
                 crash.VehicleString = string.Join(", ", vehicleMakes.Distinct());
 
@@ -530,9 +560,9 @@ public class HomeController : Controller
                     };
 
                     _context.CrashPeople.Add(crashPerson);
-                    await _context.SaveChangesAsync(); 
+                    await _context.SaveChangesAsync();
 
-                   
+
                     var role = GetString(pe, "Role");
                     if (role == "Pedestrian" || role == "Cyclist")
                     {
@@ -546,7 +576,7 @@ public class HomeController : Controller
                             ClothingColour = GetString(pe, "ClothingColour")
                         };
                         _context.PedestrianBicyclistDetails.Add(detail);
-                 
+
                     }
                 }
             }
@@ -635,7 +665,12 @@ public class HomeController : Controller
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
 
-            TempData["SuccessMessage"] = $"Crash report #{crash.CrashId} saved successfully.";
+            var successMessage = $"Crash report #{crash.CrashId} saved successfully.";
+            if (existsAsSummary)
+                successMessage += $" Note: CR number '{crash.CrNo}' also exists as a Quick Add / imported record — " +
+                                   "both are saved; reports won't double-count them, but you may want to reconcile the two records.";
+
+            TempData["SuccessMessage"] = successMessage;
             return RedirectToAction(nameof(Index));
         }
         catch (Exception ex)
@@ -760,242 +795,6 @@ public class HomeController : Controller
             ViewBag.FormJson = formJson;
         }
         return View("Create");
-    }
-
-    private async Task<List<string>> ValidateForm(
-        CrashReportFormViewModel vm, int? existingCrashId)
-    {
-        var errors = new List<string>();
-        var ci = vm.CrashInfo;
-        var today = DateOnly.FromDateTime(DateTime.Today);
-
-        
-
-        if (string.IsNullOrWhiteSpace(ci.CrNo) && string.IsNullOrWhiteSpace(ci.CasNo))
-            errors.Add("At least one of CR No. or CAS No. is required.");
-
-        if (!DateOnly.TryParse(ci.CrashDate, out var crashDate))
-        {
-            errors.Add("Crash date is required and must be a valid date.");
-        }
-        else
-        {
-            if (crashDate > today)
-                errors.Add("Crash date cannot be in the future.");
-
-            if (crashDate < today.AddYears(-5))
-                errors.Add("Crash date cannot be more than 5 years in the past.");
-        }
-
-        if (!string.IsNullOrWhiteSpace(ci.CrNo))
-        {
-            var duplicate = await _context.Crashes
-                .AnyAsync(c => c.CrNo == ci.CrNo.Trim() &&
-                               (existingCrashId == null || c.CrashId != existingCrashId));
-            if (duplicate)
-                errors.Add($"CR No. '{ci.CrNo.Trim()}' already exists in the database.");
-        }
-
-        // Speed limit must be a legal SA value if provided
-        if (ci.SpeedLimitKmh.HasValue && !ValidSpeedLimits.Contains(ci.SpeedLimitKmh.Value))
-            errors.Add($"Speed limit {ci.SpeedLimitKmh} km/h is not a valid South African " +
-                       $"speed limit. Must be one of: {string.Join(", ", ValidSpeedLimits.Order())}.");
-
-        
-
-        var loc = vm.Location;
-        bool hasLocation = !string.IsNullOrWhiteSpace(loc?.StreetRoadName) ||
-                           !string.IsNullOrWhiteSpace(loc?.Suburb) ||
-                           !string.IsNullOrWhiteSpace(loc?.CityTown);
-        if (!hasLocation)
-            errors.Add("At least one location field is required (Street/Road Name, Suburb, or City/Town).");
-
-        // GPS: if one coordinate entered, both are required
-        bool hasLat = loc?.GpsXCoordinate.HasValue == true;
-        bool hasLon = loc?.GpsYCoordinate.HasValue == true;
-        if (hasLat != hasLon)
-        {
-            errors.Add("Both GPS latitude and longitude are required if either is entered.");
-        }
-        else if (hasLat && hasLon)
-        {
-            var lat = loc!.GpsXCoordinate!.Value;
-            var lon = loc!.GpsYCoordinate!.Value;
-            if (lat < -35.0m || lat > -22.0m)
-                errors.Add($"GPS latitude {lat} is outside South Africa (valid range: -35.0 to -22.0).");
-            if (lon < 16.0m || lon > 33.0m)
-                errors.Add($"GPS longitude {lon} is outside South Africa (valid range: 16.0 to 33.0).");
-        }
-
-        // ── Step 3: Conditions ────────────────────────────────
-
-        if (string.IsNullOrWhiteSpace(vm.Conditions?.CrashType))
-            errors.Add("Crash type is required.");
-
-        if (string.IsNullOrWhiteSpace(vm.Conditions?.LightCondition))
-            errors.Add("Light condition is required.");
-
-        if (vm.Conditions?.WeatherConditions == null ||
-            vm.Conditions.WeatherConditions.Count == 0)
-            errors.Add("At least one weather condition must be selected.");
-
-        // ── Step 4: Vehicles ──────────────────────────────────
-
-        if (vm.Vehicles == null || vm.Vehicles.Count == 0)
-            errors.Add("At least one vehicle must be entered.");
-        else
-        {
-            // Vehicle count must match the declared count on Step 1
-            if (vm.Vehicles.Count != ci.NoOfVehiclesInvolved)
-                errors.Add($"Number of vehicles entered ({vm.Vehicles.Count}) does not match " +
-                           $"'No. of Vehicles Involved' ({ci.NoOfVehiclesInvolved}) on Step 1.");
-
-            // Vehicle references must be unique
-            var refs = vm.Vehicles.Select(v => v.VehicleReference?.Trim().ToUpper()).ToList();
-            if (refs.Distinct().Count() != refs.Count)
-                errors.Add("Each vehicle must have a unique Vehicle Reference (A, B, C…).");
-
-            foreach (var ve in vm.Vehicles)
-            {
-                var vRef = ve.VehicleReference?.Trim().ToUpper() ?? "(unknown)";
-
-                // VehicleReference required
-                if (string.IsNullOrWhiteSpace(ve.VehicleReference))
-                    errors.Add($"Vehicle reference is required for each vehicle.");
-
-                // If driver name entered, ID number and licence code are required
-                if (!string.IsNullOrWhiteSpace(ve.DriverSurname))
-                {
-                    if (string.IsNullOrWhiteSpace(ve.DriverIdNumber))
-                        errors.Add($"Vehicle {vRef}: driver ID number is required when a driver surname is entered.");
-                    else if (!IsValidSaId(ve.DriverIdNumber))
-                        errors.Add($"Vehicle {vRef}: driver ID number '{ve.DriverIdNumber}' is not a valid South African ID number.");
-
-                    if (string.IsNullOrWhiteSpace(ve.LicenceCode))
-                        errors.Add($"Vehicle {vRef}: licence code is required when a driver is named.");
-                }
-
-                // Alcohol/drug test result only if suspected
-                if (!string.IsNullOrWhiteSpace(ve.AlcoholTestResult) &&
-                    !string.Equals(ve.AlcoholSuspected, "Yes", StringComparison.OrdinalIgnoreCase))
-                    errors.Add($"Vehicle {vRef}: alcohol test result entered but 'Alcohol Suspected' is not set to Yes.");
-            }
-        }
-
-        // ── Step 5: Persons ───────────────────────────────────
-
-        var vehicleRefs = (vm.Vehicles ?? new())
-            .Select(v => v.VehicleReference?.Trim().ToUpper())
-            .Where(r => !string.IsNullOrWhiteSpace(r))
-            .ToHashSet()!;
-
-        // Track which vehicles already have a driver assigned from Step 4
-        var driverVehicleRefs = (vm.Vehicles ?? new())
-            .Where(v => !string.IsNullOrWhiteSpace(v.DriverSurname) &&
-                        !string.IsNullOrWhiteSpace(v.VehicleReference))
-            .Select(v => v.VehicleReference!.Trim().ToUpper())
-            .ToHashSet();
-
-        foreach (var pe in vm.Persons ?? new())
-        {
-            if (string.IsNullOrWhiteSpace(pe.Surname)) continue;
-
-            if (string.IsNullOrWhiteSpace(pe.Role))
-                errors.Add($"Person '{pe.Surname}': role is required (Driver/Passenger/Pedestrian/Bicyclist).");
-
-            if (string.IsNullOrWhiteSpace(pe.SeverityOfInjury))
-                errors.Add($"Person '{pe.Surname}': severity of injury is required.");
-
-            var role = pe.Role?.Trim();
-
-            // Driver or Passenger must have a vehicle reference
-            if ((string.Equals(role, "Driver", StringComparison.OrdinalIgnoreCase) ||
-                 string.Equals(role, "Passenger", StringComparison.OrdinalIgnoreCase)) &&
-                string.IsNullOrWhiteSpace(pe.VehicleReference))
-            {
-                errors.Add($"Person '{pe.Surname}': vehicle reference is required for {role} role.");
-            }
-
-            // Vehicle reference must match a vehicle entered in Step 4
-            if (!string.IsNullOrWhiteSpace(pe.VehicleReference))
-            {
-                var pRef = pe.VehicleReference.Trim().ToUpper();
-                if (!vehicleRefs.Contains(pRef))
-                    errors.Add($"Person '{pe.Surname}': vehicle reference '{pe.VehicleReference}' does not match any vehicle entered in Step 4.");
-            }
-
-            // Cannot add a second Driver for the same vehicle
-            if (string.Equals(role, "Driver", StringComparison.OrdinalIgnoreCase) &&
-                !string.IsNullOrWhiteSpace(pe.VehicleReference))
-            {
-                var pRef = pe.VehicleReference.Trim().ToUpper();
-                if (driverVehicleRefs.Contains(pRef))
-                    errors.Add($"Person '{pe.Surname}': vehicle {pe.VehicleReference} already has a driver assigned in Step 4.");
-            }
-
-            // SA ID validation if provided
-            if (!string.IsNullOrWhiteSpace(pe.IdNumber) && !IsValidSaId(pe.IdNumber))
-                errors.Add($"Person '{pe.Surname}': ID number '{pe.IdNumber}' is not a valid South African ID number.");
-
-            // Fatal persons should have gender recorded for demographic reports
-            if (string.Equals(pe.SeverityOfInjury, "Fatal", StringComparison.OrdinalIgnoreCase) &&
-                string.IsNullOrWhiteSpace(pe.Gender))
-                errors.Add($"Person '{pe.Surname}': gender is required for fatal victims (needed for demographic reports).");
-        }
-
-        // ── Cross-step rules ──────────────────────────────────
-
-        // Pedestrian crash type requires at least one pedestrian or bicyclist victim
-        var crashType = vm.Conditions?.CrashType;
-        if (!string.IsNullOrWhiteSpace(crashType) &&
-            PedestrianCrashTypes.Contains(crashType))
-        {
-            var allPersonRoles = (vm.Persons ?? new())
-                .Select(pe => pe.Role?.Trim())
-                .ToList();
-
-            bool hasPedestrian = allPersonRoles.Any(r =>
-                string.Equals(r, "Pedestrian", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(r, "Bicyclist", StringComparison.OrdinalIgnoreCase));
-
-            if (!hasPedestrian)
-                errors.Add($"Crash type '{crashType}' requires at least one Pedestrian or Bicyclist victim in Step 5.");
-        }
-
-        return errors;
-    }
-
-    private static bool IsValidSaId(string id)
-    {
-        if (string.IsNullOrWhiteSpace(id)) return false;
-
-        // Must be exactly 13 digits
-        id = id.Trim();
-        if (id.Length != 13 || !id.All(char.IsDigit)) return false;
-
-        // Month and day must be plausible
-        if (!int.TryParse(id.Substring(2, 2), out var month) || month < 1 || month > 12)
-            return false;
-        if (!int.TryParse(id.Substring(4, 2), out var day) || day < 1 || day > 31)
-            return false;
-
-        // Luhn algorithm
-        var digits = id.Select(c => c - '0').ToArray();
-        var sum = 0;
-        for (var i = 0; i < 12; i++)
-        {
-            if (i % 2 == 0)
-            {
-                sum += digits[i];
-            }
-            else
-            {
-                var d = digits[i] * 2;
-                sum += d > 9 ? d - 9 : d;
-            }
-        }
-        var checkDigit = (10 - (sum % 10)) % 10;
-        return checkDigit == digits[12];
     }
 
     private static Crash BuildCrash(CrashReportFormViewModel vm)

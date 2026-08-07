@@ -1,10 +1,12 @@
-﻿using CrashReport.Data;
+﻿using System.Text.Json;
+using CrashReport.Data;
 using CrashReport.Models;
 using CrashReport.Services;
 using CrashReport.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using CrashReport.ViewModels;
 
 namespace CrashReport.Controllers;
 
@@ -22,7 +24,7 @@ public class CrashesController : Controller
 
     public IActionResult Index() => View();
 
-    
+
     [HttpGet]
     public async Task<IActionResult> Search(
         string? keyword = null,
@@ -43,7 +45,6 @@ public class CrashesController : Controller
             .Include(c => c.CrashVehicles)
             .AsQueryable();
 
-        // ── Keyword (searches AR No, CAS, location, route)
         if (!string.IsNullOrWhiteSpace(keyword))
         {
             var kw = keyword.Trim().ToLower();
@@ -58,42 +59,34 @@ public class CrashesController : Controller
             );
         }
 
-        // ── AR Number
         if (!string.IsNullOrWhiteSpace(arNo))
             query = query.Where(c => c.CrNo != null &&
                 c.CrNo.ToLower().Contains(arNo.Trim().ToLower()));
 
-        // ── CAS Number
         if (!string.IsNullOrWhiteSpace(casNo))
             query = query.Where(c => c.CasNo != null &&
                 c.CasNo.ToLower().Contains(casNo.Trim().ToLower()));
 
-        // ── SAPS Station (stored as prefix of CrNo: "TONGA-01")
         if (!string.IsNullOrWhiteSpace(sapsStation))
             query = query.Where(c => c.CrNo != null &&
                 c.CrNo.ToLower().StartsWith(sapsStation.Trim().ToLower()));
 
-        // ── Route
         if (!string.IsNullOrWhiteSpace(route))
             query = query.Where(c => c.RoadNumber != null &&
                 c.RoadNumber.ToLower().Contains(route.Trim().ToLower()));
 
-        // ── Crash Type
         if (!string.IsNullOrWhiteSpace(crashType))
             query = query.Where(c =>
                 c.CrashConditions.Any(cc => cc.CrashType != null &&
                     cc.CrashType.ToLower().Contains(crashType.Trim().ToLower())));
 
-        // ── Province
         if (!string.IsNullOrWhiteSpace(province))
             query = query.Where(c => c.ProvinceCode == province);
 
-        // ── Severity (filter crashes that have at least one person with this severity)
         if (!string.IsNullOrWhiteSpace(severity))
             query = query.Where(c =>
                 c.CrashPeople.Any(p => p.SeverityOfInjury == severity));
 
-        // ── Date range
         if (DateOnly.TryParse(dateFrom, out var dFrom))
             query = query.Where(c => c.CrashDate >= dFrom);
 
@@ -131,11 +124,9 @@ public class CrashesController : Controller
 
 
 
-    
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
-
         var to = DateOnly.FromDateTime(DateTime.Today);
         var from = to.AddMonths(-3);
 
@@ -145,7 +136,6 @@ public class CrashesController : Controller
             .ThenByDescending(r => r.Time)
             .Select(r => new
             {
-
                 CrashId = r.Source == "Manual" ? r.CrashId : (int?)null,
                 r.CrNo,
                 r.Station,
@@ -164,7 +154,6 @@ public class CrashesController : Controller
 
 
 
-    
     [HttpGet]
     public async Task<IActionResult> FilterOptions()
     {
@@ -193,7 +182,7 @@ public class CrashesController : Controller
     }
 
 
-    
+
     public async Task<IActionResult> Details(int? id)
     {
         if (id == null) return NotFound();
@@ -220,18 +209,17 @@ public class CrashesController : Controller
 
         if (crash == null) return NotFound();
 
-        
         Console.WriteLine($"Loaded crash {crash.CrashId}: {crash.CrashVehicles?.Count ?? 0} vehicles, {crash.CrashPeople?.Count ?? 0} people");
 
         return View(crash);
     }
 
-   
+
     public IActionResult Create() =>
         View(new Crash { CrashDate = DateOnly.FromDateTime(DateTime.Today) });
 
 
- 
+
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(
@@ -347,6 +335,7 @@ public class CrashesController : Controller
             .Select(r => new
             {
                 r.CrashId,
+                r.SummaryId,
                 r.CrNo,
                 r.Station,
                 r.District,
@@ -361,6 +350,305 @@ public class CrashesController : Controller
             });
 
         return Json(new { total, page, pageSize, rows = paged });
+    }
+
+
+    // ═══════════════════════════════════════════════════════════════
+    // EditSummary — now covers vehicles (instance-based) and casualties
+    // across all three severities, matching CreateSummaryController.
+    // ═══════════════════════════════════════════════════════════════
+
+    [HttpGet]
+    public async Task<IActionResult> EditSummary(int? id)
+    {
+        if (id == null) return NotFound();
+
+        var summary = await _context.CrashSummaries.FindAsync(id);
+        if (summary == null) return NotFound();
+
+        var vehicles = await _context.CrashSummaryVehicles
+            .Where(v => v.SummaryId == id)
+            .OrderBy(v => v.VehicleNumber)
+            .Select(v => new VehicleEntryInput
+            {
+                VehicleNumber = v.VehicleNumber,
+                VehicleTypeCode = v.VehicleTypeCode,
+                VehicleTypeName = v.VehicleTypeName,
+                Registration = v.Registration
+            })
+            .ToListAsync();
+
+        var injuries = await _context.CrashSummaryInjuries
+            .Where(i => i.SummaryId == id)
+            .Include(i => i.Vehicle)
+            .Select(i => new InjuryEntryInput
+            {
+                Severity = i.Severity,
+                Role = i.Role,
+                VehicleNumber = i.Vehicle != null ? i.Vehicle.VehicleNumber : (byte?)null,
+                Age = i.Age,
+                Gender = i.Gender,
+                Race = i.Race
+            })
+            .ToListAsync();
+
+        return View(new EditSummaryViewModel
+        {
+            Summary = summary,
+            Vehicles = vehicles,
+            Injuries = injuries
+        });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Authorize(Policy = Privileges.Crashes.Edit)]
+    public async Task<IActionResult> EditSummary(
+            CrashSummary model, string? vehiclesJson, string? injuriesJson)
+    {
+        var summary = await _context.CrashSummaries.FindAsync(model.SummaryId);
+        if (summary == null) return NotFound();
+
+        if (string.IsNullOrWhiteSpace(model.Station))
+            return Json(new { success = false, message = "Station is required." });
+
+        if (string.IsNullOrWhiteSpace(model.CrNo))
+            return Json(new { success = false, message = "CR number is required." });
+
+        var vehicles = new List<VehicleEntryInput>();
+        if (!string.IsNullOrWhiteSpace(vehiclesJson))
+        {
+            try
+            {
+                vehicles = JsonSerializer.Deserialize<List<VehicleEntryInput>>(vehiclesJson,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new();
+            }
+            catch
+            {
+                return Json(new { success = false, message = "Vehicle details could not be read. Please try again." });
+            }
+        }
+
+        foreach (var v in vehicles)
+        {
+            if (string.IsNullOrWhiteSpace(v.VehicleTypeCode))
+                return Json(new { success = false, message = $"Vehicle {v.VehicleNumber}: vehicle type is required." });
+        }
+
+        var vehicleNumbers = vehicles.Select(v => v.VehicleNumber).ToList();
+        if (vehicleNumbers.Distinct().Count() != vehicleNumbers.Count)
+            return Json(new { success = false, message = "Each vehicle must have a unique vehicle number." });
+
+        var injuries = new List<InjuryEntryInput>();
+        if (!string.IsNullOrWhiteSpace(injuriesJson))
+        {
+            try
+            {
+                injuries = JsonSerializer.Deserialize<List<InjuryEntryInput>>(injuriesJson,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new();
+            }
+            catch
+            {
+                return Json(new { success = false, message = "Casualty details could not be read. Please try again." });
+            }
+        }
+
+        var validSeverities = new[] { "Fatal", "Serious", "Slight" };
+        var validRoles = new[] { "Driver", "Passenger", "Pedestrian", "Cyclist" };
+
+        foreach (var inj in injuries)
+        {
+            if (!validSeverities.Contains(inj.Severity))
+                return Json(new { success = false, message = $"Each casualty needs a valid severity (Fatal, Serious, or Slight) — got '{inj.Severity}'." });
+
+            if (!validRoles.Contains(inj.Role))
+                return Json(new { success = false, message = $"Each casualty needs a valid role (Driver, Passenger, Pedestrian, or Cyclist) — got '{inj.Role}'." });
+
+            if (inj.Age.HasValue && (inj.Age.Value < 0 || inj.Age.Value > 120))
+                return Json(new { success = false, message = $"Age {inj.Age} is out of range (0–120)." });
+
+            if (!string.IsNullOrEmpty(inj.Gender) && inj.Gender != "M" && inj.Gender != "F")
+                return Json(new { success = false, message = "Gender must be M or F if provided." });
+
+            if (!string.IsNullOrEmpty(inj.Race) && !new[] { "B", "C", "I", "W", "O" }.Contains(inj.Race))
+                return Json(new { success = false, message = "Race must be B, C, I, W, or O if provided." });
+
+            if (inj.Role == "Driver" || inj.Role == "Passenger")
+            {
+                if (inj.VehicleNumber == null || !vehicleNumbers.Contains(inj.VehicleNumber.Value))
+                    return Json(new { success = false, message = $"A {inj.Role.ToLower()} casualty must reference one of the vehicles entered above." });
+            }
+            else if (inj.VehicleNumber != null)
+            {
+                return Json(new { success = false, message = $"A {inj.Role.ToLower()} casualty cannot be linked to a vehicle." });
+            }
+        }
+
+        // ── Recompute all 12 counts server-side, same as CreateSummary —
+        // never trust submitted counts directly, the injuries list is the
+        // real source of truth. ─────────────────────────────────────────
+        int Count(string severity, string role) =>
+            injuries.Count(i => i.Severity == severity && i.Role == role);
+
+        summary.Station = model.Station;
+        summary.CasNo = model.CasNo;
+        summary.CrNo = model.CrNo;
+        summary.CrashDate = model.CrashDate;
+        summary.CrashTime = model.CrashTime;
+        summary.Route = model.Route;
+        summary.Location = model.Location;
+        summary.CrashType = model.CrashType;
+        summary.VehicleCount = (byte)vehicles.Count;
+
+        summary.FatalDrivers = (byte)Count("Fatal", "Driver");
+        summary.FatalPassengers = (byte)Count("Fatal", "Passenger");
+        summary.FatalPedestrians = (byte)Count("Fatal", "Pedestrian");
+        summary.FatalCyclists = (byte)Count("Fatal", "Cyclist");
+
+        summary.SeriousDrivers = (byte)Count("Serious", "Driver");
+        summary.SeriousPassengers = (byte)Count("Serious", "Passenger");
+        summary.SeriousPedestrians = (byte)Count("Serious", "Pedestrian");
+        summary.SeriousCyclists = (byte)Count("Serious", "Cyclist");
+
+        summary.SlightDrivers = (byte)Count("Slight", "Driver");
+        summary.SlightPassengers = (byte)Count("Slight", "Passenger");
+        summary.SlightPedestrians = (byte)Count("Slight", "Pedestrian");
+        summary.SlightCyclists = (byte)Count("Slight", "Cyclist");
+
+        // Rebuilt from scratch, not incremented — an edit must replace
+        // the old totals, not add to them.
+        summary.FatalMale = 0; summary.FatalFemale = 0;
+        summary.FatalAge0to7 = 0; summary.FatalAge8to12 = 0; summary.FatalAge13to18 = 0;
+        summary.FatalAge19to35 = 0; summary.FatalAge36Plus = 0;
+        summary.FatalAfrican = 0; summary.FatalColoured = 0; summary.FatalIndian = 0;
+        summary.FatalWhite = 0; summary.FatalOtherRace = 0;
+
+        foreach (var inj in injuries.Where(i => i.Severity == "Fatal"))
+        {
+            if (inj.Age.HasValue)
+            {
+                var age = inj.Age.Value;
+                if (age <= 7) summary.FatalAge0to7++;
+                else if (age <= 12) summary.FatalAge8to12++;
+                else if (age <= 18) summary.FatalAge13to18++;
+                else if (age <= 35) summary.FatalAge19to35++;
+                else summary.FatalAge36Plus++;
+            }
+
+            if (inj.Gender == "M") summary.FatalMale++;
+            else if (inj.Gender == "F") summary.FatalFemale++;
+
+            switch (inj.Race)
+            {
+                case "B": summary.FatalAfrican++; break;
+                case "C": summary.FatalColoured++; break;
+                case "I": summary.FatalIndian++; break;
+                case "W": summary.FatalWhite++; break;
+                case "O": summary.FatalOtherRace++; break;
+            }
+        }
+
+        await using var transaction = await _context.Database.BeginTransactionAsync();
+
+        try
+        {
+            // Injuries deleted BEFORE vehicles — injuries reference
+            // vehicles by FK (NO ACTION, not CASCADE), so vehicles can't
+            // be removed while injuries still point at them.
+            var existingInjuries = _context.CrashSummaryInjuries.Where(i => i.SummaryId == summary.SummaryId);
+            _context.CrashSummaryInjuries.RemoveRange(existingInjuries);
+            await _context.SaveChangesAsync();
+
+            var existingVehicles = _context.CrashSummaryVehicles.Where(v => v.SummaryId == summary.SummaryId);
+            _context.CrashSummaryVehicles.RemoveRange(existingVehicles);
+            await _context.SaveChangesAsync();
+
+            var vehicleNumberToId = new Dictionary<byte, int>();
+            foreach (var v in vehicles)
+            {
+                var entity = new CrashSummaryVehicle
+                {
+                    SummaryId = summary.SummaryId,
+                    VehicleNumber = v.VehicleNumber,
+                    VehicleTypeCode = v.VehicleTypeCode,
+                    VehicleTypeName = v.VehicleTypeName,
+                    Registration = string.IsNullOrWhiteSpace(v.Registration) ? null : v.Registration
+                };
+                _context.CrashSummaryVehicles.Add(entity);
+                await _context.SaveChangesAsync();
+                vehicleNumberToId[v.VehicleNumber] = entity.VehicleId;
+            }
+
+            foreach (var inj in injuries)
+            {
+                _context.CrashSummaryInjuries.Add(new CrashSummaryInjury
+                {
+                    SummaryId = summary.SummaryId,
+                    VehicleId = inj.VehicleNumber.HasValue ? vehicleNumberToId[inj.VehicleNumber.Value] : null,
+                    Severity = inj.Severity,
+                    Role = inj.Role,
+                    Age = (byte?)inj.Age,
+                    Gender = string.IsNullOrEmpty(inj.Gender) ? null : inj.Gender,
+                    Race = string.IsNullOrEmpty(inj.Race) ? null : inj.Race
+                });
+            }
+            if (injuries.Count > 0)
+                await _context.SaveChangesAsync();
+
+            await transaction.CommitAsync();
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync();
+            return Json(new
+            {
+                success = false,
+                message = $"Something went wrong while saving: {ex.Message} | Inner: {ex.InnerException?.Message}"
+            });
+        }
+
+        return Json(new { success = true, message = $"Crash record '{summary.CrNo}' has been updated." });
+    }
+
+    // Deletes in dependency order — injuries, then vehicles, then the
+    // summary itself. This is REQUIRED now, not a style choice: the FKs
+    // from crash_summary_injuries and crash_summary_vehicles back to
+    // crash_summaries are NO ACTION (not CASCADE) — that was the fix for
+    // the "multiple cascade paths" SQL Server error when the schema was
+    // first built. A bare Remove(summary) will now throw an FK violation
+    // if any vehicles or injuries still reference it.
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Authorize(Policy = Privileges.Crashes.Delete)]
+    public async Task<IActionResult> DeleteSummary(int id)
+    {
+        var summary = await _context.CrashSummaries.FindAsync(id);
+        if (summary == null) return NotFound();
+
+        await using var transaction = await _context.Database.BeginTransactionAsync();
+
+        try
+        {
+            var injuries = _context.CrashSummaryInjuries.Where(i => i.SummaryId == id);
+            _context.CrashSummaryInjuries.RemoveRange(injuries);
+            await _context.SaveChangesAsync();
+
+            var vehicles = _context.CrashSummaryVehicles.Where(v => v.SummaryId == id);
+            _context.CrashSummaryVehicles.RemoveRange(vehicles);
+            await _context.SaveChangesAsync();
+
+            _context.CrashSummaries.Remove(summary);
+            await _context.SaveChangesAsync();
+
+            await transaction.CommitAsync();
+        }
+        catch (Exception)
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+
+        return RedirectToAction(nameof(Index));
     }
 
     private static List<Row> Sort(List<Row> rows, string sortBy, bool desc)

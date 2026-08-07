@@ -1,5 +1,6 @@
-﻿@{
-    ViewData["Title"] = "Quick add crash record";
+﻿@model CrashReport.ViewModels.EditSummaryViewModel
+@{
+    ViewData["Title"] = "Edit crash record";
 }
 
 <style>
@@ -215,36 +216,19 @@
         cursor: pointer;
         font-size: .95rem;
     }
-
-    .qa-inline-buttons {
-        display: flex;
-        gap: 10px;
-        margin-bottom: 16px;
-        flex-wrap: wrap;
-    }
 </style>
 
 <div class="qa-card">
     <div class="qa-note">
-        <i class="ti ti-bolt" style="font-size:16px;" aria-hidden="true"></i>
-        <span>
-            Quick add — logs the key details needed for reporting directly, without
-            the full CR1 form. Enter the CR number exactly as written on the completed
-            form. The record is saved the same way an imported row is, and can
-            be edited later from the crash reports grid.
-        </span>
+        <i class="ti ti-edit" style="font-size:16px;" aria-hidden="true"></i>
+        <span>Editing a crash record. CR number, station, and details can all be updated below.</span>
     </div>
 
     <div class="qa-section-title">Identification</div>
     <div class="qa-row">
         <div class="qa-field"><label>CR number</label><div id="crNoBox"></div></div>
         <div class="qa-field"><label>CAS number</label><div id="casNoBox"></div></div>
-        <div class="qa-field"><label>District</label><div id="districtBox"></div></div>
-    </div>
-    <div class="qa-row">
         <div class="qa-field"><label>Station</label><div id="stationBox"></div></div>
-        <div class="qa-field"><label>Route</label><div id="routeBox"></div></div>
-        <div class="qa-field"><label>Location</label><div id="locationBox"></div></div>
     </div>
 
     <div class="qa-section-title">Crash details</div>
@@ -252,6 +236,10 @@
         <div class="qa-field"><label>Date</label><div id="crashDateBox"></div></div>
         <div class="qa-field"><label>Time</label><div id="crashTimeBox"></div></div>
         <div class="qa-field"><label>Crash type</label><div id="crashTypeBox"></div></div>
+    </div>
+    <div class="qa-row">
+        <div class="qa-field"><label>Route</label><div id="routeBox"></div></div>
+        <div class="qa-field" style="grid-column: span 2;"><label>Location</label><div id="locationBox"></div></div>
     </div>
 
     <div class="qa-section-title">Vehicles</div>
@@ -268,9 +256,8 @@
     </div>
 
     <div style="font-size:.75rem;color:#9ca3af;margin:0 0 12px;">
-        Tap + for each casualty by severity and role — a labelled entry appears below for each one.
-        Remove an entry directly with the × and the count above updates to match. Age, gender, race,
-        and vehicle are all optional.
+        Tap + for each casualty by severity and role. Remove an entry directly with the × and the
+        count above updates to match. Age, gender, race, and vehicle are all optional.
     </div>
     <div id="personRows"></div>
 
@@ -285,10 +272,20 @@
     <script>
         $(function () {
 
+            var summaryId = @Model.Summary.SummaryId;
+            var existingVehicles = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Vehicles));
+            var existingInjuries = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Injuries));
+
             var data = {
-                CrNo: null, CasNo: null, District: null, Station: null,
-                CrashDate: null, CrashTime: null, CrashType: null,
-                Route: null, Location: null
+                SummaryId: summaryId,
+                CrNo: @Html.Raw(Json.Serialize(Model.Summary.CrNo)),
+                CasNo: @Html.Raw(Json.Serialize(Model.Summary.CasNo)),
+                Station: @Html.Raw(Json.Serialize(Model.Summary.Station)),
+                Route: @Html.Raw(Json.Serialize(Model.Summary.Route)),
+                Location: @Html.Raw(Json.Serialize(Model.Summary.Location)),
+                CrashType: @Html.Raw(Json.Serialize(Model.Summary.CrashType)),
+                CrashDate: @Html.Raw(Json.Serialize(Model.Summary.CrashDate.ToString("yyyy-MM-dd"))),
+                CrashTime: @Html.Raw(Json.Serialize(Model.Summary.CrashTime.HasValue ? Model.Summary.CrashTime.Value.ToString("HH:mm") : null))
             };
 
             var vehicles = [];       // { VehicleNumber, VehicleTypeCode, VehicleTypeName, Registration }
@@ -301,47 +298,35 @@
 
             function severityClass(s) { return s.toLowerCase(); }
 
-            function textBox(container, placeholder, onChange) {
+            function textBox(container, value, onChange) {
                 return $(container).dxTextBox({
-                    placeholder: placeholder, showClearButton: true,
+                    value: value || "", showClearButton: true,
                     onValueChanged: function (e) { if (onChange) onChange(e.value); }
                 }).dxTextBox("instance");
             }
 
-            // ── Identification / crash detail fields ────────────────────
-            textBox("#crNoBox", "e.g. TONGA-01/09/2026", function (v) { data.CrNo = v; });
-            textBox("#casNoBox", "e.g. CAS-2026-1234", function (v) { data.CasNo = v; });
+            // ── Identification ──────────────────────────────────────────
+            textBox("#crNoBox", data.CrNo, function (v) { data.CrNo = v; });
+            textBox("#casNoBox", data.CasNo, function (v) { data.CasNo = v; });
 
-            // FIX: /api/lookup/districts returns a plain array of strings,
-            // not {text: ...} objects like most other lookup endpoints --
-            // confirmed against the one other place in this project that
-            // already consumes this same endpoint successfully (it passes
-            // the raw array straight to items with no displayExpr/valueExpr
-            // at all). Specifying displayExpr/valueExpr: "text" here was
-            // looking for a property that doesn't exist on a plain string,
-            // which is why every entry showed blank.
-            $("#districtBox").dxSelectBox({
-                dataSource: { load: function () { return $.getJSON("/api/lookup/districts"); } },
-                searchEnabled: true, showClearButton: true,
-                onValueChanged: function (e) { data.District = e.value; }
-            });
-
-            // FIX: Station/Route/Location no longer gated behind selecting
-            // a district first -- all fields are visible together from
-            // the start.
             $("#stationBox").dxSelectBox({
-                dataSource: { load: function (o) { return $.getJSON("/api/lookup/stations", { q: o.searchValue }); } },
-                displayExpr: "text", valueExpr: "text",
+                dataSource: {
+                    load: function (o) { return $.getJSON("/api/lookup/stations", { q: o.searchValue }); },
+                    byKey: function (key) { return { text: key }; }
+                },
+                displayExpr: "text", valueExpr: "text", value: data.Station,
                 searchEnabled: true, acceptCustomValue: true, showClearButton: true,
                 onValueChanged: function (e) { data.Station = e.value; }
             });
 
             $("#crashDateBox").dxDateBox({
-                type: "date", displayFormat: "dd/MM/yyyy", value: new Date(),
+                type: "date", displayFormat: "dd/MM/yyyy",
+                value: data.CrashDate ? new Date(data.CrashDate) : null,
                 onValueChanged: function (e) { data.CrashDate = e.value ? e.value.toISOString().split("T")[0] : null; }
             });
             $("#crashTimeBox").dxDateBox({
                 type: "time", displayFormat: "HH:mm", pickerType: "rollers", useMaskBehavior: true,
+                value: data.CrashTime ? new Date("1970-01-01T" + data.CrashTime + ":00") : null,
                 onValueChanged: function (e) {
                     data.CrashTime = e.value
                         ? e.value.getHours().toString().padStart(2, "0") + ":" + e.value.getMinutes().toString().padStart(2, "0")
@@ -349,42 +334,58 @@
                 }
             });
             $("#crashTypeBox").dxSelectBox({
-                dataSource: { load: function (o) { return $.getJSON("/api/lookup/crashtypes", { q: o.searchValue }); } },
-                displayExpr: "text", valueExpr: "text",
-                searchEnabled: true, acceptCustomValue: true, showClearButton: true,
+                dataSource: {
+                    load: function (o) { return $.getJSON("/api/lookup/crashtypes", { q: o.searchValue }); },
+                    byKey: function (key) { return { text: key }; }
+                },
+                displayExpr: "text", valueExpr: "text", value: data.CrashType,
+                showClearButton: true, searchEnabled: true, acceptCustomValue: true,
                 onValueChanged: function (e) { data.CrashType = e.value; }
             });
             $("#routeBox").dxSelectBox({
-                dataSource: { load: function (o) { return $.getJSON("/api/lookup/routes", { q: o.searchValue }); } },
-                displayExpr: "text", valueExpr: "text",
-                searchEnabled: true, acceptCustomValue: true, showClearButton: true,
+                dataSource: {
+                    load: function (o) { return $.getJSON("/api/lookup/routes", { q: o.searchValue }); },
+                    byKey: function (key) { return { text: key }; }
+                },
+                displayExpr: "text", valueExpr: "text", value: data.Route,
+                showClearButton: true, searchEnabled: true, acceptCustomValue: true,
                 onValueChanged: function (e) { data.Route = e.value; }
             });
             $("#locationBox").dxSelectBox({
-                dataSource: { load: function (o) { return $.getJSON("/api/lookup/locations", { q: o.searchValue }); } },
-                displayExpr: "text", valueExpr: "text",
-                searchEnabled: true, acceptCustomValue: true, showClearButton: true,
+                dataSource: {
+                    load: function (o) { return $.getJSON("/api/lookup/locations", { q: o.searchValue }); },
+                    byKey: function (key) { return { text: key }; }
+                },
+                displayExpr: "text", valueExpr: "text", value: data.Location,
+                showClearButton: true, searchEnabled: true, acceptCustomValue: true,
                 onValueChanged: function (e) { data.Location = e.value; }
             });
 
-            // ── Vehicles (instance-based) ────────────────────────────────
+            // ── Vehicles (instance-based, pre-populated) ─────────────────
             function refreshVehicleDropdowns() {
                 var items = vehicles.map(function (v) {
                     return { value: v.VehicleNumber, text: "Vehicle " + v.VehicleNumber + " — " + (v.VehicleTypeName || "?") };
                 });
                 personRows.forEach(function (p) {
                     if (!p._widgets || !p._widgets.vehicle) return;
+                    var current = p.VehicleNumber;
                     p._widgets.vehicle.option("items", items);
-                    if (p.VehicleNumber !== null && !items.some(function (i) { return i.value === p.VehicleNumber; })) {
+                    if (current !== null && items.some(function (i) { return i.value === current; })) {
+                        p._widgets.vehicle.option("value", current);
+                    } else if (current !== null) {
                         p.VehicleNumber = null;
                         p._widgets.vehicle.option("value", null);
                     }
                 });
             }
 
-            function addVehicleCard() {
-                var num = nextVehicleNumber++;
-                var entry = { VehicleNumber: num, VehicleTypeCode: null, VehicleTypeName: null, Registration: null };
+            function addVehicleCard(prefill) {
+                var num = prefill ? prefill.VehicleNumber : nextVehicleNumber;
+                nextVehicleNumber = Math.max(nextVehicleNumber, num + 1);
+
+                var entry = prefill
+                    ? { VehicleNumber: num, VehicleTypeCode: prefill.VehicleTypeCode, VehicleTypeName: prefill.VehicleTypeName, Registration: prefill.Registration }
+                    : { VehicleNumber: num, VehicleTypeCode: null, VehicleTypeName: null, Registration: null };
                 vehicles.push(entry);
 
                 var card = $("<div class='qa-vehicle-card'>").appendTo("#vehicleCards");
@@ -394,6 +395,7 @@
                 typeDiv.dxSelectBox({
                     items: vehicleTypeOptions, displayExpr: "text", valueExpr: "value",
                     placeholder: "Vehicle type...", searchEnabled: true,
+                    value: entry.VehicleTypeCode,
                     onValueChanged: function (e) {
                         entry.VehicleTypeCode = e.value;
                         var match = vehicleTypeOptions.find(function (o) { return o.value === e.value; });
@@ -404,7 +406,7 @@
 
                 var regDiv = $("<div style='flex:1;'>").appendTo(card);
                 regDiv.dxTextBox({
-                    placeholder: "Registration (optional)",
+                    placeholder: "Registration (optional)", value: entry.Registration,
                     onValueChanged: function (e) { entry.Registration = e.value; }
                 });
 
@@ -430,36 +432,41 @@
             }
 
             $.getJSON("/api/lookup/vehicletypes").done(function (items) {
-                // Server now returns {value, text} directly -- see
-                // LookupController.SearchVehicleTypes -- no more guessing
-                // at property names client-side.
                 vehicleTypeOptions = (items || []).map(function (i) {
                     return { value: i.value, text: i.text };
                 });
-                addVehicleCard(); // start with one, matching the common case
+
+                if (existingVehicles.length > 0) {
+                    existingVehicles.forEach(function (v) { addVehicleCard(v); });
+                } else {
+                    addVehicleCard(null);
+                }
+                refreshVehicleDropdowns();
+
+                // Person rows (need vehicle options ready first, since a
+                // pre-filled row may reference an existing vehicle number)
+                existingInjuries.forEach(function (inj) { addPersonRow(inj.Severity, inj.Role, inj); });
             });
 
             $("#btnAddVehicle").dxButton({
                 text: "Add vehicle", icon: "plus", type: "normal", stylingMode: "outlined",
-                onClick: addVehicleCard
+                onClick: function () { addVehicleCard(null); }
             });
 
             // ── Casualties: grid drives generated rows, rows drive the grid ──
-            var stepperWidgets = {}; // "Fatal:Driver" -> { countEl, ... }
+            var stepperWidgets = {};
 
             function groupKey(sev, role) { return sev + ":" + role; }
-
-            function countFor(sev, role) {
-                return personRows.filter(function (p) { return p.Severity === sev && p.Role === role; }).length;
-            }
-
+            function countFor(sev, role) { return personRows.filter(function (p) { return p.Severity === sev && p.Role === role; }).length; }
             function syncStepperDisplay(sev, role) {
                 var w = stepperWidgets[groupKey(sev, role)];
                 if (w) w.countEl.text(countFor(sev, role));
             }
 
-            function addPersonRow(sev, role) {
-                var entry = { Severity: sev, Role: role, VehicleNumber: null, Age: null, Gender: null, Race: null, _widgets: {} };
+            function addPersonRow(sev, role, prefill) {
+                var entry = prefill
+                    ? { Severity: sev, Role: role, VehicleNumber: prefill.VehicleNumber, Age: prefill.Age, Gender: prefill.Gender, Race: prefill.Race, _widgets: {} }
+                    : { Severity: sev, Role: role, VehicleNumber: null, Age: null, Gender: null, Race: null, _widgets: {} };
                 personRows.push(entry);
 
                 var cls = severityClass(sev);
@@ -473,20 +480,20 @@
                     items: vehicles.map(function (v) { return { value: v.VehicleNumber, text: "Vehicle " + v.VehicleNumber + " — " + (v.VehicleTypeName || "?") }; }),
                     displayExpr: "text", valueExpr: "value",
                     placeholder: noVehicle ? "No vehicle" : "Which vehicle?",
-                    disabled: noVehicle,
+                    disabled: noVehicle, value: entry.VehicleNumber,
                     onValueChanged: function (e) { entry.VehicleNumber = e.value; }
                 }).dxSelectBox("instance");
 
                 var genderDiv = $("<div>").appendTo(row);
                 genderDiv.dxSelectBox({
                     items: [{ text: "M", value: "M" }, { text: "F", value: "F" }],
-                    displayExpr: "text", valueExpr: "value", placeholder: "Gender",
+                    displayExpr: "text", valueExpr: "value", placeholder: "Gender", value: entry.Gender,
                     onValueChanged: function (e) { entry.Gender = e.value; }
                 });
 
                 var ageDiv = $("<div>").appendTo(row);
                 ageDiv.dxNumberBox({
-                    placeholder: "Age", min: 0, max: 120,
+                    placeholder: "Age", min: 0, max: 120, value: entry.Age,
                     onValueChanged: function (e) { entry.Age = e.value; }
                 });
 
@@ -496,7 +503,7 @@
                         { text: "African (B)", value: "B" }, { text: "Coloured (C)", value: "C" },
                         { text: "Indian (I)", value: "I" }, { text: "White (W)", value: "W" }, { text: "Other (O)", value: "O" }
                     ],
-                    displayExpr: "text", valueExpr: "value", placeholder: "Race",
+                    displayExpr: "text", valueExpr: "value", placeholder: "Race", value: entry.Race,
                     onValueChanged: function (e) { entry.Race = e.value; }
                 });
 
@@ -529,7 +536,7 @@
             }
 
             SEVERITIES.forEach(function (sev) {
-                var rowHeader = $("<div class='qa-row-header " + severityClass(sev) + "'>").text(sev).appendTo("#casualtyGrid");
+                $("<div class='qa-row-header " + severityClass(sev) + "'>").text(sev).appendTo("#casualtyGrid");
                 ROLES.forEach(function (role) {
                     var cell = $("<div class='qa-stepper " + severityClass(sev) + "'>").appendTo("#casualtyGrid");
                     var minusBtn = $("<button type='button' class='qa-stepper-btn'>").text("-").appendTo(cell);
@@ -538,19 +545,19 @@
 
                     stepperWidgets[groupKey(sev, role)] = { countEl: countEl };
 
-                    plusBtn.on("click", function () { addPersonRow(sev, role); });
+                    plusBtn.on("click", function () { addPersonRow(sev, role, null); });
                     minusBtn.on("click", function () { removeLastPersonRow(sev, role); syncStepperDisplay(sev, role); });
                 });
             });
 
             // ── Save / Cancel ─────────────────────────────────────────────
             $("#btnSave").dxButton({
-                text: "Save record",
+                text: "Save changes",
                 type: "default",
                 icon: "save",
                 onClick: function () {
                     if (!data.Station) {
-                        DevExpress.ui.notify("Please select a district and station.", "warning", 3000);
+                        DevExpress.ui.notify("Station is required.", "warning", 3000);
                         return;
                     }
                     if (!data.CrNo) {
@@ -564,13 +571,6 @@
                         return;
                     }
 
-                    var crashDate = data.CrashDate;
-                    if (!crashDate) {
-                        var today = new Date();
-                        crashDate = today.getFullYear() + "-" + String(today.getMonth() + 1).padStart(2, "0") + "-" + String(today.getDate()).padStart(2, "0");
-                    }
-                    var crashTime = data.CrashTime || "00:00";
-
                     var cleanVehicles = vehicles.map(function (v) {
                         return { VehicleNumber: v.VehicleNumber, VehicleTypeCode: v.VehicleTypeCode, VehicleTypeName: v.VehicleTypeName, Registration: v.Registration };
                     });
@@ -578,36 +578,24 @@
                         return { Severity: p.Severity, Role: p.Role, VehicleNumber: p.VehicleNumber, Age: p.Age, Gender: p.Gender, Race: p.Race };
                     });
 
-                    var payload = {
-                        CrNo: data.CrNo || "",
-                        CasNo: data.CasNo || "",
-                        Station: data.Station || "",
-                        Route: data.Route || "",
-                        Location: data.Location || "",
-                        CrashType: data.CrashType || "",
-                        CrashDate: crashDate,
-                        CrashTime: crashTime,
+                    var payload = $.extend({}, data, {
                         vehiclesJson: JSON.stringify(cleanVehicles),
                         injuriesJson: JSON.stringify(cleanPersonRows)
-                    };
+                    });
 
-                    $.post("/CreateSummary/CreateSummary", $.extend({
+                    $.post("/Crashes/EditSummary", $.extend({
                         __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').first().val()
                     }, payload))
                     .done(function (res) {
                         if (res.success) {
-                            DevExpress.ui.notify(res.message + " (CR number: " + res.crNo + ")", "success", 4000);
+                            DevExpress.ui.notify(res.message, "success", 4000);
                             window.location.href = "/Crashes";
                         } else {
                             DevExpress.ui.notify(res.message, "error", 4000);
                         }
                     })
-                    .fail(function (jqXHR) {
-                        var msg = "Something went wrong. Please try again.";
-                        if (jqXHR.responseJSON && jqXHR.responseJSON.message) msg = jqXHR.responseJSON.message;
-                        else if (jqXHR.responseText) msg = jqXHR.responseText;
-                        DevExpress.ui.notify(msg, "error", 5000);
-                        console.error("Server error:", jqXHR.responseText);
+                    .fail(function () {
+                        DevExpress.ui.notify("Something went wrong. Please try again.", "error", 3500);
                     });
                 }
             });
