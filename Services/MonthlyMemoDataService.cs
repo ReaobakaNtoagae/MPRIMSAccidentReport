@@ -74,34 +74,79 @@ public class MonthlyMemoDataService
             FromTitle = req.FromTitle
         };
 
-        var current = await LoadAsync(from, to);
-        var prior = await LoadAsync(pFrom, pTo);
+        // ── Load data for current and prior periods ──────────────
+        var currentRows = await LoadAsync(from, to);
+        var priorRows = await LoadAsync(pFrom, pTo);
 
-        vm.Provincial.Current = Agg(current);
-        vm.Provincial.Prior = Agg(prior);
+        // ── Aggregate rows ──────────────────────────────────────
+        var currentAgg = Agg(currentRows);
+        var priorAgg = Agg(priorRows);
 
-        // 5-year history — same calendar month for each year
+        // ── Fetch demographics from the dedicated table ─────────
+        var province = req.ProvinceCode ?? "MP";
+        var currentDemo = await GetDemographicsAsync(from, to, province);
+        var priorDemo = await GetDemographicsAsync(pFrom, pTo, province);
+
+        // ── Attach age/gender breakdowns ───────────────────────
+        currentAgg.FatalAgeGroups = BuildAgeGroupsFromDemographics(currentDemo);
+        currentAgg.FatalGender = BuildGenderFromDemographics(currentDemo);
+
+        // Also for prior period (though the sample only shows current year,
+        // having it available allows easy future extension)
+        priorAgg.FatalAgeGroups = BuildAgeGroupsFromDemographics(priorDemo);
+        priorAgg.FatalGender = BuildGenderFromDemographics(priorDemo);
+
+        vm.Provincial.Current = currentAgg;
+        vm.Provincial.Prior = priorAgg;
+
+        // Inside BuildAsync, after loading current and prior rows:
+        var districtMap = await _stationDistrict.GetAllAsync();
+        string ResolveDistrict(string station) =>
+            districtMap.TryGetValue(StationDistrictLookup.Normalize(station), out var d) ? d : "Unknown";
+
+        // Then, when building districts, group by the resolved district name, not by the hardcoded sets.
+        var districtGroups = currentRows
+            .Concat(priorRows)
+            .Select(r => new { r, District = ResolveDistrict(r.Station) })
+            .Where(x => x.District != "Unknown")
+            .GroupBy(x => x.District)
+            .Select(g => new DistrictMemoStats
+            {
+                Name = g.Key,
+                Current = Agg(g.Where(x => currentRows.Contains(x.r)).Select(x => x.r).ToList()),
+                Prior = Agg(g.Where(x => priorRows.Contains(x.r)).Select(x => x.r).ToList()),
+                Routes = BuildRoutes(
+                    g.Where(x => currentRows.Contains(x.r)).Select(x => x.r).ToList(),
+                    g.Where(x => priorRows.Contains(x.r)).Select(x => x.r).ToList()
+                )
+            })
+            .ToList();
+
+        // Assign to vm.Districts (you may need to preserve the Key for days-of-week lookup later)
+        vm.Districts = districtGroups;
+
+        // ── 5-year history ──────────────────────────────────────
         if (from.Month == to.Month)
         {
             for (int y = from.Year - 4; y <= from.Year; y++)
             {
                 var yF = new DateOnly(y, from.Month, 1);
                 var yT = yF.AddMonths(1).AddDays(-1);
-                var yC = await LoadAsync(yF, yT);
+                var yRows = await LoadAsync(yF, yT);
                 vm.FiveYearHistory.Add(new YearHistory
                 {
                     Year = y,
-                    Crashes = yC.Count,
-                    Fatalities = yC.Sum(r => r.Fatalities)
+                    Crashes = yRows.Count,
+                    Fatalities = yRows.Sum(r => r.Fatalities)
                 });
             }
         }
 
-        // Districts
+        // ── Districts ───────────────────────────────────────────
         foreach (var (key, name, stations) in Districts)
         {
-            var dC = current.Where(r => stations.Contains(r.Station)).ToList();
-            var dP = prior.Where(r => stations.Contains(r.Station)).ToList();
+            var dC = currentRows.Where(r => stations.Contains(r.Station)).ToList();
+            var dP = priorRows.Where(r => stations.Contains(r.Station)).ToList();
             vm.Districts.Add(new DistrictMemoStats
             {
                 Key = key,
@@ -112,31 +157,31 @@ public class MonthlyMemoDataService
             });
         }
 
-        // Provincial routes
-        vm.ProvincialRoutes = BuildRoutes(current, prior)
+        // ── Provincial routes ──────────────────────────────────
+        vm.ProvincialRoutes = BuildRoutes(currentRows, priorRows)
             .OrderByDescending(r => r.FatalCurr)
             .ThenByDescending(r => r.CrashesCurr)
             .Take(6).ToList();
 
-        vm.CrashTypes = BuildCrashTypes(current, prior);
-        vm.VehicleCategories = BuildVehicleCats(current, prior);
-        vm.TimeSlots = BuildTimeSlots(current, prior);
+        vm.CrashTypes = BuildCrashTypes(currentRows, priorRows);
+        vm.VehicleCategories = BuildVehicleCats(currentRows, priorRows);
+        vm.TimeSlots = BuildTimeSlots(currentRows, priorRows);
 
-        vm.DaysOfWeek["Provincial"] = BuildDays(current, prior);
-
-        // Populate a DayStats entry for every district — always, even if all zeros
-        // This ensures the JS renderer always finds a matching key
+        foreach (var dist in districtGroups)
+        {
+            var dC = currentRows.Where(r => ResolveDistrict(r.Station) == dist.Name).ToList();
+            var dP = priorRows.Where(r => ResolveDistrict(r.Station) == dist.Name).ToList();
+            vm.DaysOfWeek[dist.Name] = BuildDays(dC, dP);
+        }
         foreach (var (key, name, stations) in Districts)
         {
-            var dC = current.Where(r => stations.Contains(r.Station)).ToList();
-            var dP = prior.Where(r => stations.Contains(r.Station)).ToList();
+            var dC = currentRows.Where(r => stations.Contains(r.Station)).ToList();
+            var dP = priorRows.Where(r => stations.Contains(r.Station)).ToList();
             vm.DaysOfWeek[key] = BuildDays(dC, dP);
         }
 
         return vm;
     }
-
-
     public async Task<List<Row>> LoadAsync(DateOnly from, DateOnly to)
     {
         var districtMap = await _stationDistrict.GetAllAsync();
@@ -184,10 +229,6 @@ public class MonthlyMemoDataService
                 Route = c.RoadNumber ?? "",
                 CrashType = cond?.CrashType ?? "",
                 VehicleCats = vCats,
-
-                // Officer-declared count, not linked-record count — see note above.
-                // NoOfVehiclesInvolved is a nullable byte on Crash; default to 0
-                // rather than leaving it null, since Row.VehicleCount is a plain int.
                 VehicleCount = c.NoOfVehiclesInvolved ?? 0,
 
                 Fatalities = people.Count(p => p.SeverityOfInjury == "Fatal"),
@@ -260,7 +301,6 @@ public class MonthlyMemoDataService
         formRows.AddRange(summaryRows);
         return formRows;
     }
-
     private static string BuildLocation(CrashLocation? loc)
     {
         if (loc == null) return "";
@@ -323,6 +363,37 @@ public class MonthlyMemoDataService
         SlightPedestrians = r.Sum(x => x.SlightPedestrians),
         SlightCyclists = r.Sum(x => x.SlightCyclists)
     };
+
+    private async Task<CrashDemographicRecord?> GetDemographicsAsync(DateOnly from, DateOnly to, string province)
+    {
+        return await _context.CrashDemographics
+            .FirstOrDefaultAsync(d => d.PeriodFrom == from && d.PeriodTo == to && d.ProvinceCode == province);
+    }
+
+    private static Dictionary<string, int> BuildAgeGroupsFromDemographics(CrashDemographicRecord? demo)
+    {
+        if (demo == null) return new Dictionary<string, int>();
+        return new Dictionary<string, int>
+        {
+            ["0-7"] = demo.Age0to7,
+            ["8-12"] = demo.Age8to12,
+            ["13-18"] = demo.Age13to18,
+            ["19-35"] = demo.Age19to35,
+            ["36+"] = demo.Age36Plus
+        };
+    }
+
+    private static Dictionary<string, Dictionary<string, int>> BuildGenderFromDemographics(CrashDemographicRecord? demo)
+    {
+        if (demo == null) return new Dictionary<string, Dictionary<string, int>>();
+        return new Dictionary<string, Dictionary<string, int>>
+        {
+            ["Drivers"] = new() { ["Male"] = demo.DriverMale, ["Female"] = demo.DriverFemale },
+            ["Passengers"] = new() { ["Male"] = demo.PassengerMale, ["Female"] = demo.PassengerFemale },
+            ["Pedestrians"] = new() { ["Male"] = demo.PedestrianMale, ["Female"] = demo.PedestrianFemale },
+            ["Cyclists"] = new() { ["Male"] = demo.CyclistMale, ["Female"] = demo.CyclistFemale }
+        };
+    }
 
     protected static List<RouteStats> BuildRoutes(List<Row> curr, List<Row> prior)
     {
@@ -475,8 +546,74 @@ public class MonthlyMemoDataService
             : $"{months[from.Month]}–{months[to.Month]} {to.Year}";
     }
 
+    private class FatalPerson
+    {
+        public int Age { get; set; }
+        public string Gender { get; set; } = "";
+        public string Role { get; set; } = "";
+    }
 
-    
+   
+    protected static List<StationStats> BuildStations(List<Row> curr, List<Row> prior)
+    {
+        var c = curr.Where(r => !string.IsNullOrEmpty(r.Station))
+                    .GroupBy(r => r.Station)
+                    .ToDictionary(g => g.Key, g => (g.Count(), g.Sum(x => x.Fatalities)));
+        var p = prior.Where(r => !string.IsNullOrEmpty(r.Station))
+                     .GroupBy(r => r.Station)
+                     .ToDictionary(g => g.Key, g => (g.Count(), g.Sum(x => x.Fatalities)));
+
+        return c.Keys.Union(p.Keys)
+            .Select(station =>
+            {
+                c.TryGetValue(station, out var cv);
+                p.TryGetValue(station, out var pv);
+                return new StationStats
+                {
+                    Station = station,
+                    CrashesCurr = cv.Item1,
+                    FatalCurr = cv.Item2,
+                    CrashesPrev = pv.Item1,
+                    FatalPrev = pv.Item2
+                };
+            })
+            .Where(s => s.CrashesCurr >= 2 || s.FatalCurr >= 1)
+            .OrderByDescending(s => s.CrashesCurr)
+            .ToList();
+    }
+
+
+    public async Task<InsightsViewModel> BuildInsightsAsync(
+        DateOnly from, DateOnly to, string? scopeDistrict = null, string? scopeStation = null)
+    {
+        var priorFrom = from.AddYears(-1);
+        var priorTo = to.AddYears(-1);
+
+        var currentRows = await LoadAsync(from, to);
+        var priorRows = await LoadAsync(priorFrom, priorTo);
+
+        if (!string.IsNullOrEmpty(scopeStation))
+        {
+            currentRows = currentRows.Where(r => string.Equals(r.Station, scopeStation, StringComparison.OrdinalIgnoreCase)).ToList();
+            priorRows = priorRows.Where(r => string.Equals(r.Station, scopeStation, StringComparison.OrdinalIgnoreCase)).ToList();
+        }
+        else if (!string.IsNullOrEmpty(scopeDistrict))
+        {
+            currentRows = currentRows.Where(r => string.Equals(r.District, scopeDistrict, StringComparison.OrdinalIgnoreCase)).ToList();
+            priorRows = priorRows.Where(r => string.Equals(r.District, scopeDistrict, StringComparison.OrdinalIgnoreCase)).ToList();
+        }
+
+        return new InsightsViewModel
+        {
+            PeriodLabel = FormatPeriodLabel(from, to),
+            PriorPeriodLabel = FormatPeriodLabel(priorFrom, priorTo),
+            ScopeLabel = scopeStation ?? scopeDistrict,
+            CrashTypes = BuildCrashTypes(currentRows, priorRows),
+            Routes = BuildRoutes(currentRows, priorRows).Take(10).ToList(),
+            TimeSlots = BuildTimeSlots(currentRows, priorRows),
+            Stations = BuildStations(currentRows, priorRows).Take(10).ToList()
+        };
+    }
 
 
 

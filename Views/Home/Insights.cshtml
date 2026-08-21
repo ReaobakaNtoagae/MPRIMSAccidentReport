@@ -1,0 +1,204 @@
+﻿@model CrashReport.ViewModels.InsightsViewModel
+@{
+    ViewData["Title"] = "Insights";
+    var roleLabel = ViewBag.RoleLabel as string ?? "";
+    var mode = ViewBag.DashboardMode as string ?? "analytics";
+}
+
+<style>
+    .ins-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 4px;
+    }
+
+    .ins-header i {
+        color: #2e7d32;
+        font-size: 18px;
+    }
+
+    .ins-header .title {
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: #1a1a1a;
+    }
+
+    .ins-sub {
+        font-size: .78rem;
+        color: #999;
+        margin-bottom: 20px;
+    }
+
+    .ins-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+        margin-bottom: 20px;
+    }
+
+    .ins-row-label {
+        display: flex;
+        justify-content: space-between;
+        font-size: .78rem;
+        margin-bottom: 3px;
+    }
+
+    .ins-row-label .name { font-weight: 700; }
+    .ins-row-label .stat { color: #777; }
+
+    .ins-bar-track {
+        height: 8px;
+        border-radius: 4px;
+        background: #eee;
+        overflow: hidden;
+        margin-bottom: 10px;
+    }
+
+    .ins-bar-fill {
+        height: 8px;
+    }
+
+    .ins-informs {
+        font-size: .72rem;
+        color: #2e7d32;
+        margin: 0 0 10px;
+        display: flex;
+        align-items: flex-start;
+        gap: 4px;
+    }
+
+    .ins-empty-note {
+        font-size: .8rem;
+        color: #999;
+        line-height: 1.6;
+        padding: 8px 2px;
+    }
+</style>
+
+<div class="ins-header">
+    <i class="ti ti-trending-up" aria-hidden="true"></i>
+    <span class="title">Insights</span>
+</div>
+<div class="ins-sub">
+    @Model.PeriodLabel vs. @Model.PriorPeriodLabel
+    @if (!string.IsNullOrEmpty(Model.ScopeLabel))
+    {
+        <text> &middot; scoped to @Model.ScopeLabel</text>
+    }
+    &mdash; analysis only, nothing here needs acting on today.
+</div>
+
+<div class="ins-grid">
+
+    <div class="panel" style="margin-bottom:0;">
+        <div class="panel-head">Crash type</div>
+        <div class="panel-body">
+            <div class="ins-informs"><i class="ti ti-target" aria-hidden="true"></i> Informs: which intervention type to prioritise &mdash; engineering, enforcement, or education.</div>
+            @{ var shownTypes = Model.CrashTypes.Take(5).ToList(); }
+            @foreach (var t in shownTypes)
+            {
+                var pct = t.CrashesCurr > 0 ? (int)Math.Round(100.0 * t.FatalCurr / t.CrashesCurr) : 0;
+                <div class="ins-row-label">
+                    <span class="name">@t.Type</span>
+                    <span class="stat">@t.CrashesCurr &middot; <b style="color:#b71c1c;">@t.FatalCurr fatal</b></span>
+                </div>
+                <div class="ins-bar-track"><div class="ins-bar-fill" style="width:@(Math.Min(100,pct))%;background:@(pct > 30 ? "#b71c1c" : "#e65100");"></div></div>
+            }
+            @if (Model.CrashTypes.Count > 5)
+            {
+                <div style="font-size:.76rem;color:#2e7d32;cursor:pointer;" onclick="$(this).next().show();$(this).hide();">Show all @Model.CrashTypes.Count types</div>
+                <div style="display:none;">
+                    @foreach (var t in Model.CrashTypes.Skip(5))
+                    {
+                        var pct = t.CrashesCurr > 0 ? (int)Math.Round(100.0 * t.FatalCurr / t.CrashesCurr) : 0;
+                        <div class="ins-row-label">
+                            <span class="name">@t.Type</span>
+                            <span class="stat">@t.CrashesCurr &middot; <b style="color:#b71c1c;">@t.FatalCurr fatal</b></span>
+                        </div>
+                        <div class="ins-bar-track"><div class="ins-bar-fill" style="width:@(Math.Min(100,pct))%;background:@(pct > 30 ? "#b71c1c" : "#e65100");"></div></div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="panel" style="margin-bottom:0;">
+        <div class="panel-head">Routes by risk</div>
+        <div class="panel-body">
+            <div class="ins-informs"><i class="ti ti-target" aria-hidden="true"></i> Informs: where to focus infrastructure or enforcement &mdash; ranked by fatality rate, not raw count, so a short dangerous road isn't hidden behind a long busy one.</div>
+            @{ var rankedRoutes = Model.Routes.Select(r => new { r, Rate = r.CrashesCurr > 0 ? 100.0 * r.FatalCurr / r.CrashesCurr : 0 }).OrderByDescending(x => x.Rate).ToList(); }
+            @foreach (var x in rankedRoutes.Take(5))
+            {
+                <div class="ins-row-label">
+                    <span class="name">@x.r.Route</span>
+                    <span class="stat"><b style="color:@(x.Rate > 30 ? "#b71c1c" : "#777");">@x.Rate.ToString("0.#")%</b> fatal &middot; @x.r.FatalCurr killed</span>
+                </div>
+                <div class="ins-bar-track"><div class="ins-bar-fill" style="width:@(Math.Min(100,(int)x.Rate))%;background:@(x.Rate > 30 ? "#b71c1c" : "#e65100");"></div></div>
+            }
+            @if (rankedRoutes.Count > 5)
+            {
+                <div style="font-size:.76rem;color:#2e7d32;cursor:pointer;" onclick="$(this).next().show();$(this).hide();">Show all @rankedRoutes.Count routes</div>
+                <div style="display:none;">
+                    @foreach (var x in rankedRoutes.Skip(5))
+                    {
+                        <div class="ins-row-label">
+                            <span class="name">@x.r.Route</span>
+                            <span class="stat"><b style="color:@(x.Rate > 30 ? "#b71c1c" : "#777");">@x.Rate.ToString("0.#")%</b> fatal &middot; @x.r.FatalCurr killed</span>
+                        </div>
+                        <div class="ins-bar-track"><div class="ins-bar-fill" style="width:@(Math.Min(100,(int)x.Rate))%;background:@(x.Rate > 30 ? "#b71c1c" : "#e65100");"></div></div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="panel" style="margin-bottom:0;">
+        <div class="panel-head">Time of day</div>
+        <div class="panel-body">
+            <div class="ins-informs"><i class="ti ti-target" aria-hidden="true"></i> Informs: when to schedule patrols and visibility campaigns.</div>
+            @foreach (var t in Model.TimeSlots)
+            {
+                var pct = t.CrashesCurr > 0 ? (int)Math.Round(100.0 * t.FatalCurr / t.CrashesCurr) : 0;
+                <div class="ins-row-label">
+                    <span class="name">@t.Slot</span>
+                    <span class="stat">@t.CrashesCurr &middot; <b style="color:#b71c1c;">@t.FatalCurr fatal</b></span>
+                </div>
+                <div class="ins-bar-track"><div class="ins-bar-fill" style="width:@(Math.Min(100,pct))%;background:@(pct > 30 ? "#b71c1c" : "#e65100");"></div></div>
+            }
+        </div>
+    </div>
+
+    <div class="panel" style="margin-bottom:0;">
+        <div class="panel-head">By station</div>
+        <div class="panel-body">
+            <div class="ins-informs"><i class="ti ti-target" aria-hidden="true"></i> Informs: where staffing or resourcing may need to shift.</div>
+            @{ var shownStations = Model.Stations.Take(5).ToList(); }
+            @foreach (var s in shownStations)
+            {
+                var pct = s.CrashesCurr > 0 ? (int)Math.Round(100.0 * s.FatalCurr / s.CrashesCurr) : 0;
+                <div class="ins-row-label">
+                    <span class="name">@s.Station</span>
+                    <span class="stat">@s.CrashesCurr &middot; <b style="color:#b71c1c;">@s.FatalCurr fatal</b></span>
+                </div>
+                <div class="ins-bar-track"><div class="ins-bar-fill" style="width:@(Math.Min(100,pct))%;background:@(pct > 30 ? "#b71c1c" : "#e65100");"></div></div>
+            }
+            @if (Model.Stations.Count > 5)
+            {
+                <div style="font-size:.76rem;color:#2e7d32;cursor:pointer;" onclick="$(this).next().show();$(this).hide();">Show all @Model.Stations.Count stations</div>
+                <div style="display:none;">
+                    @foreach (var s in Model.Stations.Skip(5))
+                    {
+                        var pct = s.CrashesCurr > 0 ? (int)Math.Round(100.0 * s.FatalCurr / s.CrashesCurr) : 0;
+                        <div class="ins-row-label">
+                            <span class="name">@s.Station</span>
+                            <span class="stat">@s.CrashesCurr &middot; <b style="color:#b71c1c;">@s.FatalCurr fatal</b></span>
+                        </div>
+                        <div class="ins-bar-track"><div class="ins-bar-fill" style="width:@(Math.Min(100,pct))%;background:@(pct > 30 ? "#b71c1c" : "#e65100");"></div></div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+
+</div>

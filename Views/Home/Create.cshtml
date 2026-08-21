@@ -322,7 +322,7 @@
             <div><div class="field-label">Road Signs</div><div id="roadSignsBox"></div></div>
             <div><div class="field-label">Road Markings</div><div id="roadMarkingsBox"></div></div>
             <div><div class="field-label">Overtaking Control</div><div id="overtakingCtrlBox"></div></div>
-            <div><div class="field-label">Crash Severity</div><div id="crashSeverityBox"></div></div>
+
         </div>
     </div>
 
@@ -336,6 +336,14 @@
         <div class="field-row cols-2">
             <div><div class="field-label">Crash Type</div><div id="crashTypeSelect"></div></div>
             <div><div class="field-label">Hit and Run</div><div id="hitRunBox"></div></div>
+        </div>
+    </div>
+
+    <div class="panel-card">
+        <h6>Special Observations</h6>
+        <div class="field-row cols-2">
+            <div><div class="field-label">Tyre Appears to Have Burst</div><div id="tyreBurstBox"></div></div>
+            <div><div class="field-label">Vehicle Lights</div><div id="vehicleLightsBox"></div></div>
         </div>
     </div>
 </div>
@@ -357,6 +365,16 @@
         <div class="entry-tabs" id="personTabs"></div>
         <div id="personForms"></div>
         <div style="margin-top:12px;"><div id="btnAddPerson"></div></div>
+    </div>
+
+    <div class="panel-card">
+        <h6>Passengers Visibly Not Injured</h6>
+        <div style="font-size:.78rem; color:#777; margin-bottom:12px;">
+            For passengers who were not hurt at all — only these five details are needed,
+            not the full form above.
+        </div>
+        <div id="uninjuredRows"></div>
+        <div style="margin-top:12px;"><div id="btnAddUninjured"></div></div>
     </div>
 </div>
 
@@ -570,6 +588,7 @@
                 Conditions: { WeatherConditions: [] },
                 Vehicles:   [],
                 Persons:    [],
+                UninjuredPassengers: [],
                 Factors:    [],
                 Witnesses: [],
                 OfficialUse: {},
@@ -798,6 +817,14 @@
             lookupSelect("#crashTypeSelect","crashtypes","e.g. HEAD ON, SIDE SWIPE...",function(v){ formData.Conditions.CrashType = v; });
             staticSelect("#hitRunBox",[{text:"Yes",value:true},{text:"No",value:false}],"Select...",function(v){ formData.Conditions.HitAndRun = v; });
             $("#hitRunBox").dxSelectBox("instance").option({ displayExpr:"text", valueExpr:"value" });
+
+            // Backend (HomeController.PopulateCrashFromJsonAsync) already
+            // reads TyreBurstObserved / VehicleLightsCondition from the
+            // Conditions object and saves them -- these were the missing
+            // half: nothing in the UI ever set them, so they were always
+            // sent as null. Property names below match the backend exactly.
+            staticSelect("#tyreBurstBox", formOptions.YesNoUnknown, "Tyre burst?", function(v) { formData.Conditions.TyreBurstObserved = v; });
+            staticSelect("#vehicleLightsBox", ["Good", "Faulty / not visible", "Unknown"], "Vehicle lights...", function(v) { formData.Conditions.VehicleLightsCondition = v; });
 
             (formOptions.WeatherCondition || []).forEach(function(w) {
                 var wrap = $("<div>").css({ display:"flex", alignItems:"center", gap:"6px",
@@ -1376,6 +1403,40 @@
                 onClick: function() { buildPersonForm(personCount++); }
             });
 
+            // Separate, lightweight capture for passengers who were not
+            // hurt at all -- matches the physical form's own choice to
+            // treat this as a distinct, much shorter section (Surname,
+            // ID, phone, vehicle -- nothing else) rather than a collapsed
+            // version of the full injured-person form above.
+            var uninjuredCount = 0;
+
+            function buildUninjuredRow(index) {
+                var data = {};
+                formData.UninjuredPassengers[index] = data;
+
+                var row = $("<div class='field-row cols-4'>")
+                    .css({ borderBottom: "1px solid #eee", paddingBottom: "10px", marginBottom: "10px" })
+                    .appendTo("#uninjuredRows");
+
+                [
+                    ["Surname & Initials", "text", v => data.Surname = v],
+                    ["ID Number", "text", v => data.IdNumber = v],
+                    ["Cell / Phone", "text", v => data.CellPhone = v],
+                    ["Vehicle Reference", "sel", formOptions.VehicleReference, v => data.VehicleReference = v]
+                ]
+                .forEach(function(f){
+                    var w = $("<div>").appendTo(row);
+                    $("<div class='field-label'>").text(f[0]).appendTo(w);
+                    if (f[1] == "sel") staticSelect($("<div>").appendTo(w), f[2], f[0], f[3]);
+                    else textBox($("<div>").appendTo(w), f[0], f[2]);
+                });
+            }
+
+            $("#btnAddUninjured").dxButton({
+                text: "Add Passenger", type: "default", icon: "plus",
+                onClick: function() { buildUninjuredRow(uninjuredCount++); }
+            });
+
             function addFactorRow() {
                 var data = { FactorCategory: null, FactorDescription: null, IsMajorFactor: false };
                 factorRows.push(data);
@@ -1512,6 +1573,14 @@
                         html += rv(p.Role || "Person",
                             (p.Surname||"") + " " + (p.FullNames||"") +
                             (p.SeverityOfInjury ? " — " + p.SeverityOfInjury : ""));
+                    });
+                    html += '</div></div>';
+                }
+
+                if (formData.UninjuredPassengers.length > 0) {
+                    html += '<div class="review-section"><h6>Passengers Visibly Not Injured</h6><div class="review-grid">';
+                    formData.UninjuredPassengers.forEach(function(p) {
+                        html += rv(p.VehicleReference ? "Vehicle " + p.VehicleReference : "Passenger", p.Surname || "");
                     });
                     html += '</div></div>';
                 }

@@ -42,7 +42,7 @@ builder.Services.AddScoped<FiveYearReportDataService>();
 builder.Services.AddScoped<FiveYearReportDocService>();
 builder.Services.AddScoped<IStationDistrictLookup, StationDistrictLookup>();
 builder.Services.AddScoped<ICrashFormValidationService, CrashFormValidationService>();
-
+builder.Services.AddMemoryCache(); 
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 {
     options.Password.RequireDigit = true;

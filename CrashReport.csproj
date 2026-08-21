@@ -22,4 +22,8 @@
     <PackageReference Include="PdfPig" Version="0.1.14" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="wwwroot\uploads\crashes\" />
+  </ItemGroup>
+
 </Project>

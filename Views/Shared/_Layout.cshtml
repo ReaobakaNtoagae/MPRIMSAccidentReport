@@ -426,6 +426,18 @@
         var canAdminRoles   = Has(CrashReport.Security.Privileges.Admin.Roles);
         var canAdminLookups = Has(CrashReport.Security.Privileges.Admin.Lookups);
         var canAdminister   = canAdminUsers || canAdminRoles || canAdminLookups;
+
+        // Insights is the one nav item gated on role identity rather than
+        // a privilege claim -- deliberately, not an oversight. It answers
+        // "does this role operate at a scale where a pattern is worth
+        // showing," not "can this role perform an action," and no
+        // existing privilege maps to that. Reusing canAnyReport as a
+        // stand-in was considered and rejected: Regional Staff holds no
+        // Reports.* privilege at all, so that would silently exclude the
+        // exact role this page was built to include.
+        var canSeeInsights = User.IsInRole("System Administrator")
+                           || User.IsInRole("Provincial Staff")
+                           || User.IsInRole("Regional Staff");
     }
 
     <aside class="sidebar" id="sidebar">
@@ -453,6 +465,16 @@
                     <span class="nav-label">Dashboard</span>
                 </a>
             </div>
+
+            @if (canSeeInsights)
+            {
+                <div class="nav-item" data-label="Insights">
+                    <a class="nav-link" asp-controller="Home" asp-action="Insights">
+                        <span class="nav-dot"></span>
+                        <span class="nav-label">Insights</span>
+                    </a>
+                </div>
+            }
 
             @if (canCreateFull)
             {

@@ -1,9 +1,122 @@
 ﻿@{
-    ViewData["Title"] = "Roles & Privileges";
+    ViewData["Title"] = "Dashboard";
+    var mode = ViewBag.DashboardMode as string ?? "none";
+    var roleLabel = ViewBag.RoleLabel as string ?? "";
+    var userDistrict = ViewBag.UserDistrict as string;
+    var userStation = ViewBag.UserStation as string;
+    bool canView = ViewBag.CanView;
+    bool canCreateFull = ViewBag.CanCreateFull;
+    bool canQuickAdd = ViewBag.CanQuickAdd;
+    bool canEdit = ViewBag.CanEdit;
+    bool canImport = ViewBag.CanImport;
+    bool canStandby = ViewBag.CanStandby;
+    bool canMonthly = ViewBag.CanMonthly;
+    bool canFiveYear = ViewBag.CanFiveYear;
+    bool canQuarterly = ViewBag.CanQuarterly;
+    bool canAnyReport = ViewBag.CanAnyReport;
+    bool canAdminister = ViewBag.CanAdminister;
+}
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div id="successMsg" data-message="@TempData["SuccessMessage"]"></div>
+}
+@if (TempData["ErrorMessage"] != null)
+{
+    <div id="errorMsg" data-message="@TempData["ErrorMessage"]"></div>
 }
 
 <style>
-    .rm-card {
+    .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+        margin-bottom: 20px;
+    }
+
+    .kpi-card {
+        border-radius: 12px;
+        padding: 14px 16px;
+        background: #f8faf8;
+        border-left: 3px solid transparent;
+    }
+
+        .kpi-card .kpi-head {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 6px;
+        }
+
+            .kpi-card .kpi-head i {
+                font-size: 16px;
+            }
+
+        .kpi-card .num {
+            font-size: 1.5rem;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .kpi-card .label {
+            font-size: .72rem;
+            color: #666;
+        }
+
+        .kpi-card .sub {
+            font-size: .7rem;
+            color: #999;
+            margin-top: 6px;
+        }
+
+    .qa-section {
+        margin-bottom: 20px;
+    }
+
+    .qa-section-label {
+        font-size: .68rem;
+        text-transform: uppercase;
+        letter-spacing: .8px;
+        color: #888;
+        font-weight: 700;
+        margin-bottom: 8px;
+    }
+
+    .qa-row {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        align-items: flex-start;
+    }
+
+        .qa-row .dx-button {
+            width: 180px;
+        }
+
+        .qa-row.horizontal {
+            flex-direction: row;
+            flex-wrap: wrap;
+        }
+
+            .qa-row.horizontal .dx-button {
+                width: auto;
+            }
+
+    .panel-row-actions {
+        display: grid;
+        grid-template-columns: 1fr 1.6fr;
+        gap: 16px;
+        margin-bottom: 20px;
+    }
+
+    .panel-row {
+        display: grid;
+        grid-template-columns: 1.4fr 1fr;
+        gap: 16px;
+        margin-bottom: 20px;
+    }
+
+    .panel {
         background: #fff;
         border-radius: 10px;
         border: 1px solid #c8e6c9;
@@ -11,320 +124,588 @@
         overflow: hidden;
         margin-bottom: 20px;
     }
-    .rm-card-head {
-        padding: 11px 20px;
+
+    .panel-head {
+        padding: 14px 20px;
         border-bottom: 2px solid #e8f5e9;
-        font-size: .72rem;
+        font-size: .78rem;
         text-transform: uppercase;
-        letter-spacing: .8px;
+        letter-spacing: .7px;
         color: #2e7d32;
         font-weight: 700;
         display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .panel-body {
+        padding: 16px 20px;
+    }
+
+
+    .activity-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: .78rem;
+    }
+
+        .activity-table th {
+            text-align: left;
+            font-size: .65rem;
+            text-transform: uppercase;
+            letter-spacing: .4px;
+            color: #9ca3af;
+            font-weight: 600;
+            padding: 4px 8px;
+            border-bottom: 1px solid #f0f4f0;
+        }
+
+        .activity-table td {
+            padding: 7px 8px;
+            border-bottom: 1px solid #f6f8f6;
+            vertical-align: middle;
+        }
+
+        .activity-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .activity-table tr.clickable {
+            cursor: pointer;
+        }
+
+            .activity-table tr.clickable:hover td {
+                background: #f4fbf5;
+            }
+
+        .activity-table .cr-no {
+            font-weight: 700;
+            color: #1a1a1a;
+        }
+
+        .activity-table .where {
+            color: #777;
+            font-size: .74rem;
+        }
+
+    .src-badge {
+        font-size: .62rem;
+        padding: 2px 6px;
+        border-radius: 5px;
+        white-space: nowrap;
+    }
+
+    .src-manual {
+        background: #e8f5e9;
+        color: #2e7d32;
+    }
+
+    .src-import {
+        background: #f5f5f5;
+        color: #9e9e9e;
+    }
+
+    .sev-badge {
+        font-size: .62rem;
+        padding: 2px 6px;
+        border-radius: 8px;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    .sev-fatal {
+        background: #b71c1c;
+        color: #fff;
+    }
+
+    .sev-serious {
+        background: #e65100;
+        color: #fff;
+    }
+
+    .sev-none {
+        color: #c0c0c0;
+        font-size: .72rem;
+    }
+
+    .view-all-link {
+        font-size: .78rem;
+        color: #2e7d32;
+        font-weight: 600;
+        text-decoration: none;
+    }
+
+    
+
+    .action-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 14px;
+        margin-bottom: 20px;
+    }
+
+    .action-card {
+        background: #fff;
+        border-radius: 10px;
+        border: 1px solid #c8e6c9;
+        box-shadow: 0 2px 8px rgba(0,0,0,.06);
+        padding: 18px 18px 16px;
+    }
+
+        .action-card .icon {
+            font-size: 22px;
+            color: #2e7d32;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .action-card .title {
+            font-size: .88rem;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 3px;
+        }
+
+        .action-card .desc {
+            font-size: .74rem;
+            color: #888;
+            margin-bottom: 12px;
+            min-height: 2.2em;
+        }
+
+        .action-card .dx-button {
+            width: 100%;
+        }
+
+    .scope-banner {
+        display: flex;
         align-items: center;
         justify-content: space-between;
+        background: #fff;
+        border: 1px solid #c8e6c9;
+        border-radius: 10px;
+        padding: 10px 18px;
+        margin-bottom: 20px;
+        font-size: .82rem;
     }
-    .rm-card-body { padding: 18px; }
-    .rm-note { font-size: .8rem; color: #888; margin-top: 12px; }
 
-    /* Privilege matrix */
-    .priv-matrix { width: 100%; border-collapse: collapse; font-size: .85rem; }
-    .priv-matrix th {
-        background: #2b2b2b; color: #fff; padding: 8px 12px;
-        text-align: left; font-weight: 600; white-space: nowrap;
+        .scope-banner .role-tag {
+            font-size: .68rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            color: #2e7d32;
+            background: #e8f5e9;
+            padding: 4px 10px;
+            border-radius: 6px;
+        }
+
+        .scope-banner .scope-value {
+            color: #444;
+        }
+
+        .scope-banner .not-enforced {
+            font-size: .72rem;
+            color: #a15c00;
+            background: #fff3e0;
+            padding: 3px 9px;
+            border-radius: 6px;
+        }
+
+    .review-note {
+        background: #e6f1fb;
+        border: 1px solid #b5d4f4;
+        border-radius: 8px;
+        padding: 10px 14px;
+        font-size: .8rem;
+        color: #0c447c;
+        margin-bottom: 20px;
     }
-    .priv-matrix th.role-col { text-align: center; min-width: 100px; }
-    .priv-matrix td { padding: 6px 12px; border-bottom: 1px solid #f0f0f0; }
-    .priv-matrix tr:hover td { background: #f9fdf9; }
-    .priv-matrix .group-header td {
-        background: #e8f5e9; font-weight: 700;
-        font-size: .7rem; text-transform: uppercase;
-        letter-spacing: .6px; color: #2e7d32;
-        padding: 5px 12px;
-    }
-    .priv-matrix td.check-cell { text-align: center; }
-    .priv-matrix input[type=checkbox] {
-        width: 16px; height: 16px; cursor: pointer;
-        accent-color: #2e7d32;
-    }
-    .priv-matrix input[type=checkbox]:disabled {
-        opacity: 0.4; cursor: not-allowed;
-    }
-    .save-btn-row { margin-top: 14px; display: flex; gap: 10px; align-items: center; }
-    .save-note { font-size: .78rem; color: #888; }
-    .role-name-th { font-size: .75rem; }
 </style>
 
-@* ── Role list card ─────────────────────────────────────────── *@
-<div class="rm-card">
-    <div class="rm-card-head">
-        <span>Roles</span>
-        <div id="btnAddRole"></div>
+<!-- Scope banner — every role's actual data scope, now genuinely
+     enforced (see HomeController.Index). -->
+<div class="scope-banner">
+    <div style="display:flex;align-items:center;gap:10px;">
+        <span class="role-tag">@roleLabel</span>
+        <span class="scope-value">
+            @if (mode == "analytics")
+            {
+                <text>All districts &middot; province-wide</text>
+            }
+            else if (roleLabel == "Regional Staff")
+            {
+                <text>Your region: @(userDistrict ?? "not set")</text>
+            }
+            else
+            {
+                <text>Your station: @(userStation ?? "not set")</text>
+            }
+        </span>
     </div>
-    <div class="rm-card-body">
-        <div id="rolesGrid"></div>
-        <p class="rm-note">Administrator, Supervisor, and DataCapturer are core system roles. Their privilege defaults are set during setup and can be adjusted in the privilege matrix below.</p>
+    <i class="ti @(mode == "analytics" ? "ti-world" : mode == "review" ? "ti-list-check" : "ti-map-pin")" style="font-size:18px;color:#9ca3af;" aria-hidden="true"></i>
+</div>
+
+@{
+    var scopeSuffix = mode == "analytics" ? " (all time)" : " (your scope)";
+}
+<div class="kpi-grid">
+    <div class="kpi-card" style="border-left-color:#2e7d32;">
+        <div class="kpi-head" style="color:#2e7d32;"><i class="ti ti-car-crash" aria-hidden="true"></i><span class="label">Total crash reports@scopeSuffix</span></div>
+        <div class="num" style="color:#2e7d32;">@ViewBag.TotalCrashes</div>
+        <div class="sub">@ViewBag.ThisMonthCrashes new in @ViewBag.CurrentMonth</div>
+    </div>
+    <div class="kpi-card" style="border-left-color:#b71c1c;">
+        <div class="kpi-head" style="color:#b71c1c;"><i class="ti ti-alert-triangle" aria-hidden="true"></i><span class="label">Fatal injuries@scopeSuffix</span></div>
+        <div class="num" style="color:#b71c1c;">@ViewBag.FatalCount</div>
+        <div class="sub">@ViewBag.ThisMonthFatal this month</div>
+    </div>
+    <div class="kpi-card" style="border-left-color:#e65100;">
+        <div class="kpi-head" style="color:#e65100;"><i class="ti ti-first-aid-kit" aria-hidden="true"></i><span class="label">Serious injuries@scopeSuffix</span></div>
+        <div class="num" style="color:#e65100;">@ViewBag.SeriousCount</div>
+    </div>
+    <div class="kpi-card" style="border-left-color:#0277bd;">
+        <div class="kpi-head" style="color:#0277bd;"><i class="ti ti-bandage" aria-hidden="true"></i><span class="label">Slight injuries@scopeSuffix</span></div>
+        <div class="num" style="color:#0277bd;">@ViewBag.SlightCount</div>
     </div>
 </div>
 
-@* ── Privilege matrix card ──────────────────────────────────── *@
-<div class="rm-card">
-    <div class="rm-card-head">
-        <span>Privilege assignment</span>
-        <div id="matrixStatus" style="font-size:.78rem;color:#888;text-transform:none;letter-spacing:0;font-weight:400;"></div>
-    </div>
-    <div class="rm-card-body">
-        <p style="font-size:.85rem;color:#555;margin-bottom:14px;">
-            Tick or untick privileges per role. Click <strong>Save changes</strong> when done.
-            Changes take effect the next time users in that role log in.
-        </p>
-        <div id="matrixWrap"><em style="color:#aaa;">Loading&#8230;</em></div>
-        <div class="save-btn-row">
-            <div id="btnSaveMatrix"></div>
-            <span class="save-note" id="saveNote"></span>
+@if (mode == "analytics")
+{
+    <!-- Charts sit directly under the KPI cards now, before quick actions
+         or recent activity — the most important glance-value content
+         comes first. -->
+    <div class="panel-row">
+        <div class="panel" style="margin-bottom:0;">
+            <div class="panel-head">Crashes by district</div>
+            <div class="panel-body">
+                <div style="position:relative; height:220px;"><canvas id="districtChart"></canvas></div>
+            </div>
+        </div>
+        <div class="panel" style="margin-bottom:0;">
+            <div class="panel-head">Severity breakdown</div>
+            <div class="panel-body">
+                <div style="position:relative; height:220px;"><canvas id="severityChart"></canvas></div>
+            </div>
         </div>
     </div>
-</div>
+    <div class="qa-section-label">Quick actions</div>
+    <div class="action-grid" id="quickActionsAll"></div>
+
+    <div class="panel">
+        <div class="panel-head">
+            Recent activity
+            @if (canView)
+            {
+                <a href="/Crashes" class="view-all-link">View all crash reports →</a>
+            }
+        </div>
+        <div class="panel-body" id="recentActivityBody">
+            <div style="color:#999; font-size:.8rem;">Loading…</div>
+        </div>
+    </div>
+}
+@if (mode != "analytics")
+{
+    if (mode == "capture")
+    {
+        <!-- ══════════ Capture: SAPS Officer or Cost Centre Administrator.
+             Cards are strictly per-privilege — SAPS Officer never sees Quick
+             add (no CreateSummary), Cost Centre Administrator never sees
+             New CR1 (no Create). Every available action is one card among
+             equals, not a single oversized tile with empty space beside it. ══ -->
+        <div class="qa-section-label">Quick actions</div>
+        <div class="action-grid">
+            @if (canCreateFull)
+            {
+                <div class="action-card">
+                    <i class="ti ti-file-text icon" aria-hidden="true"></i>
+                    <div class="title">New CR1 report</div>
+                    <div class="desc">Full crash report form</div>
+                    <div id="actionNewCr1"></div>
+                </div>
+            }
+            @if (canQuickAdd)
+            {
+                <div class="action-card">
+                    <i class="ti ti-bolt icon" aria-hidden="true"></i>
+                    <div class="title">Quick add</div>
+                    <div class="desc">Fast capture from a completed form</div>
+                    <div id="actionQuickAdd"></div>
+                </div>
+            }
+            @if (canImport)
+            {
+                <div class="action-card">
+                    <i class="ti ti-upload icon" aria-hidden="true"></i>
+                    <div class="title">Import Excel</div>
+                    <div class="desc">Bring in a batch of records from a workbook</div>
+                    <div id="actionImport"></div>
+                </div>
+            }
+        </div>
+
+        <div class="panel">
+            <div class="panel-head">
+                Recent activity — your station
+                @if (canView)
+                {
+                    <a href="/Crashes" class="view-all-link">View all crash reports →</a>
+                }
+            </div>
+            <div class="panel-body" id="recentActivityBody">
+                <div style="color:#999; font-size:.8rem;">Loading…</div>
+            </div>
+        </div>
+    }
+    else if (mode == "review")
+    {
+        <!-- ══════════ Review: Regional Staff. View/Edit, plus Quick Add
+             (added per the explicit per-role spec — needs Crashes.
+             CreateSummary in the privilege model to actually work, not
+             just display). No New CR1/full-report generation. ══════════ -->
+        @if (canQuickAdd)
+        {
+            <div class="qa-section-label">Quick actions</div>
+            <div class="action-grid">
+                <div class="action-card">
+                    <i class="ti ti-bolt icon" aria-hidden="true"></i>
+                    <div class="title">Quick add</div>
+                    <div class="desc">Fast capture from a completed form</div>
+                    <div id="actionQuickAdd"></div>
+                </div>
+            </div>
+        }
+
+        <div class="review-note">
+            Showing recent crash records for your region: @(userDistrict ?? "not set").
+        </div>
+
+        <div class="panel">
+            <div class="panel-head">
+                Records to review
+                @if (canView)
+                {
+                    <a href="/Crashes" class="view-all-link">Open Crash Reports →</a>
+                }
+            </div>
+            <div class="panel-body" id="recentActivityBody">
+                <div style="color:#999; font-size:.8rem;">Loading…</div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="panel">
+            <div class="panel-body">
+                <div style="color:#999; font-size:.85rem;">
+                    Your account doesn't have any dashboard-relevant privileges assigned yet.
+                    Contact a System Administrator if this seems wrong.
+                </div>
+            </div>
+        </div>
+    }
+}
+
+<form id="deleteForm" method="post" style="display:none;">
+    @Html.AntiForgeryToken()
+</form>
 
 @section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
     <script>
         $(function () {
-            var allPrivileges = [];
-            var allRoles      = [];
 
-            // ── Load both datasets in parallel ────────────────────────
-            $.when(
-                $.getJSON('/Roles/GetPrivileges'),
-                $.getJSON('/Roles/GetAll')
-            ).done(function (privRes, roleRes) {
-                allPrivileges = privRes[0];
-                allRoles      = roleRes[0];
-                renderRolesGrid();
-                renderMatrix();
-            });
+        var mode = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(mode));
+        var roleLabel = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(roleLabel));
+        var canView       = @Html.Raw(canView.ToString().ToLower());
+        var canCreateFull = @Html.Raw(canCreateFull.ToString().ToLower());
+        var canQuickAdd   = @Html.Raw(canQuickAdd.ToString().ToLower());
+        var canEdit       = @Html.Raw(canEdit.ToString().ToLower());
+        var canImport     = @Html.Raw(canImport.ToString().ToLower());
+        var canStandby    = @Html.Raw(canStandby.ToString().ToLower());
+        var canMonthly    = @Html.Raw(canMonthly.ToString().ToLower());
+        var canFiveYear   = @Html.Raw(canFiveYear.ToString().ToLower());
+        var canQuarterly  = @Html.Raw(canQuarterly.ToString().ToLower());
+        var canAdminister = @Html.Raw(canAdminister.ToString().ToLower());
+        var scopedRecentActivity = @Html.Raw(ViewBag.ScopedRecentActivityJson ?? "null");
 
-            // ── Roles grid ────────────────────────────────────────────
-            function renderRolesGrid() {
-                $("#rolesGrid").dxDataGrid({
-                    dataSource: allRoles,
-                    paging: { pageSize: 20 },
-                    filterRow: { visible: false },
-                    columns: [
-                        { dataField: "Name", caption: "Role name", width: 220 },
-                        {
-                            caption: "Type", width: 120,
-                            cellTemplate: function (el, info) {
-                                $('<span>').text(info.data.IsCore ? "System role" : "Custom")
-                                           .css("color", info.data.IsCore ? "#2e7d32" : "#666")
-                                           .appendTo(el);
-                            }
-                        },
-                        {
-                            caption: "Privileges assigned",
-                            cellTemplate: function (el, info) {
-                                $('<span>').text(info.data.Privileges.length + " of " + allPrivileges.length)
-                                           .css("color", "#555")
-                                           .appendTo(el);
-                            }
-                        },
-                        {
-                            caption: "Actions", width: 110, allowSorting: false,
-                            cellTemplate: function (el, info) {
-                                if (info.data.IsCore) return;
-                                $('<div>').appendTo(el).dxButton({
-                                    text: "Delete", type: "danger", stylingMode: "outlined",
-                                    onClick: function () { deleteRole(info.data.Id, info.data.Name); }
-                                });
-                            }
-                        }
-                    ]
-                });
-            }
+        var successMsg = $("#successMsg").data("message");
+        var errorMsg   = $("#errorMsg").data("message");
+        if (successMsg) DevExpress.ui.notify(successMsg, "success", 4000);
+        if (errorMsg)   DevExpress.ui.notify(errorMsg,   "error",   5000);
 
-            // ── Privilege matrix ──────────────────────────────────────
-            function renderMatrix() {
-                var groups    = [...new Set(allPrivileges.map(p => p.Group))];
-                var roleNames = allRoles.map(r => r.Name);
+        // Builds a full action-card (icon, title, description, button)
+        // into a grid container — every quick action gets its own small
+        // section, matching how the Import page separates its cards,
+        // rather than several buttons sharing one panel.
+        var ACTION_META = {
+        "Manage users":       { icon: "ti-users",         desc: "Add, edit, or deactivate user accounts" },
+        "Manage roles":       { icon: "ti-shield-lock",   desc: "Adjust role privileges and permissions" },
+        "Manage lookups":     { icon: "ti-list-details",  desc: "Maintain stations, routes, and other reference data" },
+        "Weekly standby":     { icon: "ti-clock",         desc: "Generate the weekly PATRICIA-format report" },
+        "Monthly memo":       { icon: "ti-chart-bar",     desc: "Generate the monthly memo report" },
+        "Quarterly report":   { icon: "ti-chart-line",    desc: "Generate the quarterly summary report" },
+        "Five year report":   { icon: "ti-chart-area",    desc: "Generate the five-year trend report" },
+        "Import Excel":       { icon: "ti-upload",        desc: "Bring in a batch of records from a workbook" }
+        };
 
-                // Build a map: roleName → Set of privileges
-                var rolePrivMap = {};
-                allRoles.forEach(function (r) {
-                    rolePrivMap[r.Name] = new Set(r.Privileges);
-                });
+        function addActionCards(containerId, items) {
+        items.forEach(function (a) {
+        var meta = ACTION_META[a.text] || { icon: "ti-arrow-right", desc: "" };
+        var card = $("<div class='action-card'>").appendTo(containerId);
+        $("<i>").addClass("ti " + meta.icon + " icon").attr("aria-hidden", "true").appendTo(card);
+        $("<div class='title'>").text(a.text).appendTo(card);
+        $("<div class='desc'>").text(meta.desc).appendTo(card);
+        $("<div>").appendTo(card).dxButton({
+        text: "Open", type: a.type,
+        onClick: function () { window.location.href = a.url; }
+        });
+        });
+        }
 
-                var table = $('<table class="priv-matrix">');
+        if (mode === "analytics") {
+        // Every button here is gated on its own privilege flag —
+        // nothing is pushed unconditionally, including "Search
+        // crashes" (requires canView) which previously always
+        // appeared regardless of privilege.
+        // Quick Actions content is now an exact, explicit list per
+        // role — not "whatever the privilege flags happen to allow."
+        // System Administrator: management only. Provincial Staff:
+        // reports + import only. Neither shows capture buttons even
+        // though System Administrator technically holds those
+        // privileges too — this is a deliberate curation choice for
+        // this panel, not a privilege restriction (the sidebar nav
+        // still reflects full privileges separately).
+        var allButtons = [];
+        if (roleLabel === "System Administrator") {
+        allButtons = [
+        { text: "Manage users",   type: "default", icon: "user",  url: "/Users" },
+        { text: "Manage roles",   type: "normal",  icon: "key",   url: "/Roles" },
+        { text: "Manage lookups", type: "normal",  icon: "align", url: "/Lookups" }
+        ];
+        } else if (roleLabel === "Provincial Staff") {
+        allButtons = [
+        { text: "Weekly standby",   type: "default", icon: "clock", url: "/StandbyReport" },
+        { text: "Monthly memo",     type: "normal",  icon: "chart", url: "/MemoReport" },
+        { text: "Quarterly report", type: "normal",  icon: "chart", url: "/QuarterlyReport" },
+        { text: "Five year report", type: "normal",  icon: "chart", url: "/FiveYearReport" },
+        { text: "Import Excel",     type: "normal",  icon: "upload", url: "/Import" }
+        ];
+        }
+        addActionCards("#quickActionsAll", allButtons);
 
-                // Header row
-                var thead = $('<thead>');
-                var hrow  = $('<tr>');
-                hrow.append($('<th>').text('Privilege'));
-                roleNames.forEach(function (rn) {
-                    hrow.append($('<th class="role-col">').html('<span class="role-name-th">' + rn + '</span>'));
-                });
-                thead.append(hrow);
-                table.append(thead);
+        $.getJSON("/Crashes/Grid", { pageSize: 5000, sortBy: "Date", sortDesc: true }).done(function (result) {
+        var rows = result.rows || [];
 
-                var tbody = $('<tbody>');
-                groups.forEach(function (group) {
-                    // Group header row
-                    var grow = $('<tr class="group-header">');
-                    var gtd  = $('<td>').attr('colspan', roleNames.length + 1).text(group);
-                    grow.append(gtd);
-                    tbody.append(grow);
+        var byDistrict = {};
+        var bySeverity = { Fatal: 0, Serious: 0, Minor: 0 };
+        rows.forEach(function (r) {
+        var d = r.District || "Unknown";
+        byDistrict[d] = (byDistrict[d] || 0) + 1;
+        if (r.Fatalities > 0) bySeverity.Fatal++;
+        else if (r.Serious > 0) bySeverity.Serious++;
+        else bySeverity.Minor++;
+        });
 
-                    // Privilege rows in this group
-                    allPrivileges.filter(p => p.Group === group).forEach(function (priv) {
-                        var row = $('<tr>');
-                        row.append($('<td>').text(priv.Label));
-                        roleNames.forEach(function (rn) {
-                            var checked = rolePrivMap[rn].has(priv.Value);
-                            var cb = $('<input type="checkbox">')
-                                .attr('data-role', rn)
-                                .attr('data-priv', priv.Value)
-                                .prop('checked', checked);
-                            var td = $('<td class="check-cell">').append(cb);
-                            row.append(td);
-                        });
-                        tbody.append(row);
-                    });
-                });
-                table.append(tbody);
+        var districtLabels = Object.keys(byDistrict);
+        var districtValues = districtLabels.map(function (d) { return byDistrict[d]; });
 
-                $('#matrixWrap').empty().append(table);
+        new Chart(document.getElementById('districtChart'), {
+        type: 'bar',
+        data: { labels: districtLabels, datasets: [{ data: districtValues, backgroundColor: '#2a78d6', borderRadius: 4, maxBarThickness: 32 }] },
+        options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, grid: { color: '#e1e0d9' } }, x: { grid: { display: false } } }
+        }
+        });
 
-                // Track changes
-                $('#matrixWrap').on('change', 'input[type=checkbox]', function () {
-                    $('#saveNote').text('Unsaved changes');
-                    $('#saveNote').css('color', '#e65100');
-                });
-            }
+        new Chart(document.getElementById('severityChart'), {
+        type: 'doughnut',
+        data: {
+        labels: ['Fatal', 'Serious', 'Minor'],
+        datasets: [{ data: [bySeverity.Fatal, bySeverity.Serious, bySeverity.Minor], backgroundColor: ['#b71c1c', '#e65100', '#2a78d6'] }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } } }
+        });
 
-            // ── Save matrix ───────────────────────────────────────────
-            $("#btnSaveMatrix").dxButton({
-                text: "Save changes", type: "default", icon: "save",
-                onClick: function () { saveMatrix(); }
-            });
+        renderRecentActivity(rows.slice(0, 8), false);
+        }).fail(function () {
+        $("#recentActivityBody").html('<div style="color:#b71c1c; font-size:.8rem;">Could not load recent activity.</div>');
+        });
 
-            function saveMatrix() {
-                var token = $('input[name="__RequestVerificationToken"]').first().val();
-                var saves = allRoles.map(function (role) {
-                    var privs = [];
-                    $('input[data-role="' + role.Name + '"]:checked').each(function () {
-                        privs.push($(this).data('priv'));
-                    });
-                    return $.post('/Roles/SetPrivileges', {
-                        __RequestVerificationToken: token,
-                        roleId: role.Id,
-                        privileges: privs
-                    });
-                });
+        } else if (mode === "capture") {
+        // Each card's button is mounted directly into the card already
+        // rendered server-side (icon/title/desc), rather than building
+        // the whole card in JS — the set of cards shown is privilege-
+        // gated in Razor, so JS only needs to wire up what's present.
+        if (canCreateFull) {
+        $("#actionNewCr1").dxButton({ text: "Open", type: "default", onClick: function () { window.location.href = "/Home/Create"; } });
+        }
+        if (canQuickAdd) {
+        $("#actionQuickAdd").dxButton({ text: "Open", type: "default", onClick: function () { window.location.href = "/Crashes/CreateSummary"; } });
+        }
+        if (canImport) {
+        $("#actionImport").dxButton({ text: "Open", type: "default", onClick: function () { window.location.href = "/Import"; } });
+        }
+        // Scoped server-side in HomeController.Index -- no separate
+        // fetch needed, and no risk of accidentally rendering the
+        // unscoped list this used to pull from /Crashes/Grid.
+        renderRecentActivity(scopedRecentActivity || [], canEdit);
 
-                $.when.apply($, saves).done(function () {
-                    $('#saveNote').text('Saved successfully').css('color', '#2e7d32');
-                    setTimeout(function () { $('#saveNote').text(''); }, 3000);
-                    // Reload to refresh privilege counts in the grid
-                    $.getJSON('/Roles/GetAll', function (data) {
-                        allRoles = data;
-                        renderRolesGrid();
-                    });
-                }).fail(function () {
-                    $('#saveNote').text('Something went wrong — please try again.').css('color', '#c62828');
-                });
-            }
+        } else if (mode === "review") {
+        if (canQuickAdd) {
+        $("#actionQuickAdd").dxButton({ text: "Open", type: "default", onClick: function () { window.location.href = "/Crashes/CreateSummary"; } });
+        }
+        renderRecentActivity(scopedRecentActivity || [], canEdit);
+        }
 
-            // ── Add role button ───────────────────────────────────────
-            $("#btnAddRole").dxButton({
-                text: "Add role", icon: "plus", type: "default", stylingMode: "outlined",
-                onClick: function () {
-                    // Create a fresh container for the popup
-                    var $popupContainer = $('<div>').appendTo('body');
+        // ── Recent activity — compact table, not stacked cards ──────
+        function renderRecentActivity(recent, clickableToEdit) {
+        var body = $("#recentActivityBody").empty();
+        if (recent.length === 0) {
+        body.append('<div style="color:#999; font-size:.8rem;">No crash reports yet.</div>');
+        return;
+        }
 
-                    // Create the text box inside the container
-                    var $textBox = $('<div>').appendTo($popupContainer).dxTextBox({
-                        placeholder: "Role name...",
-                        value: ""
-                    });
+        var table = $('<table class="activity-table"></table>');
+        table.append(
+        '<thead><tr>' +
+        '<th>CR No.</th><th>Where</th><th>Severity</th><th>Source</th>' +
+        '</tr></thead>'
+        );
 
-                    var popupInstance = $popupContainer.dxPopup({
-                        title: "New role",
-                        width: 400,
-                        height: "auto",
-                        showCloseButton: true,
-                        visible: true,
-                        contentTemplate: function () {
-                            // Return the text box element (already in the container)
-                            return $textBox;
-                        },
-                        onHiding: function () {
-                            // Clean up the container when the popup closes
-                            $popupContainer.remove();
-                        },
-                        toolbarItems: [
-                            {
-                                widget: "dxButton",
-                                location: "after",
-                                toolbar: "bottom",
-                                options: {
-                                    text: "Create",
-                                    type: "default",
-                                    onClick: function () {
-                                        var name = $textBox.dxTextBox("instance").option("value");
-                                        if (!name || name.trim() === "") {
-                                            DevExpress.ui.notify("Please enter a role name.", "warning", 2000);
-                                            return;
-                                        }
-                                        $.post("/Roles/Create", {
-                                            __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').first().val(),
-                                            roleName: name.trim()
-                                        })
-                                        .done(function (res) {
-                                            if (res.success) {
-                                                DevExpress.ui.notify(res.message, "success", 2500);
-                                                location.reload();
-                                            } else {
-                                                DevExpress.ui.notify(res.message, "error", 3000);
-                                            }
-                                        });
-                                    }
-                                }
-                            },
-                            {
-                                widget: "dxButton",
-                                location: "after",
-                                toolbar: "bottom",
-                                options: {
-                                    text: "Cancel",
-                                    onClick: function () {
-                                        popupInstance.hide();
-                                    }
-                                }
-                            }
-                        ]
-                    }).dxPopup("instance");
-                }
-            });
+        var tbody = $('<tbody></tbody>').appendTo(table);
 
-            
-            function deleteRole(id, name) {
-                DevExpress.ui.dialog.confirm(
-                    "Delete role '" + name + "'? Users assigned this role will lose it.",
-                    "Confirm delete"
-                ).done(function (yes) {
-                    if (!yes) return;
-                    $.post("/Roles/Delete", {
-                        __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').first().val(),
-                        id: id
-                    })
-                    .done(function (res) {
-                        if (res.success) {
-                            DevExpress.ui.notify(res.message, "success", 2500);
-                            location.reload();
-                        } else {
-                            DevExpress.ui.notify(res.message, "error", 3000);
-                        }
-                    });
-                });
-            }
+        recent.forEach(function (r) {
+        var sevBadge = r.Fatalities > 0
+        ? '<span class="sev-badge sev-fatal">' + r.Fatalities + ' fatal</span>'
+        : (r.Serious > 0
+        ? '<span class="sev-badge sev-serious">' + r.Serious + ' serious</span>'
+        : '<span class="sev-none">—</span>');
+        var srcBadge = r.Source === "Import"
+        ? '<span class="src-badge src-import">Import</span>'
+        : '<span class="src-badge src-manual">Manual</span>';
+
+        var $tr = $('<tr' + (clickableToEdit ? ' class="clickable"' : '') + '>' +
+        '<td class="cr-no">' + r.CrNo + '</td>' +
+        '<td class="where">' + r.District + ', ' + r.Station + '</td>' +
+        '<td>' + sevBadge + '</td>' +
+        '<td>' + srcBadge + '</td>' +
+        '</tr>');
+
+        if (clickableToEdit) {
+        $tr.on("click", function () {
+        var editUrl = r.Source === "Import" ? "/Crashes/EditSummary/" + r.SummaryId : "/Crashes/Edit/" + r.CrashId;
+        window.location.href = editUrl;
+        });
+        }
+        tbody.append($tr);
+        });
+
+        body.append(table);
+        }
         });
     </script>
-    @Html.AntiForgeryToken()
 }

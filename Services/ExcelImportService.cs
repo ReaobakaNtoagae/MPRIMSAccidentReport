@@ -289,10 +289,32 @@ public class ExcelImportService
     }
 
 
-    
-    public async Task<ImportResult> ImportAsync(Stream stream, string fileName, string province = "MP")
+
+    // ═══════════════════════════════════════════════════════════════════
+    // REPLACE the existing ImportAsync method (the block starting
+    // "public async Task<ImportResult> ImportAsync(Stream stream, string
+    // fileName, string province = \"MP\")" and ending at its closing brace,
+    // right before "private void ParseDemographics" or wherever the next
+    // method begins) with the two methods below, PLUS the new supporting
+    // classes at the very bottom of this file (add those alongside the
+    // existing ImportResult/ImportDemographics classes at the end of
+    // ExcelImportService.cs).
+    //
+    // Nothing else in ExcelImportService.cs changes -- BuildColumnMap,
+    // ParseSummaryRow, ParseDemographics, SaveDemographicsAsync, etc. are
+    // all untouched.
+    // ═══════════════════════════════════════════════════════════════════
+
+    // ── PHASE 1: Preview. Parses and detects everything, including all
+    // three duplicate paths (full CR1 forms, already-imported
+    // CrashSummaries, and within-file collisions) -- but NEVER commits
+    // a CrashSummary. Demographics aggregation still runs here (an
+    // idempotent upsert by period/province, not a per-row duplicate
+    // decision, so it doesn't fit the same "let a human decide" framing
+    // the row-level duplicates need).
+    public async Task<PendingImport> PreviewAsync(Stream stream, string fileName, string province = "MP")
     {
-        var result = new ImportResult { FileName = fileName };
+        var pending = new PendingImport { FileName = fileName, Province = province };
 
         using var wb = new XLWorkbook(stream);
 
@@ -304,17 +326,14 @@ public class ExcelImportService
             .Select(c => c.CrNo!)
             .ToHashSetAsync();
 
-        // FIX: AR numbers are NOT reliably unique per station within a
-        // file — confirmed against real data (e.g. two genuinely different
-        // WITBANK crashes on the same day both filed under AR "158/09";
-        // two TWEEFONTEIN crashes SIX DAYS apart both under "11/09").
-        // Treating every AR collision as an automatic duplicate silently
-        // discards real crash records. Instead: group by the AR-based
-        // CrNo, and only treat a collision as a genuine duplicate if the
-        // colliding rows' actual details (date/time/location/type) match —
-        // otherwise it's a different crash reusing the same AR number,
-        // which gets a disambiguated CrNo and is imported, with a visible
-        // warning so it's auditable rather than silently guessed at.
+        // NEW: existing CrashSummaries, preloaded the same way -- this is
+        // the third detection path (previously missing entirely). Keyed
+        // by CrNo for detail comparison, same disambiguate-or-flag logic
+        // already used for within-file collisions.
+        var existingSummariesByCrNo = await _context.CrashSummaries
+            .GroupBy(s => s.CrNo)
+            .ToDictionaryAsync(g => g.Key, g => g.ToList());
+
         var crNoGroups = new Dictionary<string, List<CrashSummary>>();
         var stationSequenceCounters = new Dictionary<string, int>();
 
@@ -333,7 +352,7 @@ public class ExcelImportService
             if (missing.Count > 0)
             {
                 sheetsSkipped.Add(ws.Name);
-                result.AddWarning(
+                pending.AddWarning(
                     $"Sheet '{ws.Name}': header row found, but missing required columns " +
                     $"({string.Join(", ", missing)}) — skipped.");
                 continue;
@@ -368,16 +387,12 @@ public class ExcelImportService
                     ws.Name, periodFrom, periodTo);
             }
 
-            // Only trust bare day-of-month date cells (see ParseCrashDate)
-            // when the period came from the sheet's own header, not a
-            // filename/today guess — otherwise a wrong guessed month would
-            // silently propagate into every crash date in the sheet.
             int? fallbackMonth = periodGenuinelyDetected ? periodFrom.Month : null;
 
-            result.DetectedPeriodFrom ??= periodFrom;
-            result.DetectedPeriodTo ??= periodTo;
-            result.DetectedDistrict ??= headerInfo.District;
-            if (headerInfo.IsProvincial) result.DetectedIsProvincial = true;
+            pending.DetectedPeriodFrom ??= periodFrom;
+            pending.DetectedPeriodTo ??= periodTo;
+            pending.DetectedDistrict ??= headerInfo.District;
+            if (headerInfo.IsProvincial) pending.DetectedIsProvincial = true;
 
             var allRows = ws.RowsUsed().Skip(headerRowNumber).ToList();
 
@@ -389,24 +404,26 @@ public class ExcelImportService
             {
                 var saps = row.Cell(map.Saps).GetString().Trim();
 
-                if (string.IsNullOrWhiteSpace(saps) || saps.Equals("TOTAL", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (inSummary) summaryRows.Add(row);
-                    else inSummary = true;
+                // ── Skip rows that are empty or contain "TOTAL" (footer totals) ──
+                if (string.IsNullOrWhiteSpace(saps) || saps.Contains("TOTAL", StringComparison.OrdinalIgnoreCase))
                     continue;
-                }
 
                 var col7 = row.Cell(map.Location > 0 ? map.Location : 8).GetString().Trim();
 
+                // ── Detect "GRAND TOTAL" or "TOTAL:" (if any) ──
                 if (col7.Equals("GRAND TOTAL", StringComparison.OrdinalIgnoreCase) ||
-                    saps.StartsWith("TOTAL:", StringComparison.OrdinalIgnoreCase))
+                    saps.StartsWith("TOTAL:", StringComparison.OrdinalIgnoreCase)||
+                    saps.Contains("SUM", StringComparison.OrdinalIgnoreCase))
+
                 {
                     inSummary = true;
                     continue;
                 }
 
+                // ── If we haven't entered the summary section yet ──
                 if (!inSummary)
                 {
+                    // Check if this row is a header for the demographics summary
                     if (saps.StartsWith("VICTIMS", StringComparison.OrdinalIgnoreCase) ||
                         saps.StartsWith("AGE", StringComparison.OrdinalIgnoreCase) ||
                         saps.StartsWith("RACE", StringComparison.OrdinalIgnoreCase) ||
@@ -420,47 +437,81 @@ public class ExcelImportService
                         continue;
                     }
 
+                    // Otherwise, treat as a normal data row
                     dataRows.Add(row);
                 }
                 else
                 {
+                    // Already in summary section – add to summary rows
                     summaryRows.Add(row);
                 }
             }
-
             var demographics = ParseDemographics(summaryRows, ws, ws.Name);
             await SaveDemographicsAsync(demographics, periodFrom, periodTo, province);
-            if (result.Demographics.AgeTotal == 0 && result.Demographics.GenderTotal == 0 && result.Demographics.RaceTotal == 0)
-                result.Demographics = demographics;
+            if (pending.Demographics.AgeTotal == 0 && pending.Demographics.GenderTotal == 0 && pending.Demographics.RaceTotal == 0)
+                pending.Demographics = demographics;
 
             foreach (var row in dataRows)
             {
-                result.TotalRows++;
+                pending.TotalRows++;
                 try
                 {
                     var summary = ParseSummaryRow(row, map, fileName, periodFrom.Year, fallbackMonth, ws.Name, stationSequenceCounters);
                     if (summary == null)
                     {
-                        result.Skipped++;
-                        result.AddWarning($"Sheet '{ws.Name}', row {row.RowNumber()}: could not parse — skipped.");
+                        pending.Errors++;
+                        pending.AddWarning($"Sheet '{ws.Name}', row {row.RowNumber()}: could not parse — skipped.");
                         continue;
                     }
 
+                    // ── Path 1: already exists as a full CR1 form ──────
                     if (existingFormCrNos.Contains(summary.CrNo))
                     {
-                        result.Skipped++;
-                        result.AddWarning(
-                            $"Sheet '{ws.Name}', row {row.RowNumber()}: CrNo '{summary.CrNo}' already exists as a full CR1 form — skipped.");
+                        pending.DuplicateCandidates.Add(new DuplicateCandidate
+                        {
+                            Summary = summary,
+                            SheetName = ws.Name,
+                            RowNumber = row.RowNumber(),
+                            OriginalCrNo = summary.CrNo,
+                            Reason = $"CrNo '{summary.CrNo}' already exists as a full CR1 report."
+                        });
                         continue;
                     }
 
+                    // ── Path 2 (NEW): already exists as a previously-
+                    // imported CrashSummary. Same detail-comparison
+                    // approach as the within-file case below -- an exact
+                    // match on date/time/location/type is flagged as a
+                    // likely genuine duplicate; anything else is flagged
+                    // too, but the human sees the actual conflicting
+                    // record's details to judge for themselves. ────────
+                    if (existingSummariesByCrNo.TryGetValue(summary.CrNo, out var existingDbGroup))
+                    {
+                        var matchesExisting = existingDbGroup.Any(existing =>
+                            existing.CrashDate == summary.CrashDate &&
+                            existing.CrashTime == summary.CrashTime &&
+                            string.Equals(existing.Location, summary.Location, StringComparison.OrdinalIgnoreCase) &&
+                            string.Equals(existing.CrashType, summary.CrashType, StringComparison.OrdinalIgnoreCase));
+
+                        pending.DuplicateCandidates.Add(new DuplicateCandidate
+                        {
+                            Summary = summary,
+                            SheetName = ws.Name,
+                            RowNumber = row.RowNumber(),
+                            OriginalCrNo = summary.CrNo,
+                            Reason = matchesExisting
+                                ? $"CrNo '{summary.CrNo}' already imported previously, with matching date/time/location/type — likely a genuine duplicate (re-uploaded file, or overlapping source files)."
+                                : $"CrNo '{summary.CrNo}' already imported previously, but the date/time/location/type differ — may be a different crash reusing the same CR number."
+                        });
+                        continue;
+                    }
+
+                    // ── Path 3: within-file collision (existing logic,
+                    // unchanged) — disambiguate automatically when the
+                    // details clearly differ, since that's not really a
+                    // "should I keep a duplicate" decision at all. ─────
                     if (crNoGroups.TryGetValue(summary.CrNo, out var existingGroup))
                     {
-                        // Only a genuine duplicate if date/time/location/type all
-                        // match an already-imported row under this same CrNo —
-                        // otherwise this is a different crash that happens to
-                        // reuse the same AR number, and gets disambiguated
-                        // rather than silently dropped.
                         var isGenuineDuplicate = existingGroup.Any(existing =>
                             existing.CrashDate == summary.CrashDate &&
                             existing.CrashTime == summary.CrashTime &&
@@ -469,22 +520,23 @@ public class ExcelImportService
 
                         if (isGenuineDuplicate)
                         {
-                            result.Skipped++;
-                            result.AddWarning(
-                                $"Sheet '{ws.Name}', row {row.RowNumber()}: CrNo '{summary.CrNo}' matches an already-" +
-                                $"imported row with the same date/time/location/type — genuine duplicate, skipped.");
+                            pending.DuplicateCandidates.Add(new DuplicateCandidate
+                            {
+                                Summary = summary,
+                                SheetName = ws.Name,
+                                RowNumber = row.RowNumber(),
+                                OriginalCrNo = summary.CrNo,
+                                Reason = $"CrNo '{summary.CrNo}' matches another row earlier in this same file, with the same date/time/location/type — likely a genuine duplicate."
+                            });
                             continue;
                         }
 
-                        // Different crash, same reused AR number — disambiguate
-                        // rather than lose this row. Suffix letter based on how
-                        // many rows already share this base CrNo.
                         var suffix = (char)('B' + existingGroup.Count - 1);
                         var originalCrNo = summary.CrNo;
                         summary.CrNo = $"{originalCrNo}-{suffix}";
                         existingGroup.Add(summary);
 
-                        result.AddWarning(
+                        pending.AddWarning(
                             $"Sheet '{ws.Name}', row {row.RowNumber()}: AR number reused — '{originalCrNo}' already " +
                             $"used by a different crash (different date/time/location/type). Imported as " +
                             $"'{summary.CrNo}' instead. This source file's AR numbers are not unique per station; " +
@@ -497,18 +549,17 @@ public class ExcelImportService
 
                     if (summary.CrashDate < periodFrom || summary.CrashDate > periodTo)
                     {
-                        result.AddWarning(
+                        pending.AddWarning(
                             $"Sheet '{ws.Name}', row {row.RowNumber()}: crash date {summary.CrashDate:dd/MM/yyyy} outside period " +
                             $"({periodFrom:dd/MM/yyyy} – {periodTo:dd/MM/yyyy}) — imported anyway.");
                     }
 
-                    _context.CrashSummaries.Add(summary);
-                    result.Imported++;
+                    pending.ReadyToImport.Add(summary);
                 }
                 catch (Exception ex)
                 {
-                    result.Errors++;
-                    result.AddError($"Sheet '{ws.Name}', row {row.RowNumber()}: {ex.Message}");
+                    pending.Errors++;
+                    pending.AddError($"Sheet '{ws.Name}', row {row.RowNumber()}: {ex.Message}");
                     _logger.LogWarning(ex, "Import error on sheet {Sheet} row {Row}", ws.Name, row.RowNumber());
                 }
             }
@@ -516,17 +567,123 @@ public class ExcelImportService
 
         if (sheetsProcessed.Count == 0)
         {
-            result.AddError("No sheet in this workbook matched the expected crash-register layout (SAPS/AR NO/CAS header row).");
+            pending.AddError("No sheet in this workbook matched the expected crash-register layout (SAPS/AR NO/CAS header row).");
         }
 
         _logger.LogInformation(
-            "Import of {File} complete. Sheets processed: {Processed}. Sheets skipped: {Skipped}.",
-            fileName, string.Join(", ", sheetsProcessed), string.Join(", ", sheetsSkipped));
+            "Preview of {File} complete. Sheets processed: {Processed}. Sheets skipped: {Skipped}. " +
+            "Ready: {Ready}. Duplicate candidates: {Dupes}.",
+            fileName, string.Join(", ", sheetsProcessed), string.Join(", ", sheetsSkipped),
+            pending.ReadyToImport.Count, pending.DuplicateCandidates.Count);
+
+        // Demographics were already saved above (SaveDemographicsAsync
+        // commits on its own) -- nothing else to commit in this phase.
+        return pending;
+    }
+
+
+    // ── PHASE 2: Confirm. Commits ReadyToImport as-is, plus only the
+    // duplicate candidates whose index is in keepIndexes. Every KEPT
+    // duplicate gets a disambiguated CrNo applied here, regardless of
+    // whether it was flagged as a "likely genuine" duplicate or not --
+    // this isn't optional: CrashSummary has a UNIQUE(CrNo, SourceFile)
+    // constraint, so two rows sharing a CrNo from the same file cannot
+    // both be inserted without one being renamed, even if the human's
+    // intent is "yes, keep both, they really are separate." ──────────
+    public async Task<ImportResult> ConfirmImportAsync(PendingImport pending, List<int> keepIndexes)
+    {
+        var result = new ImportResult { FileName = pending.FileName, Demographics = pending.Demographics };
+
+        result.TotalRows = pending.TotalRows;
+        foreach (var w in pending.Warnings) result.AddWarning(w);
+        foreach (var e in pending.ErrorMessages) result.AddError(e);
+        result.Errors = pending.Errors;
+        result.DetectedPeriodFrom = pending.DetectedPeriodFrom;
+        result.DetectedPeriodTo = pending.DetectedPeriodTo;
+        result.DetectedDistrict = pending.DetectedDistrict;
+        result.DetectedIsProvincial = pending.DetectedIsProvincial;
+
+        foreach (var summary in pending.ReadyToImport)
+        {
+            _context.CrashSummaries.Add(summary);
+            result.Imported++;
+        }
+
+        var keptSet = keepIndexes.ToHashSet();
+        var disambiguationCounters = new Dictionary<string, int>();
+
+        for (int i = 0; i < pending.DuplicateCandidates.Count; i++)
+        {
+            var candidate = pending.DuplicateCandidates[i];
+
+            if (!keptSet.Contains(i))
+            {
+                result.Skipped++;
+                result.AddWarning($"Sheet '{candidate.SheetName}', row {candidate.RowNumber}: {candidate.Reason} Skipped (not kept on review).");
+                continue;
+            }
+
+            disambiguationCounters.TryGetValue(candidate.OriginalCrNo, out var seq);
+            seq++;
+            disambiguationCounters[candidate.OriginalCrNo] = seq;
+
+            candidate.Summary.CrNo = $"{candidate.OriginalCrNo}-DUP{seq}";
+            _context.CrashSummaries.Add(candidate.Summary);
+            result.Imported++;
+            result.AddWarning(
+                $"Sheet '{candidate.SheetName}', row {candidate.RowNumber}: kept on review despite — {candidate.Reason} " +
+                $"Saved as '{candidate.Summary.CrNo}' to keep it distinct from the record it collided with.");
+        }
 
         await _context.SaveChangesAsync();
         return result;
     }
 
+
+    // ═══════════════════════════════════════════════════════════════════
+    // New supporting classes -- add these alongside the existing
+    // ImportResult/ImportDemographics classes at the bottom of
+    // ExcelImportService.cs (outside the ExcelImportService class itself,
+    // same as the existing two).
+    // ═══════════════════════════════════════════════════════════════════
+
+    // Held server-side in IMemoryCache between Preview and Confirm -- NOT
+    // sent to the browser directly (ReadyToImport/Summary objects are full
+    // EF entities, too large and unnecessary for TempData). The controller
+    // builds a small display-only view model from this for the review page.
+    public class PendingImport
+    {
+        public string FileName { get; set; } = string.Empty;
+        public string Province { get; set; } = "MP";
+        public int TotalRows { get; set; }
+        public int Errors { get; set; }
+        public List<string> Warnings { get; set; } = new();
+        public List<string> ErrorMessages { get; set; } = new();
+        public ImportDemographics Demographics { get; set; } = new();
+
+        public DateOnly? DetectedPeriodFrom { get; set; }
+        public DateOnly? DetectedPeriodTo { get; set; }
+        public string? DetectedDistrict { get; set; }
+        public bool DetectedIsProvincial { get; set; }
+
+        // Parsed, unsaved -- committed as-is in ConfirmImportAsync.
+        public List<CrashSummary> ReadyToImport { get; set; } = new();
+
+        // Parsed, unsaved -- committed only if their index is chosen to keep.
+        public List<DuplicateCandidate> DuplicateCandidates { get; set; } = new();
+
+        public void AddWarning(string msg) { if (Warnings.Count < 50) Warnings.Add(msg); }
+        public void AddError(string msg) { if (ErrorMessages.Count < 50) ErrorMessages.Add(msg); }
+    }
+
+    public class DuplicateCandidate
+    {
+        public CrashSummary Summary { get; set; } = null!;
+        public string SheetName { get; set; } = string.Empty;
+        public int RowNumber { get; set; }
+        public string OriginalCrNo { get; set; } = string.Empty;
+        public string Reason { get; set; } = string.Empty;
+    }
 
 
     private static readonly Regex StationCaseBleed1 = new(
@@ -911,7 +1068,7 @@ public class ExcelImportService
     }
 
     private async Task SaveDemographicsAsync(
-        ImportDemographics demographics, DateOnly periodFrom, DateOnly periodTo, string province)
+    ImportDemographics demographics, DateOnly periodFrom, DateOnly periodTo, string province)
     {
         if (!demographics.HasAgeData && !demographics.HasGenderData && !demographics.HasRaceData)
         {
@@ -919,32 +1076,33 @@ public class ExcelImportService
             return;
         }
 
-        var existingRecord = await _context.CrashDemographics
+        var existing = await _context.CrashDemographics
             .FirstOrDefaultAsync(d => d.PeriodFrom == periodFrom &&
                                       d.PeriodTo == periodTo &&
                                       d.ProvinceCode == province);
 
-        if (existingRecord != null)
+        if (existing != null)
         {
-            existingRecord.Age0to7 = demographics.Age0to7;
-            existingRecord.Age8to12 = demographics.Age8to12;
-            existingRecord.Age13to18 = demographics.Age13to18;
-            existingRecord.Age19to35 = demographics.Age19to35;
-            existingRecord.Age36Plus = demographics.Age36Plus;
-            existingRecord.DriverMale = demographics.DriverMale;
-            existingRecord.DriverFemale = demographics.DriverFemale;
-            existingRecord.PassengerMale = demographics.PassengerMale;
-            existingRecord.PassengerFemale = demographics.PassengerFemale;
-            existingRecord.PedestrianMale = demographics.PedestrianMale;
-            existingRecord.PedestrianFemale = demographics.PedestrianFemale;
-            existingRecord.CyclistMale = demographics.CyclistMale;
-            existingRecord.CyclistFemale = demographics.CyclistFemale;
-            existingRecord.RaceBlack = demographics.RaceBlack;
-            existingRecord.RaceColoured = demographics.RaceColoured;
-            existingRecord.RaceWhite = demographics.RaceWhite;
-            existingRecord.RaceIndian = demographics.RaceIndian;
-            existingRecord.RaceOther = demographics.RaceOther;
-            existingRecord.CreatedAt = DateTime.UtcNow;
+            // Accumulate (add) the new counts to the existing ones
+            existing.Age0to7 += demographics.Age0to7;
+            existing.Age8to12 += demographics.Age8to12;
+            existing.Age13to18 += demographics.Age13to18;
+            existing.Age19to35 += demographics.Age19to35;
+            existing.Age36Plus += demographics.Age36Plus;
+            existing.DriverMale += demographics.DriverMale;
+            existing.DriverFemale += demographics.DriverFemale;
+            existing.PassengerMale += demographics.PassengerMale;
+            existing.PassengerFemale += demographics.PassengerFemale;
+            existing.PedestrianMale += demographics.PedestrianMale;
+            existing.PedestrianFemale += demographics.PedestrianFemale;
+            existing.CyclistMale += demographics.CyclistMale;
+            existing.CyclistFemale += demographics.CyclistFemale;
+            existing.RaceBlack += demographics.RaceBlack;
+            existing.RaceColoured += demographics.RaceColoured;
+            existing.RaceWhite += demographics.RaceWhite;
+            existing.RaceIndian += demographics.RaceIndian;
+            existing.RaceOther += demographics.RaceOther;
+            existing.CreatedAt = DateTime.UtcNow;
         }
         else
         {
@@ -977,7 +1135,6 @@ public class ExcelImportService
 
         await _context.SaveChangesAsync();
     }
-
     private static byte ByteCell(IXLRow row, int col)
     {
         if (col <= 0) return 0;

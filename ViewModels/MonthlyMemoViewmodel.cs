@@ -18,6 +18,9 @@ public class PeriodStatsBlock
     public int SlightPassengers { get; set; }
     public int SlightPedestrians { get; set; }
     public int SlightCyclists { get; set; }
+
+    public Dictionary<string, int>? FatalAgeGroups { get; set; }
+    public Dictionary<string, Dictionary<string, int>>? FatalGender { get; set; }
 }
 
 public class ProvincialStats
@@ -80,6 +83,26 @@ public class DayStats
     public int FatalCurr { get; set; }
 }
 
+public class StationStats
+{
+    public string Station { get; set; } = string.Empty;
+    public int CrashesPrev { get; set; }
+    public int CrashesCurr { get; set; }
+    public int FatalPrev { get; set; }
+    public int FatalCurr { get; set; }
+}
+
+public class InsightsViewModel
+{
+    public string PeriodLabel { get; set; } = string.Empty;
+    public string PriorPeriodLabel { get; set; } = string.Empty;
+    public string? ScopeLabel { get; set; }
+    public List<CrashTypeStats> CrashTypes { get; set; } = new();
+    public List<RouteStats> Routes { get; set; } = new();
+    public List<TimeSlotStats> TimeSlots { get; set; } = new();
+    public List<StationStats> Stations { get; set; } = new();
+}
+
 public class YearHistory
 {
     public int Year { get; set; }
@@ -128,6 +151,8 @@ public class MemoReportRequest
     public DateOnly DateTo { get; set; }
     public DateOnly CompareFrom { get; set; }
     public DateOnly CompareTo { get; set; }
+
+    public string? ProvinceCode { get; set; }
     public string ReportDate { get; set; } = string.Empty;
     public string RefNumber { get; set; } = "16/9/4";
     public string EnquiryName { get; set; } = "M C Mdhluli";

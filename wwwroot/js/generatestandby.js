@@ -1,7 +1,6 @@
 ﻿const {
     Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
-    AlignmentType, BorderStyle, WidthType, ShadingType, VerticalAlign,
-    PageOrientation, HeadingLevel
+    AlignmentType, BorderStyle, WidthType, ShadingType, VerticalAlign
 } = require('docx');
 const fs = require('fs');
 
@@ -12,7 +11,6 @@ const vm = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
 const BLACK = "000000";
 const DARK_BLUE = "1F3864";
 const LIGHT_BLUE = "BDD7EE";
-const YELLOW = "FFFF00";
 const WHITE = "FFFFFF";
 
 const border = (color = BLACK) => ({ style: BorderStyle.SINGLE, size: 4, color });
@@ -71,11 +69,11 @@ function sectionHeading(text) {
     });
 }
 
-
+// ── Constants ─────────────────────────────────────────────────
 const TW1 = 9560;
 const C1 = [1686, 935, 747, 658, 694, 745, 794, 808, 800, 881, 812];
 
-
+// ── Table 1: Weekly Statistics (Crashes, Fatalities, Serious, Slight) ──
 function weekStatsTable(vm) {
     const districts = [
         { label: 'PROVINCE', cur: vm.CurrentProvince, pri: vm.PriorProvince },
@@ -88,10 +86,8 @@ function weekStatsTable(vm) {
     const labelW = 1686;
     const distW = Math.floor((TW1 - labelW) / 5);
     const yearW = Math.floor(distW / 2);
-
     const priorYear = vm.DateFrom ? parseInt(vm.DateFrom.split('-')[0]) - 1 : new Date().getFullYear() - 1;
     const curYear = vm.DateFrom ? parseInt(vm.DateFrom.split('-')[0]) : new Date().getFullYear();
-
 
     const hdrRow = new TableRow({
         children: [
@@ -114,7 +110,6 @@ function weekStatsTable(vm) {
         ]
     });
 
-    
     const yearRow = new TableRow({
         children: [
             new TableCell({
@@ -129,7 +124,6 @@ function weekStatsTable(vm) {
         ]
     });
 
-    
     const metrics = [
         { label: 'CRASHES', key: 'Crashes' },
         { label: 'FATALITIES', key: 'Fatalities' },
@@ -160,82 +154,7 @@ function weekStatsTable(vm) {
     });
 }
 
-
-function fatalDetailTable(vm) {
-    var TW = 9560;
-    var cols = [1200, 1000, 800, 1200, 2760, 2600];  
-    var hdrRow = new TableRow({
-        children: [
-            hdrCell("DATE", cols[0]),
-            hdrCell("TIME", cols[1]),
-            hdrCell("FATAL", cols[2]),
-            hdrCell("ROUTE", cols[3]),
-            hdrCell("LOCATION", cols[4]),
-            hdrCell("DISTRICT", cols[5])
-        ]
-    });
-
-    
-    var allDetails = [];
-    var districtNames = ["EHLANZENI", "BOHLABELO", "GERT SIBANDE", "NKANGALA"];
-    var districtKeys = ["CurrentEhlanzeni", "CurrentBohlabelo", "CurrentGertSibande", "CurrentNkangala"];
-    districtKeys.forEach(function (key, i) {
-        var dist = vm[key];
-        if (dist && dist.FatalDetails) {
-            dist.FatalDetails.forEach(function (d) {
-                allDetails.push({ district: districtNames[i], detail: d });
-            });
-        }
-    });
-
-    
-    allDetails.sort(function (a, b) {
-        var da = a.detail.Date + a.detail.Time;
-        var db = b.detail.Date + b.detail.Time;
-        return da < db ? -1 : da > db ? 1 : 0;
-    });
-
-    if (allDetails.length === 0) {
-        var noDataRow = new TableRow({
-            children: [
-                new TableCell({
-                    columnSpan: 6,
-                    width: { size: TW, type: WidthType.DXA },
-                    borders: borders(),
-                    margins: cellMargins,
-                    children: [para(txt("No fatal crashes recorded for this period.", { size: 18 }), { align: AlignmentType.CENTER })]
-                })
-            ]
-        });
-        return new Table({
-            width: { size: TW, type: WidthType.DXA },
-            columnWidths: cols,
-            rows: [hdrRow, noDataRow]
-        });
-    }
-
-    var dataRows = allDetails.map(function (item) {
-        var d = item.detail;
-        return new TableRow({
-            children: [
-                dataCell(d.Date || "—", cols[0]),
-                dataCell(d.Time || "—", cols[1], { bold: true }),
-                dataCell(d.Count || 1, cols[2], { fill: "FFEBEE", bold: true }),
-                dataCell(d.Route || "—", cols[3]),
-                dataCell(d.Location || "—", cols[4]),
-                dataCell(item.district, cols[5])
-            ]
-        });
-    });
-
-    return new Table({
-        width: { size: TW, type: WidthType.DXA },
-        columnWidths: cols,
-        rows: [hdrRow, ...dataRows]
-    });
-}
-
-
+// ── Table 2: Fatalities by Time Slot ─────────────────────────
 function fatalTimeTable(vm) {
     const districts = [
         { label: 'PROVINCE', cur: vm.CurrentProvince, pri: vm.PriorProvince },
@@ -287,7 +206,94 @@ function fatalTimeTable(vm) {
     });
 }
 
+// ── Summary text after the fatal time table ──────────────────
+function buildFatalSummary(vm) {
+    const p = vm.CurrentProvince || {};
+    const lines = [];
 
+    // Time distribution summary
+    lines.push(new Paragraph({
+        spacing: { before: 100, after: 60 },
+        children: [txt(
+            `FATALITIES OCCURRED BETWEEN 06:00 TO 14:00 (${p.FatalTime1 ?? 0}) ` +
+            `14:00 TO 22:00 (${p.FatalTime2 ?? 0}) 22:00 TO 06:00 (${p.FatalTime3 ?? 0})`,
+            { bold: false, size: 20 }
+        )]
+    }));
+
+    // Pedestrian total
+    const totalPeds = (vm.CurrentEhlanzeni?.FatalPedestrians ?? 0) +
+        (vm.CurrentBohlabelo?.FatalPedestrians ?? 0) +
+        (vm.CurrentGertSibande?.FatalPedestrians ?? 0) +
+        (vm.CurrentNkangala?.FatalPedestrians ?? 0);
+
+    if (totalPeds > 0) {
+        lines.push(new Paragraph({
+            spacing: { before: 60, after: 60 },
+            children: [txt(`PROVINCE HAD ${totalPeds} FATAL PEDESTRIAN${totalPeds !== 1 ? 'S' : ''}`, { bold: true, size: 20 })]
+        }));
+
+        const pedDetails = [];
+        if (vm.CurrentEhlanzeni?.FatalPedestrians > 0)
+            pedDetails.push(`${vm.CurrentEhlanzeni.FatalPedestrians} (EHLANZENI)`);
+        if (vm.CurrentBohlabelo?.FatalPedestrians > 0)
+            pedDetails.push(`${vm.CurrentBohlabelo.FatalPedestrians} (BOHLABELO)`);
+        if (vm.CurrentGertSibande?.FatalPedestrians > 0)
+            pedDetails.push(`${vm.CurrentGertSibande.FatalPedestrians} (GERT SIBANDE)`);
+        if (vm.CurrentNkangala?.FatalPedestrians > 0)
+            pedDetails.push(`${vm.CurrentNkangala.FatalPedestrians} (NKANGALA)`);
+
+        if (pedDetails.length > 0)
+            lines.push(new Paragraph({
+                spacing: { before: 0, after: 60 },
+                children: [txt(pedDetails.join('    '), { bold: true, size: 20 })]
+            }));
+    }
+
+    return lines;
+}
+
+// ── Problematic Routes section ──────────────────────────────
+function buildRoutesSection(vm) {
+    const paras = [
+        new Paragraph({
+            spacing: { before: 200, after: 60 },
+            children: [txt('PROBLEMATIC ROUTES', { bold: true, size: 22 })]
+        })
+    ];
+
+    if (!vm.ProblematicRoutes || vm.ProblematicRoutes.length === 0) {
+        paras.push(para(txt('No problematic routes identified for this period.')));
+        return paras;
+    }
+
+    const byDistrict = {};
+    for (const r of vm.ProblematicRoutes) {
+        if (!byDistrict[r.District]) byDistrict[r.District] = [];
+        byDistrict[r.District].push(r);
+    }
+
+    for (const [district, routes] of Object.entries(byDistrict)) {
+        const routeTexts = routes.map(r => {
+            let t = `${r.Route} – ${r.Crashes} Crash${r.Crashes !== 1 ? 'es' : ''}`;
+            if (r.Fatalities > 0) t += ` with ${r.Fatalities} Facilit${r.Fatalities !== 1 ? 'ies' : 'y'}`;
+            if (r.Locations) t += ` (${r.Locations})`;
+            return t;
+        }).join('\t\t');
+
+        paras.push(new Paragraph({
+            spacing: { before: 60, after: 40 },
+            children: [
+                txt(`${district} DISTRICT – `, { bold: true, size: 20 }),
+                txt(routeTexts, { size: 20 })
+            ]
+        }));
+    }
+
+    return paras;
+}
+
+// ── Sub‑period table (main stats) ────────────────────────────
 function subPeriodTable(sp) {
     const TW = 9737;
     const labelW = 1784;
@@ -337,13 +343,15 @@ function subPeriodTable(sp) {
     });
 }
 
-
+// ── Sub‑period time table (fatalities by time slot) ────────
 function subPeriodTimeTable(sp) {
     const TW = 9560;
     const labelW = 1918;
     const distW = Math.floor((TW - labelW) / 5);
 
-    const year = sp ? (new Date().getFullYear()) : '';
+    // Extract year from sp.From (format "YYYY-MM-DD")
+    const year = sp?.From ? parseInt(sp.From.split('-')[0]) : '';
+
     const districts = [
         { label: 'PROVINCE', d: sp?.Province },
         { label: 'EHLANZENI', d: sp?.Ehlanzeni },
@@ -383,7 +391,7 @@ function subPeriodTimeTable(sp) {
     });
 }
 
-
+// ── Victims Age Table ──────────────────────────────────────────
 function victimsAgeTable(vm) {
     const TW = 9242;
     const colW = Math.floor(TW / 6);
@@ -430,7 +438,7 @@ function victimsAgeTable(vm) {
     });
 }
 
-
+// ── Victims Gender Table ──────────────────────────────────────
 function victimsGenderTable(vm) {
     const TW = 9242;
     const c1 = 3080, c2 = 3081, c3 = 3081;
@@ -466,91 +474,7 @@ function victimsGenderTable(vm) {
     });
 }
 
-
-function buildRoutesSection(vm) {
-    const paras = [
-        new Paragraph({
-            spacing: { before: 200, after: 60 },
-            children: [txt('PROBLEMATIC ROUTES', { bold: true, size: 22 })]
-        })
-    ];
-
-    if (!vm.ProblematicRoutes || vm.ProblematicRoutes.length === 0) {
-        paras.push(para(txt('No problematic routes identified for this period.')));
-        return paras;
-    }
-
-    const byDistrict = {};
-    for (const r of vm.ProblematicRoutes) {
-        if (!byDistrict[r.District]) byDistrict[r.District] = [];
-        byDistrict[r.District].push(r);
-    }
-
-    for (const [district, routes] of Object.entries(byDistrict)) {
-        const routeTexts = routes.map(r => {
-            let t = `${r.Route} – ${r.Crashes} Crash${r.Crashes !== 1 ? 'es' : ''}`;
-            if (r.Fatalities > 0) t += ` with ${r.Fatalities} Facilit${r.Fatalities !== 1 ? 'ies' : 'y'}`;
-            if (r.Locations) t += ` (${r.Locations})`;
-            return t;
-        }).join('\t\t');
-
-        paras.push(new Paragraph({
-            spacing: { before: 60, after: 40 },
-            children: [
-                txt(`${district} DISTRICT – `, { bold: true, size: 20 }),
-                txt(routeTexts, { size: 20 })
-            ]
-        }));
-    }
-
-    return paras;
-}
-
-
-function buildFatalSummary(vm) {
-    const p = vm.CurrentProvince || {};
-    const lines = [];
-    lines.push(new Paragraph({
-        spacing: { before: 100, after: 60 },
-        children: [txt(
-            `FATALITIES OCCURRED BETWEEN 06:00 TO 14:00 (${p.FatalTime1 ?? 0}) ` +
-            `14:00 TO 22:00 (${p.FatalTime2 ?? 0}) 22:00 TO 06:00 (${p.FatalTime3 ?? 0})`,
-            { bold: false, size: 20 }
-        )]
-    }));
-
-    const totalPeds = (vm.CurrentEhlanzeni?.FatalPedestrians ?? 0) +
-        (vm.CurrentBohlabelo?.FatalPedestrians ?? 0) +
-        (vm.CurrentGertSibande?.FatalPedestrians ?? 0) +
-        (vm.CurrentNkangala?.FatalPedestrians ?? 0);
-
-    if (totalPeds > 0) {
-        lines.push(new Paragraph({
-            spacing: { before: 60, after: 60 },
-            children: [txt(`PROVINCE HAD ${totalPeds} FATAL PEDESTRIAN${totalPeds !== 1 ? 'S' : ''}`, { bold: true, size: 20 })]
-        }));
-
-        const pedDetails = [];
-        if (vm.CurrentEhlanzeni?.FatalPedestrians > 0)
-            pedDetails.push(`${vm.CurrentEhlanzeni.FatalPedestrians} (EHLANZENI)`);
-        if (vm.CurrentBohlabelo?.FatalPedestrians > 0)
-            pedDetails.push(`${vm.CurrentBohlabelo.FatalPedestrians} (BOHLABELO)`);
-        if (vm.CurrentGertSibande?.FatalPedestrians > 0)
-            pedDetails.push(`${vm.CurrentGertSibande.FatalPedestrians} (GERT SIBANDE)`);
-        if (vm.CurrentNkangala?.FatalPedestrians > 0)
-            pedDetails.push(`${vm.CurrentNkangala.FatalPedestrians} (NKANGALA)`);
-
-        if (pedDetails.length > 0)
-            lines.push(new Paragraph({
-                spacing: { before: 0, after: 60 },
-                children: [txt(pedDetails.join('    '), { bold: true, size: 20 })]
-            }));
-    }
-
-    return lines;
-}
-
-
+// ── Helpers for formatting dates ─────────────────────────────
 function fmtDate(d) {
     if (!d) return '';
     const months = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE',
@@ -559,12 +483,14 @@ function fmtDate(d) {
     return `${parseInt(parts[2])} ${months[parseInt(parts[1]) - 1]} ${parts[0]}`;
 }
 
-
+// ── Build the document ──────────────────────────────────────────
 const title = `WEEKLY STATISTICS REPORT: ${fmtDate(vm.DateFrom)} TO ${fmtDate(vm.DateTo)}`;
 const dayRange = `(${vm.DayRange || 'MONDAY TO SUNDAY'})`;
 
-const children = [
-    
+const children = [];
+
+// 1. Title
+children.push(
     new Paragraph({
         spacing: { before: 240, after: 60 },
         children: [txt(title, { bold: true, size: 24 })]
@@ -572,39 +498,27 @@ const children = [
     new Paragraph({
         spacing: { before: 0, after: 120 },
         children: [txt(dayRange, { bold: true, size: 22 })]
-    }),
+    })
+);
 
-    
-    weekStatsTable(vm),
+// 2. Main weekly statistics table
+children.push(weekStatsTable(vm));
 
-    // Fatalities heading
-    new Paragraph({ spacing: { before: 120, after: 60 }, children: [txt('FATALITIES', { bold: true, size: 22 })] }),
+// 3. FATALITIES section
+children.push(
+    new Paragraph({ spacing: { before: 120, after: 60 }, children: [txt('FATALITIES', { bold: true, size: 22 })] })
+);
+children.push(fatalTimeTable(vm));
+children.push(...buildFatalSummary(vm));
+children.push(...buildRoutesSection(vm));
 
-    // Table 2a: time-slot summary
-    fatalTimeTable(vm),
-
-    // Table 2b: exact time per fatal crash
-    new Paragraph({
-        spacing: { before: 100, after: 60 },
-        children: [txt("FATAL CRASHES — EXACT TIME OF OCCURRENCE", { bold: true, size: 20 })]
-    }),
-    fatalDetailTable(vm),
-
-    // Fatality summary text + pedestrian callout
-    ...buildFatalSummary(vm),
-
-    // Problematic routes
-    ...buildRoutesSection(vm),
-];
-
-// Sub-period section (e.g. Valentine's weekend)
+// 4. Sub‑period (e.g., Valentine's weekend)
 if (vm.SubPeriod) {
     const sp = vm.SubPeriod;
     children.push(
         new Paragraph({
             spacing: { before: 200, after: 60 },
-            children: [txt(`${fmtDate(sp.From?.toString?.() || '')} – ${fmtDate(sp.To?.toString?.() || '')}`,
-                { bold: true, size: 22 })]
+            children: [txt(`${fmtDate(sp.From)} – ${fmtDate(sp.To)}`, { bold: true, size: 22 })]
         }),
         subPeriodTable(sp),
         new Paragraph({ spacing: { before: 120, after: 60 }, children: [txt('FATALITIES', { bold: true, size: 22 })] }),
@@ -612,7 +526,7 @@ if (vm.SubPeriod) {
     );
 }
 
-// Province victim demographics
+// 5. Province victim demographics
 children.push(
     new Paragraph({ spacing: { before: 120, after: 60 }, children: [txt('PROVINCE:', { bold: true, size: 22 })] }),
     victimsAgeTable(vm),
@@ -620,6 +534,7 @@ children.push(
     victimsGenderTable(vm)
 );
 
+// ── Create and save the document ─────────────────────────────
 const doc = new Document({
     styles: {
         default: {
@@ -643,4 +558,4 @@ Packer.toBuffer(doc).then(buf => {
 }).catch(e => {
     console.error(e.message);
     process.exit(1);
-});
+});  

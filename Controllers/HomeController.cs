@@ -14,35 +14,25 @@ public class HomeController : Controller
 {
     private readonly AppDbContext _context;
     private readonly MonthlyMemoDataService _memoData;
+    private readonly IWebHostEnvironment _env;
 
     private readonly ICrashFormValidationService _validation;
 
-    public HomeController(AppDbContext context, MonthlyMemoDataService memoData, ICrashFormValidationService validation)
+    public HomeController(AppDbContext context, MonthlyMemoDataService memoData, ICrashFormValidationService validation, IWebHostEnvironment env)
     {
         _context = context;
         _memoData = memoData;
         _validation = validation;
+        _env = env;
     }
 
     public async Task<IActionResult> Index()
     {
-
-
-        ViewBag.TotalCrashes = await _context.Crashes.CountAsync();
-        ViewBag.FatalCount = await _context.CrashPeople
-                                   .CountAsync(cp => cp.SeverityOfInjury == "Fatal");
-        ViewBag.SeriousCount = await _context.CrashPeople
-                                   .CountAsync(cp => cp.SeverityOfInjury == "Serious");
-        ViewBag.SlightCount = await _context.CrashPeople
-                                   .CountAsync(cp => cp.SeverityOfInjury == "Slight");
-
         var now = DateTime.Today;
         var monthStart = new DateOnly(now.Year, now.Month, 1);
         var monthEnd = monthStart.AddMonths(1).AddDays(-1);
 
         var allTime = await _memoData.LoadAsync(new DateOnly(2020, 1, 1), monthEnd);
-        var thisMonth = allTime.Where(r => r.Date >= monthStart && r.Date <= monthEnd).ToList();
-
 
         bool Has(string privilege) => User.HasClaim(Privileges.ClaimType, privilege);
 
@@ -84,30 +74,89 @@ public class HomeController : Controller
         ViewBag.RoleLabel = roleLabel;
 
         // Scope claims (District/Station), added by AppUserClaimsPrincipalFactory.
-        // These are LABELS ONLY right now — nothing in the actual data queries
-        // filters by them yet. Shown on the dashboard so the intended scope is
-        // visible ahead of the real enforcement, and the "not yet enforced"
-        // message is explicit rather than letting the UI imply a filtering that
-        // isn't real.
-        ViewBag.UserDistrict = User.FindFirst("District")?.Value;
-        ViewBag.UserStation = User.FindFirst("Station")?.Value;
+        var userDistrict = User.FindFirst("District")?.Value;
+        var userStation = User.FindFirst("Station")?.Value;
+        ViewBag.UserDistrict = userDistrict;
+        ViewBag.UserStation = userStation;
 
-        // Dashboard shape by role, not just by privilege combination — System
-        // Administrator and Provincial Staff both get "analytics" (unrestricted,
-        // all districts). Regional Staff gets "review", scoped in intent to their
-        // district. Cost Centre Administrator and SAPS Officer both get "capture",
-        // but Cost Centre Administrator also has Edit — see the dashboard view for
-        // how that's reflected in which panels render.
         ViewBag.DashboardMode =
             (roleLabel == "System Administrator" || roleLabel == "Provincial Staff") ? "analytics" :
             roleLabel == "Regional Staff" ? "review" :
             "capture"; // Cost Centre Administrator, SAPS Officer
 
+        // ── Real scoping, not just a banner label. Station-scoped roles
+        // (SAPS Officer, Cost Centre Administrator) see only their own
+        // station; Regional Staff sees their own district; analytics
+        // mode (System Administrator, Provincial Staff) stays unscoped
+        // -- that's correct for those roles, not an oversight. Filters
+        // the already-loaded Row list directly, since Row.Station and
+        // Row.District are already resolved by LoadAsync -- no need for
+        // a second query or a separate lookup service injected here. ──
+        var scopedAllTime = allTime;
+        if (roleLabel == "SAPS Officer" || roleLabel == "Cost Centre Administrator")
+        {
+            if (!string.IsNullOrEmpty(userStation))
+                scopedAllTime = allTime
+                    .Where(r => string.Equals(r.Station, userStation, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+        }
+        else if (roleLabel == "Regional Staff")
+        {
+            if (!string.IsNullOrEmpty(userDistrict))
+                scopedAllTime = allTime
+                    .Where(r => string.Equals(r.District, userDistrict, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+        }
+
+        var scopedThisMonth = scopedAllTime.Where(r => r.Date >= monthStart && r.Date <= monthEnd).ToList();
+
+        // Also fixes a second real bug: the previous version counted only
+        // _context.Crashes / _context.CrashPeople directly, which are
+        // manually-captured records ONLY -- Quick Add and imported
+        // CrashSummaries were silently excluded from every KPI. LoadAsync
+        // already merges both sources correctly, so switching to it here
+        // fixes the undercount at the same time as the scoping.
+        ViewBag.TotalCrashes = scopedAllTime.Count;
+        ViewBag.FatalCount = scopedAllTime.Sum(r => r.Fatalities);
+        ViewBag.SeriousCount = scopedAllTime.Sum(r => r.Serious);
+        ViewBag.SlightCount = scopedAllTime.Sum(r => r.Slight);
+
+        // Previously referenced by the view but never set -- the
+        // computed "thisMonth" value was discarded without ever
+        // reaching ViewBag, so this line always rendered blank.
+        ViewBag.ThisMonthCrashes = scopedThisMonth.Count;
+        ViewBag.ThisMonthFatal = scopedThisMonth.Sum(r => r.Fatalities);
+        ViewBag.CurrentMonth = now.ToString("MMMM");
+
+        // For capture/review modes, hand the scoped recent-activity rows
+        // straight to the view -- no separate AJAX call needed, and no
+        // risk of the client re-fetching an unscoped list. Analytics mode
+        // keeps its existing separate /Crashes/Grid call (large page
+        // size, unscoped, used for the district/severity charts too).
+        if (roleLabel != "System Administrator" && roleLabel != "Provincial Staff")
+        {
+            var recent = scopedAllTime
+                .OrderByDescending(r => r.Date)
+                .ThenByDescending(r => r.Time)
+                .Take(8)
+                .Select(r => new
+                {
+                    r.CrashId,
+                    r.SummaryId,
+                    r.CrNo,
+                    r.District,
+                    r.Station,
+                    r.Fatalities,
+                    r.Serious,
+                    r.Source
+                });
+            ViewBag.ScopedRecentActivityJson = JsonSerializer.Serialize(recent);
+        }
+
         return View();
     }
 
     public IActionResult Create() => View();
-
     public async Task<IActionResult> Edit(int? id)
     {
         if (id == null) return NotFound();
@@ -564,7 +613,7 @@ public class HomeController : Controller
 
 
                     var role = GetString(pe, "Role");
-                    if (role == "Pedestrian" || role == "Cyclist")
+                    if (role == "Pedestrian" || role == "Bicyclist")
                     {
                         var detail = new PedestrianBicyclistDetail
                         {
@@ -578,6 +627,57 @@ public class HomeController : Controller
                         _context.PedestrianBicyclistDetails.Add(detail);
 
                     }
+                }
+            }
+
+
+            // Passengers visibly not injured -- a separate, lighter
+            // section on the physical form (Page 3), deliberately not
+            // routed through the same fields as injured persons above.
+            // Reuses Person/CrashPerson directly (no new table) --
+            // SeverityOfInjury = "No injury" is the same fourth severity
+            // code the paper form already lists (Fatal/Serious/Slight/No
+            // injury), just reached through a five-field fast path
+            // instead of the full injured-person form.
+            if (root.TryGetProperty("UninjuredPassengers", out var uninjured) && uninjured.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var up in uninjured.EnumerateArray())
+                {
+                    var uSurname = GetString(up, "Surname");
+                    if (string.IsNullOrEmpty(uSurname)) continue;
+
+                    var uPerson = new Person
+                    {
+                        IdType = "RSA_ID",
+                        IdNumber = GetString(up, "IdNumber"),
+                        Surname = uSurname,
+                        FullNames = "",
+                        CellPhone = GetString(up, "CellPhone"),
+                        CreatedAt = DateTime.Now
+                    };
+                    _context.Persons.Add(uPerson);
+                    await _context.SaveChangesAsync();
+
+                    int? uCrashVehicleId = null;
+                    var uVehicleRef = GetString(up, "VehicleReference");
+                    if (!string.IsNullOrEmpty(uVehicleRef))
+                    {
+                        var uCv = await _context.CrashVehicles
+                            .FirstOrDefaultAsync(cv => cv.CrashId == crash.CrashId &&
+                                                       cv.VehicleReference == uVehicleRef);
+                        if (uCv != null) uCrashVehicleId = uCv.CrashVehicleId;
+                    }
+
+                    _context.CrashPeople.Add(new CrashPerson
+                    {
+                        Crash = crash,
+                        Person = uPerson,
+                        CrashVehicleId = uCrashVehicleId,
+                        Role = "Passenger",
+                        VehicleReference = uVehicleRef,
+                        SeverityOfInjury = "No injury"
+                    });
+                    await _context.SaveChangesAsync();
                 }
             }
 
@@ -661,6 +761,33 @@ public class HomeController : Controller
                 _context.OfficialUses.Add(official);
             }
 
+            if (root.TryGetProperty("Attachments", out var attachments) && attachments.ValueKind == JsonValueKind.Array)
+            {
+                var uploadDir = Path.Combine(_env.WebRootPath, "uploads", "crashes", crash.CrashId.ToString());
+                Directory.CreateDirectory(uploadDir);
+
+                var attachmentNotes = GetString(root, "AttachmentNotes");
+
+                foreach (var a in attachments.EnumerateArray())
+                {
+                    var fileName = GetString(a, "FileName");
+                    var fileData = GetString(a, "FileData");
+                    if (string.IsNullOrEmpty(fileName) || string.IsNullOrEmpty(fileData)) continue;
+
+                    var safeName = $"{Guid.NewGuid()}_{Path.GetFileName(fileName)}";
+                    var fullPath = Path.Combine(uploadDir, safeName);
+                    await System.IO.File.WriteAllBytesAsync(fullPath, Convert.FromBase64String(fileData));
+
+                    _context.CrashSketches.Add(new CrashSketch
+                    {
+                        Crash = crash,
+                        SketchType = "attachment",
+                        FilePath = $"/uploads/crashes/{crash.CrashId}/{safeName}",
+                        Notes = attachmentNotes,
+                        CreatedAt = DateTime.Now
+                    });
+                }
+            }
 
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
@@ -965,5 +1092,39 @@ public class HomeController : Controller
                 IsMajorFactor = f.IsMajorFactor
             });
         }
+    }
+
+    public async Task<IActionResult> Insights()
+    {
+        var roleLabel =
+            User.IsInRole("System Administrator") ? "System Administrator" :
+            User.IsInRole("Provincial Staff") ? "Provincial Staff" :
+            User.IsInRole("Regional Staff") ? "Regional Staff" :
+            User.IsInRole("Cost Centre Administrator") ? "Cost Centre Administrator" :
+            "SAPS Officer";
+
+        // Insights only exists for roles operating at a scale where a
+        // pattern is worth showing -- a single station's handful of
+        // records wouldn't have one. SAPS Officer and Cost Centre
+        // Administrator never had a nav link to this page, but the
+        // action itself is also blocked directly, not just hidden.
+        if (roleLabel != "System Administrator" && roleLabel != "Provincial Staff" && roleLabel != "Regional Staff")
+            return Forbid();
+
+        var userDistrict = User.FindFirst("District")?.Value;
+
+        var to = DateOnly.FromDateTime(DateTime.Today);
+        var from = new DateOnly(to.Year, 1, 1);
+
+        var scopeDistrict = roleLabel == "Regional Staff" ? userDistrict : null;
+
+        var vm = await _memoData.BuildInsightsAsync(from, to, scopeDistrict);
+
+        ViewBag.RoleLabel = roleLabel;
+        ViewBag.UserDistrict = userDistrict;
+        ViewBag.DashboardMode =
+            (roleLabel == "System Administrator" || roleLabel == "Provincial Staff") ? "analytics" : "review";
+
+        return View(vm);
     }
 }

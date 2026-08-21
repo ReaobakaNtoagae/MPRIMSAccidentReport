@@ -47,6 +47,8 @@ public class ConditionsViewModel
     public string? ObstructionType { get; set; }
     public string? RoadSignsCondition { get; set; }
     public string? RoadMarkingVisibility { get; set; }
+    public string? TyreBurstObserved { get; set; }
+    public string? VehicleLightsCondition { get; set; }
 }
 
 
@@ -98,6 +100,15 @@ public class FactorEntryViewModel
     public bool IsMajorFactor { get; set; }
 }
 
+public class UninjuredPassengerEntryViewModel
+{
+    public string? Surname { get; set; }
+    public string? IdNumber { get; set; }
+    public string? CellPhone { get; set; }
+    public string? VehicleReference { get; set; }
+}
+
+
 
 public class CrashReportFormViewModel
 {
@@ -107,4 +118,6 @@ public class CrashReportFormViewModel
     public List<VehicleEntryViewModel> Vehicles { get; set; } = new();
     public List<PersonEntryViewModel> Persons { get; set; } = new();
     public List<FactorEntryViewModel> Factors { get; set; } = new();
+
+    public List<UninjuredPassengerEntryViewModel> UninjuredPassengers { get; set; } = new();
 }

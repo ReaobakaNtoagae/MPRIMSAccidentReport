@@ -12,8 +12,7 @@ const vm = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
 const out = process.argv[3];
 
 // ── Page ─────────────────────────────────────────────────────
-const PW = 9638; 
-
+const PW = 9638;
 
 // ── Colours ───────────────────────────────────────────────────
 const NAVY = "003366";
@@ -22,15 +21,14 @@ const LGRAY = "F2F2F2";
 const WHITE = "FFFFFF";
 const BLACK = "000000";
 
-// ── Metric colour scheme (used in tables AND charts) ──────────
+// ── Metric colour scheme ──────────────────────────────────────
 const MC = {
-    CRASH: "2E5FA3", 
-    FATAL: "000000",  
-    SERIOUS: "C00000", 
-    SLIGHT: "00B050",   
+    CRASH: "2E5FA3",
+    FATAL: "000000",
+    SERIOUS: "C00000",
+    SLIGHT: "00B050",
     DEFAULT: "000000"
 };
-
 
 function metricColor(label) {
     const u = String(label).toUpperCase();
@@ -45,7 +43,6 @@ function metricColor(label) {
 const tb = { style: BorderStyle.SINGLE, size: 4, color: "BBBBBB" };
 const borders = { top: tb, bottom: tb, left: tb, right: tb };
 const CM = { top: 80, bottom: 80, left: 120, right: 120 };
-
 
 function run(text, opts = {}) {
     return new TextRun({
@@ -65,7 +62,6 @@ function para(children, opts = {}) {
     });
 }
 
-
 function heading(text) {
     return new Paragraph({
         spacing: { before: 200, after: 80 },
@@ -83,7 +79,6 @@ function variation(prev, curr) {
     return (curr >= prev ? "+" : "") + diff;
 }
 
-
 function chartPara(buf, w = 520, h = 260) {
     return new Paragraph({
         alignment: AlignmentType.CENTER,
@@ -91,7 +86,6 @@ function chartPara(buf, w = 520, h = 260) {
         children: [new ImageRun({ data: buf, transformation: { width: w, height: h }, type: "png" })]
     });
 }
-
 
 function hdrCell(text, width, span) {
     return new TableCell({
@@ -212,7 +206,7 @@ function routeTable(routes) {
 
 function fiveYearTable() {
     const hist = vm.FiveYearHistory || [];
-    const years = hist.map(h => h.Year);           
+    const years = hist.map(h => h.Year);
     const lW = Math.floor(PW * .18);
     const cW = Math.floor((PW - lW - Math.floor(PW * .15)) / (years.length || 1));
     const aW = PW - lW - cW * (years.length || 1);
@@ -236,7 +230,84 @@ function fiveYearTable() {
     });
 }
 
+// ── NEW: Age group table ──────────────────────────────────────
+function ageGroupTable(ageData, yearLabel) {
+    const groups = ['0-7', '8-12', '13-18', '19-35', '36+'];
+    const colCount = groups.length + 1; // +1 for label column
+    const labelW = Math.floor(PW * 0.15);
+    const dataW = Math.floor((PW - labelW) / groups.length);
+    const widths = [labelW, ...groups.map(() => dataW)];
 
+    return new Table({
+        width: { size: PW, type: WidthType.DXA },
+        columnWidths: widths,
+        rows: [
+            new TableRow({
+                children: [
+                    hdrCell('VICTIMS', labelW),
+                    ...groups.map(g => hdrCell(g, dataW))
+                ]
+            }),
+            new TableRow({
+                children: [
+                    labelCell('TOTAL', labelW, MC.FATAL),
+                    ...groups.map(g => dataCell(ageData[g] || 0, dataW, { bold: true, color: MC.FATAL }))
+                ]
+            })
+        ]
+    });
+}
+
+// ── NEW: Gender table ──────────────────────────────────────────
+function genderTable(genderData) {
+    const roles = ['Drivers', 'Passengers', 'Pedestrians', 'Cyclists'];
+    const colCount = 3; // label, M, F
+    const labelW = Math.floor(PW * 0.35);
+    const dataW = Math.floor((PW - labelW) / 2);
+    const widths = [labelW, dataW, dataW];
+
+    const rows = [
+        new TableRow({
+            children: [
+                hdrCell('VICTIMS GENDER', labelW),
+                hdrCell('M', dataW),
+                hdrCell('F', dataW)
+            ]
+        })
+    ];
+
+    // Compute totals across roles
+    let totalM = 0, totalF = 0;
+    roles.forEach(role => {
+        const m = genderData[role]?.Male || 0;
+        const f = genderData[role]?.Female || 0;
+        totalM += m;
+        totalF += f;
+        rows.push(new TableRow({
+            children: [
+                labelCell(role.toUpperCase(), labelW, MC.FATAL),
+                dataCell(m, dataW, { bold: true, color: MC.FATAL }),
+                dataCell(f, dataW, { bold: true, color: MC.FATAL })
+            ]
+        }));
+    });
+    // Add TOTAL row
+    rows.push(new TableRow({
+        children: [
+            labelCell('TOTAL', labelW, MC.FATAL),
+            dataCell(totalM, dataW, { bold: true, color: MC.FATAL }),
+            dataCell(totalF, dataW, { bold: true, color: MC.FATAL })
+        ]
+    }));
+
+    return new Table({
+        width: { size: PW, type: WidthType.DXA },
+        columnWidths: widths,
+        rows
+    });
+}
+
+// ── Existing data extraction ──────────────────────────────────
 const p = vm.Provincial || {};
 const c = p.Current || {};
 const pr = p.Prior || {};
@@ -257,7 +328,6 @@ function numWords(n) {
 }
 const W = n => numWords(n).toUpperCase();
 
-
 function chg(prev, curr) {
     return curr >= prev ? 'increased' : 'decreased';
 }
@@ -267,7 +337,6 @@ function pctChg(prev, curr) {
     const v = Math.abs(((curr - prev) / prev) * 100).toFixed(1);
     return ' by ' + v + '%';
 }
-
 
 function changedList(items) {
     const up = items.filter(i => i.curr >= i.prev).map(i => i.label.toLowerCase());
@@ -288,10 +357,9 @@ function figNarrative(text) {
     return para([run(text, { size: 20 })], { after: 80 });
 }
 
-
 const CW = 580, CH = 300;
 
-
+// ── Existing chart generation ──────────────────────────────────
 const fig1 = createGroupedBarChart({
     title: 'Provincial Crashes: ' + (vm.MonthYear || ''),
     labels: [String(py), String(cy)],
@@ -342,7 +410,6 @@ const piePreviousYear = createPieChart({
     height: CH
 });
 
-
 const fig2a = createGroupedBarChart({
     title: 'Total Crashes: ' + (vm.MonthName || ''),
     labels: hist.map(h => String(h.Year)),
@@ -352,7 +419,6 @@ const fig2a = createGroupedBarChart({
     legendPosition: 'right', width: CW, height: CH
 });
 
-
 const fig2b = createGroupedBarChart({
     title: 'Fatalities: ' + (vm.MonthName || ''),
     labels: hist.map(h => String(h.Year)),
@@ -361,7 +427,6 @@ const fig2b = createGroupedBarChart({
     ],
     legendPosition: 'right', width: CW, height: CH
 });
-
 
 const fig3 = createGroupedBarChart({
     title: 'Fatal Victims by Category',
@@ -375,7 +440,6 @@ const fig3 = createGroupedBarChart({
     legendPosition: 'right', width: CW, height: CH
 });
 
-
 const fig4 = createGroupedBarChart({
     title: 'Serious Injuries by Category',
     labels: [String(py), String(cy)],
@@ -387,7 +451,6 @@ const fig4 = createGroupedBarChart({
     ],
     legendPosition: 'right', width: CW, height: CH
 });
-
 
 const fig5 = createGroupedBarChart({
     title: 'Slight Injuries by Category',
@@ -401,7 +464,6 @@ const fig5 = createGroupedBarChart({
     legendPosition: 'right', width: CW, height: CH
 });
 
-
 const pRoutes = (vm.ProvincialRoutes || []).slice(0, 6);
 const fig6 = pRoutes.length > 0 ? createGroupedBarChart({
     title: 'Provincial Problematic Routes',
@@ -412,8 +474,6 @@ const fig6 = pRoutes.length > 0 ? createGroupedBarChart({
     })),
     legendPosition: 'right', palette: ROUTE_PALETTE, width: CW, height: CH
 }) : null;
-
-
 
 const DEFAULT_SLOTS = [
     { Slot: '06H00 - 14H00', CrashesPrev: 0, CrashesCurr: 0, FatalPrev: 0, FatalCurr: 0 },
@@ -431,7 +491,6 @@ const fig7 = tSlots.length > 0 ? createGroupedBarChart({
     legendPosition: 'right', width: CW, height: CH
 }) : null;
 
-
 const dowProv = (vm.DaysOfWeek || {}).Provincial || [];
 const fig8 = dowProv.length > 0 ? createGroupedBarChart({
     title: 'Crashes by Day of Week (Province)',
@@ -443,11 +502,40 @@ const fig8 = dowProv.length > 0 ? createGroupedBarChart({
     legendPosition: 'right', width: CW, height: CH
 }) : null;
 
+// ── NEW: Age and Gender charts ────────────────────────────────
+const ageData = c.FatalAgeGroups || {};
+const ageLabels = Object.keys(ageData);
+const ageValues = Object.values(ageData);
 
-const crashes = c.Crashes || 0, fatals = c.Fatalities || 0,
-    serious = c.Serious || 0, slight = c.Slight || 0;
-const days = vm.DaysInPeriod || vm.DaysInMonth || 30;
+// Age chart – changed to a bar chart
+const ageBar = createGroupedBarChart({
+    title: 'Age Distribution of Fatalities',
+    labels: ageLabels,
+    datasets: [
+        { label: 'Fatalities', data: ageValues }
+    ],
+    legendPosition: 'right',
+    width: CW,
+    height: CH
+});
 
+const genderData = c.FatalGender || {};
+const genderRoles = ['Drivers', 'Passengers', 'Pedestrians', 'Cyclists'];
+const maleData = genderRoles.map(r => genderData[r]?.Male || 0);
+const femaleData = genderRoles.map(r => genderData[r]?.Female || 0);
+const genderBar = createGroupedBarChart({
+    title: 'Fatalities by Gender and Role',
+    labels: genderRoles,
+    datasets: [
+        { label: 'Male', data: maleData },
+        { label: 'Female', data: femaleData }
+    ],
+    legendPosition: 'right',
+    width: CW,
+    height: CH
+});
+
+// ── Document building ─────────────────────────────────────────
 const children = [];
 
 // ── Header ────────────────────────────────────────────────
@@ -472,21 +560,23 @@ children.push(
 });
 children.push(blank(160));
 
-
+// ── PURPOSE ───────────────────────────────────────────────
 children.push(
     heading('PURPOSE'),
     para([run('To inform the Member of the Executive Council, of crashes and fatalities recorded in the province for the period ' + vm.PeriodFrom + ' to ' + vm.PeriodTo + ', as compared with the same period the previous year.', { size: 20 })], { after: 120 }),
     blank()
 );
 
-
+// ── DISCUSSION ─────────────────────────────────────────────
+const crashes = c.Crashes || 0, fatals = c.Fatalities || 0,
+    serious = c.Serious || 0, slight = c.Slight || 0;
 children.push(
     heading('DISCUSSION'),
     para([run('During ' + vm.MonthYear + ' ' + W(crashes) + ' (' + crashes + ') road crashes took place, resulting in ' + W(fatals) + ' (' + fatals + ') fatalities, ' + W(serious) + ' (' + serious + ') serious injuries and ' + W(slight) + ' (' + slight + ') slight injuries.', { size: 20 })], { after: 120 }),
     blank()
 );
 
-
+// ── PROVINCIAL CRASHES: MONTH TO MONTH COMPARISON ───────────
 children.push(
     heading('PROVINCIAL CRASHES: MONTH TO MONTH COMPARISON:'),
     para([run(vm.PeriodFrom + ' \u2013 ' + vm.PeriodTo, { bold: true, size: 20 })], { after: 80 }),
@@ -510,9 +600,10 @@ children.push(
     blank()
 );
 
-
+// ── AVERAGE PER DAY ───────────────────────────────────────────
 children.push(para([run('AVERAGE PER DAY', { bold: true, size: 20 })], { after: 80 }));
 {
+    const days = vm.DaysInPeriod || vm.DaysInMonth || 30;
     const C = [Math.floor(PW / 4), Math.floor(PW / 4), Math.floor(PW / 4), PW - Math.floor(PW / 4) * 3];
     children.push(
         new Table({
@@ -536,7 +627,7 @@ children.push(para([run('AVERAGE PER DAY', { bold: true, size: 20 })], { after: 
     );
 }
 
-// ── 5-year history + Figure 2 ─────────────────────────────
+// ── 5‑year history + FIGURE 2 ────────────────────────────────
 if (hist.length > 0) {
     const avgC = (hist.reduce((s, h) => s + (h.Crashes || 0), 0) / hist.length).toFixed(1);
     const avgF = (hist.reduce((s, h) => s + (h.Fatalities || 0), 0) / hist.length).toFixed(1);
@@ -561,7 +652,36 @@ if (hist.length > 0) {
     );
 }
 
+// ── NEW: PROVINCIAL FATALITIES: AGE GROUP AND GENDER ──────────
+// Inserted after 5‑year history and before "CATEGORIES OF VICTIMS"
+const hasAge = ageData && Object.keys(ageData).length > 0;
+const hasGender = genderData && Object.keys(genderData).length > 0;
+if (hasAge || hasGender) {
+    children.push(heading('PROVINCIAL FATALITIES: AGE GROUP AND GENDER'));
+    if (hasAge) {
+        children.push(
+            para([run('VICTIMS', { bold: true, size: 20 })], { after: 60 }),
+            ageGroupTable(ageData, cy),
+            blank(80),
+            chartPara(ageBar),  // <-- bar chart instead of pie
+            blank(40)
+        );
+    }
+    if (hasGender) {
+        children.push(
+            para([run('VICTIMS GENDER', { bold: true, size: 20 })], { after: 60 }),
+            genderTable(genderData),
+            blank(80),
+            chartPara(genderBar),
+            blank(40),
+            figNarrative('The above table and graph indicates the distribution of fatalities by age group and gender. ' +
+                'The majority of fatalities occurred in the 19–35 age group, with males accounting for the highest number.')
+        );
+    }
+    children.push(blank());
+}
 
+// ── CATEGORIES OF VICTIMS (Fatal) ────────────────────────────
 children.push(
     para([run('CATEGORIES OF VICTIMS', { bold: true, size: 20 })], { after: 80 }),
     compTable([
@@ -582,7 +702,7 @@ children.push(
     blank()
 );
 
-
+// ── SERIOUS INJURIES ──────────────────────────────────────────
 children.push(
     para([run('SERIOUS INJURIES', { bold: true, size: 20 })], { after: 80 }),
     compTable([
@@ -603,7 +723,7 @@ children.push(
     blank()
 );
 
-
+// ── SLIGHT INJURIES ───────────────────────────────────────────
 children.push(
     para([run('SLIGHT INJURIES', { bold: true, size: 20 })], { after: 80 }),
     compTable([
@@ -624,7 +744,7 @@ children.push(
     blank()
 );
 
-
+// ── COMPARISON BY DISTRICT ────────────────────────────────────
 children.push(
     para([run('COMPARISON BY DISTRICT: ' + vm.PeriodFrom + ' \u2013 ' + vm.PeriodTo + ' AS COMPARED WITH THE SAME PERIOD THE PREVIOUS YEAR.', { bold: true, size: 20 })], { after: 80 }),
     distTable([
@@ -636,7 +756,7 @@ children.push(
     blank()
 );
 
-
+// ── VICTIMS PER DISTRICT ──────────────────────────────────────
 children.push(
     para([run('CATEGORIES OF VICTIMS PER DISTRICT', { bold: true, size: 20 })], { after: 80 }),
     distTable([
@@ -664,7 +784,7 @@ children.push(
     blank()
 );
 
-
+// ── PROVINCIAL PROBLEMATIC ROUTES ────────────────────────────
 if (vm.ProvincialRoutes && vm.ProvincialRoutes.length > 0) {
     const rf = c.Fatalities || 1;
     const rft = pRoutes.reduce((s, r) => s + (r.FatalCurr || 0), 0);
@@ -683,7 +803,7 @@ if (vm.ProvincialRoutes && vm.ProvincialRoutes.length > 0) {
     }
 }
 
-
+// ── REGIONAL PROBLEMATIC ROUTES ──────────────────────────────
 if (vm.Districts) {
     children.push(heading('REGIONAL PROBLEMATIC ROUTES'));
     (vm.Districts || []).forEach(d => {
@@ -699,7 +819,7 @@ if (vm.Districts) {
     });
 }
 
-
+// ── PROVINCIAL CRASHES TYPES ──────────────────────────────────
 if (vm.CrashTypes && vm.CrashTypes.length > 0) {
     children.push(heading('PROVINCIAL CRASHES TYPES'));
     const C = [Math.floor(PW * .32), Math.floor(PW * .17), Math.floor(PW * .17),
@@ -720,35 +840,29 @@ if (vm.CrashTypes && vm.CrashTypes.length > 0) {
                         dataCell(ct.FatalCurr ?? 0, C[4], { color: MC.FATAL, bold: true })]
                 }))
             ]
-        }),
+        })
     );
 
     const sortedByFatalities = [...vm.CrashTypes]
         .sort((a, b) => (b.FatalCurr || 0) - (a.FatalCurr || 0));
 
     children.push(
-        para(run['Priority crashes that make up the highest number of fatalities are as follows:'])
+        para([run('Priority crashes that make up the highest number of fatalities are as follows:', { size: 20 })], { after: 60 })
     );
 
     sortedByFatalities.forEach(ct => {
         children.push(
             new Paragraph({
                 bullet: { level: 0 },
-                children: [
-                    run(ct.Type, { bold: true, size: 21 })
-                    
-                ]
+                children: [run(ct.Type, { bold: true, size: 21 })]
             })
         );
     });
 
     children.push(blank());
-    
-
-    
 }
 
-
+// ── PROVINCIAL VEHICLE CATEGORIES ────────────────────────────
 if (vm.VehicleCategories && vm.VehicleCategories.length > 0) {
     children.push(
         heading('PROVINCIAL VEHICLE CATEGORIES'),
@@ -777,9 +891,8 @@ if (vm.VehicleCategories && vm.VehicleCategories.length > 0) {
     );
 }
 
-
+// ── PROVINCIAL PREVALENT TIMES ───────────────────────────────
 {
-   
     const tW = Math.floor(PW * .30);
     const cW2 = Math.floor((PW - tW) / 4);
     const c4 = [tW, cW2, cW2, cW2, PW - tW - cW2 * 3];
@@ -787,7 +900,6 @@ if (vm.VehicleCategories && vm.VehicleCategories.length > 0) {
     const timeTable = new Table({
         width: { size: PW, type: WidthType.DXA }, columnWidths: c4,
         rows: [
-            
             new TableRow({
                 children: [
                     hdrCell('TIME', c4[0]),
@@ -805,7 +917,6 @@ if (vm.VehicleCategories && vm.VehicleCategories.length > 0) {
                     })
                 ]
             }),
-            // Header row 2: (empty) | prior year | curr year | prior year | curr year
             new TableRow({
                 children: [
                     hdrCell('', c4[0]),
@@ -815,7 +926,6 @@ if (vm.VehicleCategories && vm.VehicleCategories.length > 0) {
                     hdrCell(String(cy), c4[4])
                 ]
             }),
-            // Data rows
             ...tSlots.map(t => new TableRow({
                 children: [
                     labelCell(t.Slot, c4[0], BLACK),
@@ -828,7 +938,6 @@ if (vm.VehicleCategories && vm.VehicleCategories.length > 0) {
         ]
     });
 
-    // Narrative: contribution of 14h00–06h00 fatalities
     const fatal1406 = tSlots.filter(t => t.Slot !== '06H00 - 14H00').reduce((s, t) => s + (t.FatalCurr || 0), 0);
     const fatalTotal = tSlots.reduce((s, t) => s + (t.FatalCurr || 0), 0);
     const contribPct = fatalTotal > 0 ? ((fatal1406 / fatalTotal) * 100).toFixed(0) : 0;
@@ -836,6 +945,7 @@ if (vm.VehicleCategories && vm.VehicleCategories.length > 0) {
         'The prevalent times between 14h00 until 06h00 shows a ' + contribPct +
         ' % contribution of fatalities during this period.',
         { size: 20 })], { after: 80 });
+
     children.push(
         heading('PROVINCIAL PREVALENT TIMES'),
         para([run('Fatalities are mostly prevalent between 14h00 to 06h00. The table that follows indicates the times and number of crashes in the Province and all Districts respectively.', { size: 20 })], { after: 80 }),
@@ -858,7 +968,7 @@ if (vm.VehicleCategories && vm.VehicleCategories.length > 0) {
     }
 }
 
-// ── Days of week + Figure 8 ───────────────────────────────
+// ── DAYS OF THE WEEK ──────────────────────────────────────────
 if (dowProv.length > 0) {
     const allDays = ['MONDAYS', 'TUESDAYS', 'WEDNESDAYS', 'THURSDAYS', 'FRIDAYS', 'SATURDAYS', 'SUNDAYS'];
     children.push(
@@ -930,7 +1040,7 @@ if (dowProv.length > 0) {
     });
 }
 
-// ── Conclusion ────────────────────────────────────────────
+// ── CONCLUSION ────────────────────────────────────────────────
 const cV = variation(pr.Crashes, c.Crashes), fV = variation(pr.Fatalities, c.Fatalities),
     sV = variation(pr.Serious, c.Serious), slV = variation(pr.Slight, c.Slight);
 children.push(heading('CONCLUSION'));
@@ -946,14 +1056,14 @@ children.push(heading('CONCLUSION'));
 });
 children.push(blank(120));
 
-// ── Recommendations ───────────────────────────────────────
+// ── RECOMMENDATIONS ───────────────────────────────────────────
 children.push(
     heading('RECOMMENDATIONS'),
     para([run('It is recommended that the MEC takes note of the contents of the report and give guidance where he deems necessary.', { size: 20 })], { after: 300 }),
     blank(300)
 );
 
-// ── Signature ─────────────────────────────────────────────
+// ── SIGNATURE ──────────────────────────────────────────────────
 const sigLine = { style: BorderStyle.SINGLE, size: 6, color: NAVY };
 children.push(
     new Paragraph({ border: { bottom: sigLine }, spacing: { after: 60 }, children: [run('')] }),
@@ -966,8 +1076,7 @@ children.push(
     para([run(vm.ToTitle || 'MEMBER OF THE EXECUTIVE COUNCIL', { bold: true, size: 20 })], { after: 0 })
 );
 
-
-// ── Build ─────────────────────────────────────────────────
+// ── BUILD ──────────────────────────────────────────────────────
 const doc = new Document({
     styles: { default: { document: { run: { font: "Arial", size: 20 } } } },
     sections: [{

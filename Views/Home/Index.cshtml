@@ -36,21 +36,31 @@
 
     .kpi-card {
         border-radius: 12px;
-        padding: 18px 20px;
-        box-shadow: 0 2px 8px rgba(0,0,0,.07);
-        border-left: 5px solid transparent;
+        padding: 14px 16px;
+        background: #f8faf8;
+        border-left: 3px solid transparent;
     }
 
+        .kpi-card .kpi-head {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 6px;
+        }
+
+            .kpi-card .kpi-head i {
+                font-size: 16px;
+            }
+
         .kpi-card .num {
-            font-size: 1.9rem;
-            font-weight: 800;
+            font-size: 1.5rem;
+            font-weight: 700;
             line-height: 1;
         }
 
         .kpi-card .label {
-            font-size: .78rem;
+            font-size: .72rem;
             color: #666;
-            margin-top: 4px;
         }
 
         .kpi-card .sub {
@@ -225,44 +235,49 @@
         text-decoration: none;
     }
 
-    .capture-hero {
+    /* ── Quick actions — every action gets its own small section,
+             matching the Import page's separate-card pattern, instead of
+             either one oversized hero tile (when only one action is
+             privileged, which is the normal case) or several buttons
+             crammed into one shared panel. ─────────────────────────── */
+    .action-grid {
         display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 16px;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 14px;
         margin-bottom: 20px;
     }
 
-    .capture-tile {
+    .action-card {
         background: #fff;
-        border-radius: 12px;
+        border-radius: 10px;
         border: 1px solid #c8e6c9;
         box-shadow: 0 2px 8px rgba(0,0,0,.06);
-        padding: 28px 24px;
-        text-align: center;
-        cursor: pointer;
-        transition: box-shadow .15s;
+        padding: 18px 18px 16px;
     }
 
-        .capture-tile:hover {
-            box-shadow: 0 4px 16px rgba(0,0,0,.1);
-        }
-
-        .capture-tile .icon {
-            font-size: 32px;
+        .action-card .icon {
+            font-size: 22px;
             color: #2e7d32;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
+            display: block;
         }
 
-        .capture-tile .title {
-            font-size: 1rem;
+        .action-card .title {
+            font-size: .88rem;
             font-weight: 700;
             color: #1a1a1a;
-            margin-bottom: 4px;
+            margin-bottom: 3px;
         }
 
-        .capture-tile .desc {
-            font-size: .78rem;
+        .action-card .desc {
+            font-size: .74rem;
             color: #888;
+            margin-bottom: 12px;
+            min-height: 2.2em;
+        }
+
+        .action-card .dx-button {
+            width: 100%;
         }
 
     .scope-banner {
@@ -311,12 +326,12 @@
     }
 </style>
 
-<!-- Scope banner — every role's intended data scope, honestly labeled as
-     not-yet-enforced where that's true. -->
+<!-- Scope banner — every role's actual data scope, now genuinely
+     enforced (see HomeController.Index). -->
 <div class="scope-banner">
-    <div>
+    <div style="display:flex;align-items:center;gap:10px;">
         <span class="role-tag">@roleLabel</span>
-        <span class="scope-value" style="margin-left:10px;">
+        <span class="scope-value">
             @if (mode == "analytics")
             {
                 <text>All districts &middot; province-wide</text>
@@ -325,40 +340,36 @@
             {
                 <text>Your region: @(userDistrict ?? "not set")</text>
             }
-            else if (roleLabel == "Cost Centre Administrator")
-            {
-                <text>Stations near: @(userStation ?? "not set")</text>
-            }
             else
             {
                 <text>Your station: @(userStation ?? "not set")</text>
             }
         </span>
     </div>
-    @if (mode != "analytics")
-    {
-        <span class="not-enforced">Scope shown for reference — not yet enforced on data</span>
-    }
+    <i class="ti @(mode == "analytics" ? "ti-world" : mode == "review" ? "ti-list-check" : "ti-map-pin")" style="font-size:18px;color:#9ca3af;" aria-hidden="true"></i>
 </div>
 
+@{
+    var scopeSuffix = mode == "analytics" ? " (all time)" : " (your scope)";
+}
 <div class="kpi-grid">
-    <div class="kpi-card" style="background:#e8f5e9;border-left-color:#2e7d32;">
+    <div class="kpi-card" style="border-left-color:#2e7d32;">
+        <div class="kpi-head" style="color:#2e7d32;"><i class="ti ti-car-crash" aria-hidden="true"></i><span class="label">Total crash reports@scopeSuffix</span></div>
         <div class="num" style="color:#2e7d32;">@ViewBag.TotalCrashes</div>
-        <div class="label">Total crash reports</div>
         <div class="sub">@ViewBag.ThisMonthCrashes new in @ViewBag.CurrentMonth</div>
     </div>
-    <div class="kpi-card" style="background:#ffebee;border-left-color:#b71c1c;">
+    <div class="kpi-card" style="border-left-color:#b71c1c;">
+        <div class="kpi-head" style="color:#b71c1c;"><i class="ti ti-alert-triangle" aria-hidden="true"></i><span class="label">Fatal injuries@scopeSuffix</span></div>
         <div class="num" style="color:#b71c1c;">@ViewBag.FatalCount</div>
-        <div class="label">Fatal injuries (all time)</div>
         <div class="sub">@ViewBag.ThisMonthFatal this month</div>
     </div>
-    <div class="kpi-card" style="background:#fff3e0;border-left-color:#e65100;">
+    <div class="kpi-card" style="border-left-color:#e65100;">
+        <div class="kpi-head" style="color:#e65100;"><i class="ti ti-first-aid-kit" aria-hidden="true"></i><span class="label">Serious injuries@scopeSuffix</span></div>
         <div class="num" style="color:#e65100;">@ViewBag.SeriousCount</div>
-        <div class="label">Serious injuries (all time)</div>
     </div>
-    <div class="kpi-card" style="background:#e3f2fd;border-left-color:#0277bd;">
+    <div class="kpi-card" style="border-left-color:#0277bd;">
+        <div class="kpi-head" style="color:#0277bd;"><i class="ti ti-bandage" aria-hidden="true"></i><span class="label">Slight injuries@scopeSuffix</span></div>
         <div class="num" style="color:#0277bd;">@ViewBag.SlightCount</div>
-        <div class="label">Slight injuries (all time)</div>
     </div>
 </div>
 
@@ -381,24 +392,19 @@
             </div>
         </div>
     </div>
-    <div class="panel-row-actions">
-        <div class="panel" style="margin-bottom:0;">
-            <div class="panel-head">Quick actions</div>
-            <div class="panel-body">
-                <div class="qa-row" id="quickActionsAll"></div>
-            </div>
+    <div class="qa-section-label">Quick actions</div>
+    <div class="action-grid" id="quickActionsAll"></div>
+
+    <div class="panel">
+        <div class="panel-head">
+            Recent activity
+            @if (canView)
+            {
+                <a href="/Crashes" class="view-all-link">View all crash reports →</a>
+            }
         </div>
-        <div class="panel" style="margin-bottom:0;">
-            <div class="panel-head">
-                Recent activity
-                @if (canView)
-                {
-                    <a href="/Crashes" class="view-all-link">View all crash reports →</a>
-                }
-            </div>
-            <div class="panel-body" id="recentActivityBody">
-                <div style="color:#999; font-size:.8rem;">Loading…</div>
-            </div>
+        <div class="panel-body" id="recentActivityBody">
+            <div style="color:#999; font-size:.8rem;">Loading…</div>
         </div>
     </div>
 }
@@ -407,41 +413,44 @@
     if (mode == "capture")
     {
         <!-- ══════════ Capture: SAPS Officer or Cost Centre Administrator.
-             Tiles are strictly per-privilege — SAPS Officer never sees Quick
+             Cards are strictly per-privilege — SAPS Officer never sees Quick
              add (no CreateSummary), Cost Centre Administrator never sees
-             New CR1 (no Create). ══════════ -->
-        <div class="capture-hero">
+             New CR1 (no Create). Every available action is one card among
+             equals, not a single oversized tile with empty space beside it. ══ -->
+        <div class="qa-section-label">Quick actions</div>
+        <div class="action-grid">
             @if (canCreateFull)
             {
-                <div class="capture-tile" onclick="window.location.href='/Home/Create'">
-                    <div class="icon">📝</div>
+                <div class="action-card">
+                    <i class="ti ti-file-text icon" aria-hidden="true"></i>
                     <div class="title">New CR1 report</div>
                     <div class="desc">Full crash report form</div>
+                    <div id="actionNewCr1"></div>
                 </div>
             }
             @if (canQuickAdd)
             {
-                <div class="capture-tile" onclick="window.location.href='/Crashes/CreateSummary'">
-                    <div class="icon">⚡</div>
+                <div class="action-card">
+                    <i class="ti ti-bolt icon" aria-hidden="true"></i>
                     <div class="title">Quick add</div>
                     <div class="desc">Fast capture from a completed form</div>
+                    <div id="actionQuickAdd"></div>
+                </div>
+            }
+            @if (canImport)
+            {
+                <div class="action-card">
+                    <i class="ti ti-upload icon" aria-hidden="true"></i>
+                    <div class="title">Import Excel</div>
+                    <div class="desc">Bring in a batch of records from a workbook</div>
+                    <div id="actionImport"></div>
                 </div>
             }
         </div>
 
-        @if (canImport)
-        {
-            <div class="panel">
-                <div class="panel-head">Import</div>
-                <div class="panel-body">
-                    <div class="qa-row horizontal" id="quickActionsImport"></div>
-                </div>
-            </div>
-        }
-
         <div class="panel">
             <div class="panel-head">
-                @(roleLabel == "Cost Centre Administrator" ? "Recent activity — stations near you" : "Recent activity — your station")
+                Recent activity — your station
                 @if (canView)
                 {
                     <a href="/Crashes" class="view-all-link">View all crash reports →</a>
@@ -460,19 +469,19 @@
              just display). No New CR1/full-report generation. ══════════ -->
         @if (canQuickAdd)
         {
-            <div class="capture-hero" style="grid-template-columns: 1fr;">
-                <div class="capture-tile" onclick="window.location.href='/Crashes/CreateSummary'">
-                    <div class="icon">⚡</div>
+            <div class="qa-section-label">Quick actions</div>
+            <div class="action-grid">
+                <div class="action-card">
+                    <i class="ti ti-bolt icon" aria-hidden="true"></i>
                     <div class="title">Quick add</div>
                     <div class="desc">Fast capture from a completed form</div>
+                    <div id="actionQuickAdd"></div>
                 </div>
             </div>
         }
 
         <div class="review-note">
-            Showing recent crash records for review across your region. District-level
-            filtering isn't implemented yet — this list currently covers all districts,
-            not just @(userDistrict ?? "yours").
+            Showing recent crash records for your region: @(userDistrict ?? "not set").
         </div>
 
         <div class="panel">
@@ -522,16 +531,37 @@
         var canFiveYear   = @Html.Raw(canFiveYear.ToString().ToLower());
         var canQuarterly  = @Html.Raw(canQuarterly.ToString().ToLower());
         var canAdminister = @Html.Raw(canAdminister.ToString().ToLower());
+        var scopedRecentActivity = @Html.Raw(ViewBag.ScopedRecentActivityJson ?? "null");
 
         var successMsg = $("#successMsg").data("message");
         var errorMsg   = $("#errorMsg").data("message");
         if (successMsg) DevExpress.ui.notify(successMsg, "success", 4000);
         if (errorMsg)   DevExpress.ui.notify(errorMsg,   "error",   5000);
 
-        function addButtons(containerId, items) {
+        // Builds a full action-card (icon, title, description, button)
+        // into a grid container — every quick action gets its own small
+        // section, matching how the Import page separates its cards,
+        // rather than several buttons sharing one panel.
+        var ACTION_META = {
+        "Manage users":       { icon: "ti-users",         desc: "Add, edit, or deactivate user accounts" },
+        "Manage roles":       { icon: "ti-shield-lock",   desc: "Adjust role privileges and permissions" },
+        "Manage lookups":     { icon: "ti-list-details",  desc: "Maintain stations, routes, and other reference data" },
+        "Weekly standby":     { icon: "ti-clock",         desc: "Generate the weekly PATRICIA-format report" },
+        "Monthly memo":       { icon: "ti-chart-bar",     desc: "Generate the monthly memo report" },
+        "Quarterly report":   { icon: "ti-chart-line",    desc: "Generate the quarterly summary report" },
+        "Five year report":   { icon: "ti-chart-area",    desc: "Generate the five-year trend report" },
+        "Import Excel":       { icon: "ti-upload",        desc: "Bring in a batch of records from a workbook" }
+        };
+
+        function addActionCards(containerId, items) {
         items.forEach(function (a) {
-        $("<div>").appendTo(containerId).dxButton({
-        text: a.text, type: a.type, icon: a.icon,
+        var meta = ACTION_META[a.text] || { icon: "ti-arrow-right", desc: "" };
+        var card = $("<div class='action-card'>").appendTo(containerId);
+        $("<i>").addClass("ti " + meta.icon + " icon").attr("aria-hidden", "true").appendTo(card);
+        $("<div class='title'>").text(a.text).appendTo(card);
+        $("<div class='desc'>").text(meta.desc).appendTo(card);
+        $("<div>").appendTo(card).dxButton({
+        text: "Open", type: a.type,
         onClick: function () { window.location.href = a.url; }
         });
         });
@@ -566,7 +596,7 @@
         { text: "Import Excel",     type: "normal",  icon: "upload", url: "/Import" }
         ];
         }
-        addButtons("#quickActionsAll", allButtons);
+        addActionCards("#quickActionsAll", allButtons);
 
         $.getJSON("/Crashes/Grid", { pageSize: 5000, sortBy: "Date", sortDesc: true }).done(function (result) {
         var rows = result.rows || [];
@@ -609,19 +639,29 @@
         });
 
         } else if (mode === "capture") {
-        if (canImport) {
-        addButtons("#quickActionsImport", [
-        { text: "Import Excel", type: "default", icon: "upload", url: "/Import" }
-        ]);
+        // Each card's button is mounted directly into the card already
+        // rendered server-side (icon/title/desc), rather than building
+        // the whole card in JS — the set of cards shown is privilege-
+        // gated in Razor, so JS only needs to wire up what's present.
+        if (canCreateFull) {
+        $("#actionNewCr1").dxButton({ text: "Open", type: "default", onClick: function () { window.location.href = "/Home/Create"; } });
         }
-        $.getJSON("/Crashes/Grid", { pageSize: 8, sortBy: "Date", sortDesc: true })
-        .done(function (result) { renderRecentActivity(result.rows || [], canEdit); })
-        .fail(function () { $("#recentActivityBody").html('<div style="color:#b71c1c; font-size:.8rem;">Could not load recent activity.</div>'); });
+        if (canQuickAdd) {
+        $("#actionQuickAdd").dxButton({ text: "Open", type: "default", onClick: function () { window.location.href = "/Crashes/CreateSummary"; } });
+        }
+        if (canImport) {
+        $("#actionImport").dxButton({ text: "Open", type: "default", onClick: function () { window.location.href = "/Import"; } });
+        }
+        // Scoped server-side in HomeController.Index -- no separate
+        // fetch needed, and no risk of accidentally rendering the
+        // unscoped list this used to pull from /Crashes/Grid.
+        renderRecentActivity(scopedRecentActivity || [], canEdit);
 
         } else if (mode === "review") {
-        $.getJSON("/Crashes/Grid", { pageSize: 8, sortBy: "Date", sortDesc: true })
-        .done(function (result) { renderRecentActivity(result.rows || [], canEdit); })
-        .fail(function () { $("#recentActivityBody").html('<div style="color:#b71c1c; font-size:.8rem;">Could not load recent activity.</div>'); });
+        if (canQuickAdd) {
+        $("#actionQuickAdd").dxButton({ text: "Open", type: "default", onClick: function () { window.location.href = "/Crashes/CreateSummary"; } });
+        }
+        renderRecentActivity(scopedRecentActivity || [], canEdit);
         }
 
         // ── Recent activity — compact table, not stacked cards ──────

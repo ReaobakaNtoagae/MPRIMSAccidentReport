@@ -1,0 +1,114 @@
+﻿@model CrashReport.Controllers.ReviewDuplicatesViewModel
+@{
+    ViewData["Title"] = "Review Duplicates";
+}
+
+<style>
+    .rd-card { background:#fff; border-radius:10px; border:1px solid #c8e6c9;
+               box-shadow:0 2px 8px rgba(0,0,0,.06); padding:24px; margin-bottom:16px; }
+    .rd-card h6 { font-size:.78rem; text-transform:uppercase; letter-spacing:.7px;
+                  color:#2e7d32; font-weight:700; margin-bottom:14px;
+                  padding-bottom:8px; border-bottom:2px solid #e8f5e9; }
+    .rd-note { background:#fff3e0; border:1px solid #ffcc80; border-radius:8px;
+               padding:12px 16px; font-size:.82rem; color:#7a4a00; margin-bottom:16px; }
+    .rd-table { width:100%; border-collapse:collapse; font-size:.82rem; }
+    .rd-table th { text-align:left; padding:8px 10px; border-bottom:2px solid #e8f5e9;
+                   font-size:.7rem; text-transform:uppercase; letter-spacing:.4px; color:#888; }
+    .rd-table td { padding:9px 10px; border-bottom:1px solid #f0f4f0; vertical-align:top; }
+    .rd-table tr:hover td { background:#fafdfa; }
+    .rd-reason { color:#a15c00; font-size:.76rem; }
+    .rd-bulk { display:flex; gap:10px; margin-bottom:14px; }
+</style>
+
+<div class="rd-card">
+    <h6>Review Duplicates — @Model.FileName</h6>
+    <div class="rd-note">
+        <strong>@Model.Candidates.Count</strong> row@(Model.Candidates.Count == 1 ? "" : "s") flagged as a possible
+        duplicate against an existing record. @Model.ReadyToImportCount row@(Model.ReadyToImportCount == 1 ? "" : "s")
+        with no conflict will import regardless of what you choose here.
+        <br />
+        Nothing is saved yet. Check any row below you want to keep anyway — everything left unchecked stays skipped,
+        matching how duplicates were always handled before.
+    </div>
+
+    <div class="rd-bulk">
+        <div id="btnKeepAll"></div>
+        <div id="btnSkipAll"></div>
+    </div>
+
+    <table class="rd-table">
+        <thead>
+            <tr>
+                <th style="width:32px;"></th>
+                <th>CR No.</th>
+                <th>Station</th>
+                <th>Date</th>
+                <th>Type</th>
+                <th>Location</th>
+                <th>Why flagged</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var c in Model.Candidates)
+            {
+                <tr>
+                    <td><input type="checkbox" class="rd-keep-checkbox" data-index="@c.Index" /></td>
+                    <td><strong>@c.CrNo</strong></td>
+                    <td>@c.Station</td>
+                    <td>@c.CrashDate</td>
+                    <td>@c.CrashType</td>
+                    <td>@c.Location</td>
+                    <td class="rd-reason">@c.Reason</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<form id="confirmForm" method="post" asp-action="ConfirmImport">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="importSessionId" value="@Model.ImportSessionId" />
+    <div id="keepInputsContainer"></div>
+    <div style="display:flex; gap:10px;">
+        <div id="btnCancel"></div>
+        <div id="btnConfirm"></div>
+    </div>
+</form>
+
+@section Scripts {
+    <script>
+        $(function () {
+
+            $("#btnKeepAll").dxButton({
+                text: "Keep all", type: "normal", stylingMode: "outlined", icon: "check",
+                onClick: function () { $(".rd-keep-checkbox").prop("checked", true); }
+            });
+            $("#btnSkipAll").dxButton({
+                text: "Skip all", type: "normal", stylingMode: "outlined", icon: "close",
+                onClick: function () { $(".rd-keep-checkbox").prop("checked", false); }
+            });
+
+            $("#btnCancel").dxButton({
+                text: "Cancel — discard this import", stylingMode: "outlined", type: "normal",
+                onClick: function () { window.location.href = "/Import"; }
+            });
+
+            $("#btnConfirm").dxButton({
+                text: "Confirm import", type: "default", icon: "check",
+                onClick: function () {
+                    // Build one hidden "keep" input per checked row, matching
+                    // the ConfirmImport(List<int> keep) action's expected
+                    // model-binding shape for a repeated query/form key.
+                    var container = $("#keepInputsContainer").empty();
+                    $(".rd-keep-checkbox:checked").each(function () {
+                        $("<input>").attr({
+                            type: "hidden", name: "keep", value: $(this).data("index")
+                        }).appendTo(container);
+                    });
+                    document.getElementById("confirmForm").submit();
+                }
+            });
+
+        });
+    </script>
+}
