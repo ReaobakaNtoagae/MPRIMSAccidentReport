@@ -1,0 +1,169 @@
+{
+  "source_records": 229,
+  "converted_records": 229,
+  "unique_key_matches": 227,
+  "unmatched_source_rows": [
+    23,
+    111
+  ],
+  "unmatched_destination_rows": [
+    78,
+    18
+  ],
+  "ambiguous_match_groups": [
+    {
+      "key": [
+        "11",
+        "20/03",
+        "22H00",
+        "CALTEX GARAGE"
+      ],
+      "source_rows": [
+        86,
+        187
+      ],
+      "dest_rows": [
+        232,
+        234
+      ]
+    },
+    {
+      "key": [
+        "42",
+        "16/03",
+        "06H00",
+        "ROOSSENEKAL RD"
+      ],
+      "source_rows": [
+        98,
+        192
+      ],
+      "dest_rows": [
+        10,
+        11
+      ]
+    }
+  ],
+  "exact_preserved_row_overlap": 215,
+  "field_differences": [
+    {
+      "source_col": "X",
+      "dest_col": "U",
+      "count": 9,
+      "examples": [
+        {
+          "source_row": 89,
+          "dest_row": 127,
+          "source": "SED",
+          "dest": "P/D / SED"
+        },
+        {
+          "source_row": 226,
+          "dest_row": 101,
+          "source": "SED",
+          "dest": "P/D / SED"
+        },
+        {
+          "source_row": 17,
+          "dest_row": 107,
+          "source": "SED",
+          "dest": "P/D / SED"
+        },
+        {
+          "source_row": 186,
+          "dest_row": 227,
+          "source": "TAXI ",
+          "dest": "TP/D / AXI "
+        },
+        {
+          "source_row": 15,
+          "dest_row": 121,
+          "source": "SED",
+          "dest": "P/D / SED"
+        },
+        {
+          "source_row": 146,
+          "dest_row": 143,
+          "source": "TAXI ",
+          "dest": "P/D / TAXI "
+        },
+        {
+          "source_row": 134,
+          "dest_row": 124,
+          "source": "SED",
+          "dest": "P/D / SED"
+        },
+        {
+          "source_row": 213,
+          "dest_row": 104,
+          "source": "SED",
+          "dest": "P/D / SED"
+        },
+        {
+          "source_row": 214,
+          "dest_row": 85,
+          "source": "LDV",
+          "dest": "P/D / LDV"
+        }
+      ]
+    },
+    {
+      "source_col": "A",
+      "dest_col": "A",
+      "count": 2,
+      "examples": [
+        {
+          "source_row": 225,
+          "dest_row": 163,
+          "source": "PILGREMS REST",
+          "dest": "PILGRIMS REST"
+        },
+        {
+          "source_row": 72,
+          "dest_row": 230,
+          "source": "PIENAR",
+          "dest": "PIENAAR"
+        }
+      ]
+    },
+    {
+      "source_col": "E",
+      "dest_col": "D",
+      "count": 1,
+      "examples": [
+        {
+          "source_row": 20,
+          "dest_row": 231,
+          "source": "THU",
+          "dest": "TH"
+        }
+      ]
+    }
+  ],
+  "station_changes": [
+    {
+      "source": "PILGREMS REST",
+      "dest": "PILGRIMS REST",
+      "count": 1
+    },
+    {
+      "source": "PIENAR",
+      "dest": "PIENAAR",
+      "count": 1
+    }
+  ],
+  "dropped_fields": {
+    "CAS_nonblank": 20,
+    "CAS_unique": 19,
+    "male_nonblank": 12,
+    "female_nonblank": 8,
+    "male_total": 14.0,
+    "female_total": 11.0
+  },
+  "original_supplementary_sections": {
+    "victim_age_rows": "A240:F244",
+    "victim_gender_rows": "A246:C252",
+    "race_rows_begin": "A254:F254",
+    "nonempty_rows_after_main_table": 13
+  }
+}

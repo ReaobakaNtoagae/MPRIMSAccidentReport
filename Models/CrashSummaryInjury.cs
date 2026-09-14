@@ -23,13 +23,15 @@ public class CrashSummaryInjury
 
     [Column("role")]
     [MaxLength(20)]
-    public string Role { get; set; } = string.Empty; // "Driver" | "Passenger" | "Pedestrian" | "Cyclist"
+    public string? Role { get; set; } // Null is allowed for a fatality awaiting post-mortem details.
 
-    // All nullable -- a row with just severity+role still counts as a
-    // casualty. A mass-casualty crash still just works even if nobody
-    // has time to fill in demographics for every person.
+    // All nullable: a fatality can be recorded before post-mortem details arrive.
     [Column("age")]
     public byte? Age { get; set; }
+
+    // Record the selected group without inventing an exact age.
+    [Column("age_group_code"), MaxLength(10)]
+    public string? AgeGroupCode { get; set; }
 
     [Column("gender")]
     [MaxLength(1)]

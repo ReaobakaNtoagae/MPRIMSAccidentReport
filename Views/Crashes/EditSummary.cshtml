@@ -465,7 +465,7 @@
 
             function addPersonRow(sev, role, prefill) {
                 var entry = prefill
-                    ? { Severity: sev, Role: role, VehicleNumber: prefill.VehicleNumber, Age: prefill.Age, Gender: prefill.Gender, Race: prefill.Race, _widgets: {} }
+                    ? { Severity: sev, Role: role, VehicleNumber: prefill.VehicleNumber, Age: prefill.Age, AgeGroupCode: prefill.AgeGroupCode, Gender: prefill.Gender, Race: prefill.Race, _widgets: {} }
                     : { Severity: sev, Role: role, VehicleNumber: null, Age: null, Gender: null, Race: null, _widgets: {} };
                 personRows.push(entry);
 
@@ -575,7 +575,7 @@
                         return { VehicleNumber: v.VehicleNumber, VehicleTypeCode: v.VehicleTypeCode, VehicleTypeName: v.VehicleTypeName, Registration: v.Registration };
                     });
                     var cleanPersonRows = personRows.map(function (p) {
-                        return { Severity: p.Severity, Role: p.Role, VehicleNumber: p.VehicleNumber, Age: p.Age, Gender: p.Gender, Race: p.Race };
+                        return { Severity: p.Severity, Role: p.Role, VehicleNumber: p.VehicleNumber, Age: p.Age, AgeGroupCode: p.AgeGroupCode, Gender: p.Gender, Race: p.Race };
                     });
 
                     var payload = $.extend({}, data, {

@@ -1,447 +1,229 @@
-﻿@{
-    ViewData["Title"] = "Crash Reports";
+@{
+    ViewData["Title"] = "Crash records";
+    bool Can(string privilege) => User.HasClaim(CrashReport.Security.Privileges.ClaimType, privilege);
+    var canCreate = Can(CrashReport.Security.Privileges.Crashes.Create);
+    var canQuickAdd = Can(CrashReport.Security.Privileges.Crashes.CreateSummary);
+    var canEdit = Can(CrashReport.Security.Privileges.Crashes.Edit);
+    var canDelete = Can(CrashReport.Security.Privileges.Crashes.Delete);
 }
 
 <style>
-     #crashHistoryGrid .dx-datagrid {
-        font-size: 12px;
-    }
-
-    #crashHistoryGrid .dx-datagrid-headers {
-        font-size: 12px;
-        font-weight: 600;
-    }
-
-   
-    #crashHistoryGrid .dx-row > td {
-        padding-top: 6px;
-        padding-bottom: 6px;
-    }
-
-    .toolbar-panel {
-        background: #fff;
-        border-radius: 10px;
-        border: 1px solid #c8e6c9;
-        box-shadow: 0 2px 8px rgba(0,0,0,.06);
-        padding: 14px 20px;
-        margin-bottom: 16px;
-        display: flex;
-        align-items: flex-end;
-        gap: 12px;
-        flex-wrap: wrap;
-    }
-
-    .toolbar-field {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-        min-width: 160px;
-    }
-
-        .toolbar-field label {
-            font-size: .7rem;
-            color: #666;
-        }
-
-    .filter-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 5px;
-        background: #e8f5e9;
-        border: 1px solid #a5d6a7;
-        border-radius: 20px;
-        padding: 3px 10px;
-        font-size: .75rem;
-        color: #1b5e20;
-        font-weight: 600;
-    }
-
-        .filter-badge .remove {
-            cursor: pointer;
-            color: #2e7d32;
-            font-weight: 700;
-            font-size: .8rem;
-        }
-
-    .active-filters {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-        margin-top: 10px;
-        width: 100%;
-    }
-
-    .result-count {
-        font-size: .8rem;
-        color: #555;
-        font-weight: 500;
-
-
-    .dx-datagrid-filter-row .dx-editor-cell {
-        background: #fafcf8;
-    }
+    .records-page { max-width:1400px; margin:0 auto; }
+    .records-head { margin-bottom:1rem; }
+    .records-eyebrow { color:var(--g-600); font:600 .66rem 'DM Mono',monospace; letter-spacing:1.2px; text-transform:uppercase; margin-bottom:.4rem; }
+    .records-head h1 { margin:0 0 .35rem; color:#17251b; font-size:1.65rem; }
+    .records-head p { margin:0; color:var(--muted); font-size:.84rem; }
+    .records-actions { display:flex; gap:.5rem; align-items:center; margin-top:.85rem; }
+    .records-action-note { color:#7b867e; font-size:.7rem; border-left:1px solid #dce5de; padding-left:.7rem; margin-left:.15rem; }
+    .records-actions .dx-button { border-radius:7px; height:34px; }
+    .records-actions .dx-button-text { font-size:.74rem; font-weight:600; }
+    .records-card { background:#fff; border:1px solid #dce7df; border-radius:12px; overflow:hidden; box-shadow:0 7px 24px rgba(22,50,29,.055); }
+    .records-search { display:grid; grid-template-columns:minmax(260px,1.6fr) repeat(3,minmax(145px,.65fr)) auto; gap:.65rem; padding:1rem 1.1rem; align-items:end; border-bottom:1px solid #e6ece7; }
+    .records-field label { display:block; color:#69756c; font-size:.69rem; margin-bottom:.3rem; }
+    .records-advanced { display:grid; grid-template-columns:1fr 1fr auto; gap:.65rem; padding:0 1.1rem; max-height:0; opacity:0; overflow:hidden; transition:max-height .2s,opacity .2s,padding .2s; background:#fafcfb; }
+    .records-advanced.open { max-height:100px; opacity:1; padding-top:.8rem; padding-bottom:.8rem; border-bottom:1px solid #e6ece7; }
+    .records-filter-btn { height:36px; padding:0 .85rem; border:1px solid var(--g-600); border-radius:6px; color:#fff; background:var(--g-600); font-size:.76rem; font-weight:600; }
+    .records-filter-btn.secondary { color:#4a5a4e; background:#fff; border-color:#d1ddd3; }
+    .records-active { display:none; gap:.4rem; flex-wrap:wrap; padding:.65rem 1.1rem; border-bottom:1px solid #e6ece7; }
+    .records-active.has-items { display:flex; }
+    .filter-chip { display:inline-flex; gap:.35rem; align-items:center; padding:.27rem .55rem; border-radius:999px; color:#315a38; background:#edf7ef; border:1px solid #d0e6d3; font-size:.68rem; }
+    .filter-chip button { border:0; background:transparent; color:#47764e; padding:0; line-height:1; }
+    .records-table-head { display:flex; justify-content:space-between; align-items:center; gap:1rem; padding:.85rem 1.1rem; }
+    .records-table-head strong { color:#28372c; font-size:.83rem; }
+    .records-count { color:#748078; font:400 .69rem 'DM Mono',monospace; }
+    #crashHistoryGrid .dx-datagrid { font-family:'DM Sans',sans-serif; color:#26342a; font-size:12px; }
+    #crashHistoryGrid .dx-datagrid-headers { border-top:1px solid #edf1ee; }
+    #crashHistoryGrid .dx-header-row > td { padding-top:10px; padding-bottom:10px; background:#f7faf8!important; color:#68746b!important; font-size:.66rem!important; }
+    #crashHistoryGrid .dx-data-row > td { padding-top:11px; padding-bottom:11px; border-color:#edf1ee; vertical-align:middle; }
+    #crashHistoryGrid .dx-data-row:hover > td { background:#f6faf7; }
+    .record-id { color:#1d4e27; font-weight:700; font-size:.76rem; }
+    .record-sub { display:block; color:#8a948d; font-size:.66rem; margin-top:2px; }
+    .record-place { color:#2f3d33; font-weight:500; }
+    .record-badge { display:inline-block; padding:.25rem .52rem; border-radius:999px; font:500 .64rem 'DM Mono',monospace; white-space:nowrap; }
+    .record-badge.fatal { color:#a0352a; background:#fde9e6; }
+    .record-badge.serious { color:#8a570e; background:#fff2d9; }
+    .record-badge.minor { color:#25633a; background:#edf7ef; }
+    .record-badge.import { color:#54616a; background:#f0f3f5; }
+    .record-badge.manual { color:#25633a; background:#edf7ef; }
+    .casualty-stack { display:flex; gap:.25rem; flex-wrap:wrap; }
+    .record-action { border:1px solid #d5dfd7; border-radius:6px; background:#fff; padding:.35rem .5rem; color:#56625a; font-size:.68rem; text-decoration:none; }
+    .record-action:hover { color:#205b2a; border-color:#94bd9a; }
+    .record-action.danger:hover { color:#a0352a; border-color:#dca9a3; }
+    @@media(max-width:980px) { .records-search { grid-template-columns:1fr 1fr; } }
+    @@media(max-width:650px) { .records-actions { flex-wrap:wrap; } .records-action-note { display:none; } .records-search,.records-advanced { grid-template-columns:1fr; } .records-advanced.open { max-height:260px; } }
 </style>
 
+<div class="records-page">
+    <header class="records-head">
+        <div class="records-eyebrow">Crash registry</div>
+        <h1>Crash records</h1>
+        <p>Combined full CR1 reports, quick captures and approved imported summaries.</p>
+        <div class="records-actions">
+            @if (canQuickAdd) { <div id="quickAddButton"></div> }
+            @if (canCreate) { <div id="fullReportButton"></div> }
+            <span class="records-action-note">Choose quick capture for summary data, or full report for a complete CR1.</span>
+        </div>
+    </header>
 
-<div class="toolbar-panel">
-    <div class="toolbar-field" style="min-width:220px;">
-        <label>Keyword search</label>
-        <div id="keywordBox"></div>
-    </div>
-    <div class="toolbar-field">
-        <label>Date from</label>
-        <div id="dateFromBox"></div>
-    </div>
-    <div class="toolbar-field">
-        <label>Date to</label>
-        <div id="dateToBox"></div>
-    </div>
-    <div class="toolbar-field">
-        <label>Severity</label>
-        <div id="severityBox"></div>
-    </div>
-    <div id="btnSearch" style="min-width:110px;"></div>
-    <div id="btnClear" style="min-width:90px;"></div>
-    <div class="active-filters" id="activeBadges"></div>
+    <section class="records-card">
+        <div class="records-search">
+            <div class="records-field"><label>Search registry</label><div id="keywordBox"></div></div>
+            <div class="records-field"><label>District</label><div id="districtBox"></div></div>
+            <div class="records-field"><label>Source</label><div id="sourceBox"></div></div>
+            <div class="records-field"><label>Severity</label><div id="severityBox"></div></div>
+            <div style="display:flex;gap:.4rem"><div id="searchButton"></div><div id="advancedButton"></div></div>
+        </div>
+        <div id="advancedFilters" class="records-advanced">
+            <div class="records-field"><label>Date from</label><div id="dateFromBox"></div></div>
+            <div class="records-field"><label>Date to</label><div id="dateToBox"></div></div>
+            <div id="clearButton"></div>
+        </div>
+        <div id="activeFilters" class="records-active"></div>
+        <div class="records-table-head"><strong>Registry results</strong><span id="resultCount" class="records-count">Loading…</span></div>
+        <div id="crashHistoryGrid"></div>
+    </section>
 </div>
 
-
-<div style="background:#fff;border-radius:10px;border:1px solid #c8e6c9;
-    box-shadow:0 2px 8px rgba(0,0,0,.06);overflow:hidden;">
-    <div style="display:flex;align-items:center;justify-content:space-between;
-        padding:14px 20px;border-bottom:2px solid #e8f5e9;">
-        <div style="font-size:.78rem;text-transform:uppercase;letter-spacing:.7px;
-            color:#2e7d32;font-weight:700;">
-            Crash reports
-            <span style="font-size:.68rem;text-transform:none;letter-spacing:0;color:#9ca3af;font-weight:400;">
-                &nbsp;&middot; includes manually captured and imported records &middot; filter by District/Station/Route/Type/Source in the column headers below
-            </span>
-        </div>
-        <div style="display:flex;align-items:center;gap:12px;">
-            <span class="result-count" id="resultCount"></span>
-            <div id="btnQuickAdd"></div>
-            <div id="btnNewReport"></div>
-        </div>
-    </div>
-    <div id="crashHistoryGrid"></div>
-</div>
-
-<form id="deleteForm" method="post" style="display:none;">
-    @Html.AntiForgeryToken()
-</form>
+<form id="deleteForm" method="post" style="display:none">@Html.AntiForgeryToken()</form>
 
 @section Scripts {
-    <script>
-        $(function () {
+<script>
+$(function () {
+    const canEdit = @canEdit.ToString().ToLowerInvariant();
+    const canDelete = @canDelete.ToString().ToLowerInvariant();
+    let filters = {};
 
-            var districts = [];
-            $.getJSON("/api/lookup/districts").done(function (data) {
-                districts = data || [];
-                gridInst.columnOption("District", "lookup", { dataSource: districts });
-            });
-
-            
-            var keywordInst = $("#keywordBox").dxTextBox({
-                placeholder: "CR number, route, or location",
-                showClearButton: true,
-                onEnterKey: function () { runSearch(); }
-            }).dxTextBox("instance");
-
-            var dateFromInst = $("#dateFromBox").dxDateBox({
-                type: "date", displayFormat: "dd/MM/yyyy", pickerType: "calendar",
-                placeholder: "From date", showClearButton: true, max: new Date()
-            }).dxDateBox("instance");
-
-            var dateToInst = $("#dateToBox").dxDateBox({
-                type: "date", displayFormat: "dd/MM/yyyy", pickerType: "calendar",
-                placeholder: "To date", showClearButton: true, max: new Date()
-            }).dxDateBox("instance");
-
-            var severityInst = $("#severityBox").dxSelectBox({
-                dataSource: ["Minor", "Serious", "Fatal"],
-                placeholder: "Any severity", showClearButton: true,
-                onValueChanged: function () { runSearch(); }
-            }).dxSelectBox("instance");
-
-            $("#btnSearch").dxButton({
-                text: "Search", type: "default", icon: "find", onClick: runSearch
-            });
-            $("#btnClear").dxButton({
-                text: "Clear", type: "normal", icon: "clear", stylingMode: "outlined",
-                onClick: clearAll
-            });
-            $("#btnQuickAdd").dxButton({
-                text: "Quick add", type: "normal", icon: "bolt",
-                onClick: function () { window.location.href = "/CreateSummary/CreateSummary"; }
-            });
-            $("#btnNewReport").dxButton({
-                text: "New CR1 report", type: "default", icon: "plus",
-                onClick: function () { window.location.href = "/Home/Create"; }
-            });
-
-           
-            var currentSearchParams = {};
-
-            var crashStore = new DevExpress.data.CustomStore({
-                key: "RowKey",
-                load: function (loadOptions) {
-                    var page = Math.floor((loadOptions.skip || 0) / (loadOptions.take || 25)) + 1;
-                    var params = $.extend({
-                        page: page,
-                        pageSize: loadOptions.take || 25,
-                        sortBy: (loadOptions.sort && loadOptions.sort[0]) ? loadOptions.sort[0].selector : "Date",
-                        sortDesc: (loadOptions.sort && loadOptions.sort[0]) ? !!loadOptions.sort[0].desc : true
-                    }, currentSearchParams);
-
-                    return $.getJSON("/Crashes/Grid", params).then(function (result) {
-                        $("#resultCount").text(result.total > 0 ? result.total + " results" : "");
-                        var rows = result.rows.map(function (r) {
-                            r.RowKey = r.Source === "Import" ? "I-" + r.SummaryId : "M-" + r.CrashId;
-                            return r;
-                        });
-                        return { data: rows, totalCount: result.total };
-                    }).catch(function () {
-                        DevExpress.ui.notify("Search failed. Please try again.", "error", 3000);
-                        return { data: [], totalCount: 0 };
-                    });
-                }
-            });
-
-            // Column -> query-param name, for the ones now filtered via the
-            // column header row instead of the top toolbar.
-            var columnParamMap = {
-                District: "district",
-                Station: "sapsStation",
-                Route: "route",
-                CrashType: "crashType",
-                Source: "source"
-            };
-
-            // Prevents DevExtreme from also trying to apply its own
-            // (client-side, page-only) filter on top of what the server
-            // already filtered — the column "consumes" its filterValue via
-            // our own handling instead.
-            function neutralizeFilterExpression() { return null; }
-
-            var gridInst = $("#crashHistoryGrid").dxDataGrid({
-                dataSource: { store: crashStore },
-                remoteOperations: { paging: true, sorting: true },
-                filterRow: { visible: true, applyFilter: "auto" },
-                columns: [
-                    { dataField: "CrNo",     caption: "CR No.",   width: 120, allowFiltering: false },
-                    {
-                        dataField: "Date",   caption: "Date",
-                        dataType: "date",    format: "dd MMM yyyy", width: 130,
-                        allowFiltering: false // date range stays in the top bar (two values, not one)
-                    },
-                    {
-                        dataField: "District", caption: "District", width: 140,
-                        calculateFilterExpression: neutralizeFilterExpression,
-                        lookup: { dataSource: [] } // populated once /api/lookup/districts resolves
-                    },
-                    {
-                        dataField: "Station",  caption: "Station",  width: 130,
-                        calculateFilterExpression: neutralizeFilterExpression
-                    },
-                    {
-                        dataField: "Route",    caption: "Route",    width: 90,
-                        calculateFilterExpression: neutralizeFilterExpression
-                    },
-                    {
-                        dataField: "CrashType", caption: "Crash type", width: 130,
-                        calculateFilterExpression: neutralizeFilterExpression
-                    },
-                    { dataField: "VehicleCount", caption: "Vehicles", width: 80, alignment: "center", allowFiltering: false },
-                    {
-                        caption: "Injuries", width: 200, alignment: "center",
-                        allowSorting: false, allowFiltering: false,
-                        cellTemplate: function (container, options) {
-                            var parts = [];
-                            if (options.data.Fatalities > 0)
-                                parts.push('<span style="background:#b71c1c;color:#fff;' +
-                                    'border-radius:10px;padding:1px 9px;font-size:.72rem;' +
-                                    'font-weight:700;margin-right:3px">' +
-                                    options.data.Fatalities + ' fatal</span>');
-                            if (options.data.Serious > 0)
-                                parts.push('<span style="background:#e65100;color:#fff;' +
-                                    'border-radius:10px;padding:1px 9px;font-size:.72rem;' +
-                                    'margin-right:3px">' +
-                                    options.data.Serious + ' serious</span>');
-                            container.html(parts.length ? parts.join("") :
-                                '<span style="color:#bbb;font-size:.75rem">—</span>');
-                        }
-                    },
-                    {
-                        dataField: "Source", caption: "Source", width: 90, alignment: "center",
-                        calculateFilterExpression: neutralizeFilterExpression,
-                        lookup: { dataSource: ["Manual", "Import"] },
-                        cellTemplate: function (container, options) {
-                            var isImport = options.value === "Import";
-                            container.html(
-                                '<span style="font-size:.68rem;padding:2px 8px;border-radius:6px;' +
-                                (isImport
-                                    ? 'background:#f5f5f5;color:#9e9e9e;'
-                                    : 'background:#e8f5e9;color:#2e7d32;') +
-                                '">' + options.value + '</span>'
-                            );
-                        }
-                    },
-                    {
-                        caption: "Actions", width: 145, alignment: "center",
-                        allowSorting: false, allowFiltering: false,
-                        cellTemplate: function (container, options) {
-                            var data = options.data;
-                            var isImport = data.Source === "Import";
-                            var id = isImport ? data.SummaryId : data.CrashId;
-                            var crNo = data.CrNo || ("#" + (id || ""));
-
-                            if (!id) {
-                                container.html('<span style="color:#bbb;font-size:.75rem">—</span>');
-                                return;
-                            }
-
-                            var editUrl   = isImport ? "/Crashes/EditSummary/" + id   : "/Home/Edit/" + id;
-                            var deleteUrl = isImport ? "/Crashes/DeleteSummary/" + id : "/Home/Delete/" + id;
-
-                            $("<div>").css({ display:"flex", gap:"5px", justifyContent:"center" })
-                                .appendTo(container)
-                                .append(
-                                    $("<div>").dxButton({
-                                        icon:"edit", hint: isImport ? "Edit imported record" : "Edit",
-                                        type:"normal", stylingMode:"outlined",
-                                        onClick: function() { window.location.href = editUrl; }
-                                    }),
-                                    $("<div>").dxButton({
-                                        icon:"trash", hint: isImport ? "Delete imported record" : "Delete",
-                                        type:"danger", stylingMode:"outlined",
-                                        onClick: function() {
-                                            var warning = isImport
-                                                ? "Permanently delete imported record <b>" + crNo + "</b>?"
-                                                : "Permanently delete crash report <b>" + crNo + "</b>?<br/>" +
-                                                  "<small style='color:#888'>All linked records will also be removed.</small>";
-                                            DevExpress.ui.dialog.confirm(warning, "Confirm Delete").then(function(confirmed) {
-                                                if (!confirmed) return;
-                                                $("#deleteForm").attr("action", deleteUrl);
-                                                $("#deleteForm").submit();
-                                            });
-                                        }
-                                    })
-                                );
-                        }
-                    }
-                ],
-                paging:  { pageSize: 25 },
-                pager:   { showPageSizeSelector: true, allowedPageSizes: [10,25,50,100],
-                           showInfo: true, infoText: "{0}–{1} of {2} crashes" },
-                sorting: { mode: "single" },
-                showBorders:           false,
-                rowAlternationEnabled: true,
-                hoverStateEnabled:     true,
-                noDataText:            "No crashes match the current filters.",
-                onRowPrepared: function (e) {
-                    if (e.rowType === "data" && e.data.Fatalities > 0)
-                        e.rowElement.css("border-left", "3px solid #b71c1c");
-                },
-                // Reads whichever column's filterValue just changed and
-                // merges it into the same server-side param the old
-                // sidebar used to send — this is what makes the filter
-                // row actually talk to /Crashes/Grid correctly.
-                onOptionChanged: function (e) {
-                    if (e.fullName && /^columns\[\d+\]\.filterValue$/.test(e.fullName)) {
-                        var colIndex = parseInt(e.fullName.match(/\d+/)[0], 10);
-                        var col = gridInst.columnOption(colIndex);
-                        var paramName = columnParamMap[col.dataField];
-                        if (!paramName) return;
-
-                        if (e.value) currentSearchParams[paramName] = e.value;
-                        else delete currentSearchParams[paramName];
-
-                        updateBadges(currentSearchParams);
-                        gridInst.refresh();
-                    }
-                }
-            }).dxDataGrid("instance");
-
-            function runSearch() {
-                // Top-bar fields merge in on top of whatever the column
-                // filter row currently has set, rather than replacing it.
-                if (keywordInst.option("value")) currentSearchParams.keyword = keywordInst.option("value");
-                else delete currentSearchParams.keyword;
-
-                if (dateFromInst.option("value")) currentSearchParams.dateFrom = formatDate(dateFromInst.option("value"));
-                else delete currentSearchParams.dateFrom;
-
-                if (dateToInst.option("value")) currentSearchParams.dateTo = formatDate(dateToInst.option("value"));
-                else delete currentSearchParams.dateTo;
-
-                if (severityInst.option("value")) currentSearchParams.severity = severityInst.option("value");
-                else delete currentSearchParams.severity;
-
-                updateBadges(currentSearchParams);
-                gridInst.refresh();
-            }
-
-            function formatDate(d) {
-                var dt = new Date(d);
-                return dt.getFullYear() + "-" +
-                       String(dt.getMonth() + 1).padStart(2,"0") + "-" +
-                       String(dt.getDate()).padStart(2,"0");
-            }
-
-            var badgeLabels = {
-                keyword:"Keyword", district:"District", sapsStation:"Station",
-                route:"Route", crashType:"Type", severity:"Severity",
-                source:"Source", dateFrom:"From", dateTo:"To"
-            };
-
-            function updateBadges(params) {
-                var container = $("#activeBadges").empty();
-                Object.keys(params).forEach(function (key) {
-                    var val = params[key];
-                    if (!val) return;
-                    var badge = $('<span class="filter-badge">' +
-                        badgeLabels[key] + ': <strong>' + val + '</strong>' +
-                        ' <span class="remove" data-key="' + key + '">✕</span></span>');
-                    container.append(badge);
-                });
-                container.find(".remove").on("click", function () {
-                    clearOneFilter($(this).data("key"));
-                });
-            }
-
-            function clearOneFilter(key) {
-                delete currentSearchParams[key];
-
-                
-                if (key === "keyword") keywordInst.option("value", null);
-                else if (key === "dateFrom") dateFromInst.option("value", null);
-                else if (key === "dateTo") dateToInst.option("value", null);
-                else if (key === "severity") severityInst.option("value", null);
-                else {
-                    
-                    var entry = Object.entries(columnParamMap).find(function (e) { return e[1] === key; });
-                    if (entry) {
-                        gridInst.columnOption(entry[0], "filterValue", null);
-                        return; 
-                    }
-                }
-
-                updateBadges(currentSearchParams);
-                gridInst.refresh();
-            }
-
-            function clearAll() {
-                keywordInst.option("value", null);
-                dateFromInst.option("value", null);
-                dateToInst.option("value", null);
-                severityInst.option("value", null);
-                gridInst.clearFilter("row");
-                currentSearchParams = {};
-                updateBadges(currentSearchParams);
-                gridInst.refresh();
-            }
-
-            runSearch();
+    // Keep application actions as DevExtreme widgets so their interaction,
+    // focus states and visual behaviour remain consistent with the rest of the app.
+    @if (canQuickAdd)
+    {
+        <text>
+        $('#quickAddButton').dxButton({
+            text:'Quick capture', icon:'bolt', type:'normal', stylingMode:'outlined',
+            onClick:() => window.location.href = '/CreateSummary/CreateSummary'
         });
-    </script>
+        </text>
+    }
+    @if (canCreate)
+    {
+        <text>
+        $('#fullReportButton').dxButton({
+            text:'Create full report', icon:'plus', type:'default', stylingMode:'contained',
+            onClick:() => window.location.href = '/Home/Create'
+        });
+        </text>
+    }
+
+    const keyword = $('#keywordBox').dxTextBox({ placeholder:'CR, CAS, AR, station, route or location', showClearButton:true, onEnterKey:applyFilters }).dxTextBox('instance');
+    const district = $('#districtBox').dxSelectBox({ placeholder:'All districts', showClearButton:true, searchEnabled:true }).dxSelectBox('instance');
+    const source = $('#sourceBox').dxSelectBox({ items:['Manual','Import'], placeholder:'All sources', showClearButton:true }).dxSelectBox('instance');
+    const severity = $('#severityBox').dxSelectBox({ items:['Fatal','Serious','Minor'], placeholder:'All severities', showClearButton:true }).dxSelectBox('instance');
+    const dateFrom = $('#dateFromBox').dxDateBox({ type:'date', displayFormat:'dd MMM yyyy', placeholder:'Start date', showClearButton:true, max:new Date() }).dxDateBox('instance');
+    const dateTo = $('#dateToBox').dxDateBox({ type:'date', displayFormat:'dd MMM yyyy', placeholder:'End date', showClearButton:true, max:new Date() }).dxDateBox('instance');
+
+    $.getJSON('/api/lookup/districts').done(data => district.option('items', data || []));
+    $('#searchButton').dxButton({ text:'Search', icon:'search', type:'default', onClick:applyFilters });
+    $('#advancedButton').dxButton({
+        text:'More filters', icon:'filter', type:'normal', stylingMode:'outlined',
+        onClick:function(e) {
+            const open = $('#advancedFilters').toggleClass('open').hasClass('open');
+            e.component.option('text', open ? 'Fewer filters' : 'More filters');
+        }
+    });
+    $('#clearButton').dxButton({ text:'Clear filters', icon:'clear', type:'normal', stylingMode:'outlined', onClick:clearFilters });
+
+    const store = new DevExpress.data.CustomStore({
+        key:'RowKey',
+        load:function(options) {
+            const sort = options.sort && options.sort[0];
+            const request = $.extend({}, filters, {
+                page:Math.floor((options.skip || 0) / (options.take || 25)) + 1,
+                pageSize:options.take || 25,
+                sortBy:sort ? sort.selector : 'Date',
+                sortDesc:sort ? !!sort.desc : true
+            });
+            return $.getJSON('/Crashes/Grid', request).then(result => {
+                $('#resultCount').text(result.total + (result.total === 1 ? ' record' : ' records'));
+                result.rows.forEach(row => row.RowKey = row.Source === 'Import' ? 'I-' + row.SummaryId : 'M-' + row.CrashId);
+                return { data:result.rows, totalCount:result.total };
+            }).catch(() => {
+                DevExpress.ui.notify('The records could not be loaded.', 'error', 3500);
+                return { data:[], totalCount:0 };
+            });
+        }
+    });
+
+    const grid = $('#crashHistoryGrid').dxDataGrid({
+        dataSource:{ store }, remoteOperations:{ paging:true, sorting:true }, showBorders:false,
+        hoverStateEnabled:true, columnAutoWidth:false, wordWrapEnabled:true,
+        columns:[
+            { dataField:'CrNo', caption:'CR number', minWidth:145, cellTemplate:(c,o) => c.html(`<span class="record-id">${escapeHtml(o.value || 'Not assigned')}</span><span class="record-sub">${escapeHtml(o.data.CasNo || o.data.ArNo || '')}</span>`) },
+            { dataField:'Date', caption:'Date / time', width:125, dataType:'date', format:'dd MMM yyyy', cellTemplate:(c,o) => c.html(`<span>${formatDate(o.data.Date)}</span><span class="record-sub">${escapeHtml(o.data.Time || 'Time not supplied')}</span>`) },
+            { dataField:'Station', caption:'Station', minWidth:135, cellTemplate:(c,o) => c.html(`<span class="record-place">${escapeHtml(o.value || 'Unknown')}</span><span class="record-sub">${escapeHtml(o.data.District || 'District unknown')}</span>`) },
+            { dataField:'Location', caption:'Location', minWidth:175, cellTemplate:(c,o) => c.html(`<span class="record-place">${escapeHtml(o.data.Route || 'Route missing')}</span><span class="record-sub">${escapeHtml(o.value || 'Location not supplied')}</span>`) },
+            { dataField:'CrashType', caption:'Crash type', minWidth:125 },
+            { dataField:'Severity', caption:'Casualties', minWidth:180, cellTemplate:casualtyCell },
+            { dataField:'Source', caption:'Source', width:92, cellTemplate:(c,o) => c.html(`<span class="record-badge ${o.value === 'Import' ? 'import' : 'manual'}">${escapeHtml(o.value)}</span>`) },
+            { caption:'Actions', width:145, allowSorting:false, cellTemplate:actionCell }
+        ],
+        paging:{ pageSize:25 }, pager:{ visible:true, showPageSizeSelector:true, allowedPageSizes:[10,25,50,100], showInfo:true, infoText:'Page {0} of {1}' },
+        sorting:{ mode:'single' }, noDataText:'No crash records match these filters.'
+    }).dxDataGrid('instance');
+
+    function casualtyCell(container, options) {
+        const d = options.data, badges = [];
+        if (d.Fatalities) badges.push(`<span class="record-badge fatal">${d.Fatalities} fatal</span>`);
+        if (d.Serious) badges.push(`<span class="record-badge serious">${d.Serious} serious</span>`);
+        if (d.Slight) badges.push(`<span class="record-badge minor">${d.Slight} slight</span>`);
+        container.html(`<div class="casualty-stack">${badges.length ? badges.join('') : '<span class="record-badge minor">No injury recorded</span>'}</div>`);
+    }
+
+    function actionCell(container, options) {
+        const d = options.data, imported = d.Source === 'Import', id = imported ? d.SummaryId : d.CrashId;
+        if (!id) return;
+        const wrap = $('<div>').css({display:'flex',gap:'5px',justifyContent:'flex-start'}).appendTo(container);
+        const detailUrl = imported ? `/Crashes/EditSummary/${id}` : `/Crashes/Details/${id}`;
+        $('<div>').appendTo(wrap).dxButton({
+            icon:'eyeopen', hint:imported ? 'Open imported summary' : 'View crash report',
+            stylingMode:'outlined', onClick:() => window.location.href = detailUrl
+        });
+        if (canEdit && !imported) $('<div>').appendTo(wrap).dxButton({
+            icon:'edit', hint:'Edit crash report', stylingMode:'outlined',
+            onClick:() => window.location.href = `/Home/Edit/${id}`
+        });
+        if (canDelete) $('<div>').appendTo(wrap).dxButton({
+            icon:'trash', hint:'Delete record', type:'danger', stylingMode:'outlined',
+            onClick:() => confirmDelete(d, imported, id)
+        });
+    }
+
+    function confirmDelete(data, imported, id) {
+        DevExpress.ui.dialog.confirm(`Delete <b>${escapeHtml(data.CrNo || 'this record')}</b>? This cannot be undone.`, 'Confirm deletion').then(ok => {
+            if (!ok) return;
+            $('#deleteForm').attr('action', imported ? `/Crashes/DeleteSummary/${id}` : `/Home/Delete/${id}`).trigger('submit');
+        });
+    }
+
+    function applyFilters() {
+        filters = {};
+        add('Search', keyword.option('value')); add('District', district.option('value'));
+        add('Source', source.option('value')); add('Severity', severity.option('value'));
+        add('From', iso(dateFrom.option('value'))); add('To', iso(dateTo.option('value')));
+        renderChips(); grid.pageIndex(0); grid.refresh();
+    }
+    function add(key,value) { if (value) filters[key] = value; }
+    function clearFilters() {
+        [keyword,district,source,severity,dateFrom,dateTo].forEach(widget => widget.option('value',null));
+        filters = {}; renderChips(); grid.pageIndex(0); grid.refresh();
+    }
+    function renderChips() {
+        const host = $('#activeFilters').empty();
+        Object.entries(filters).forEach(([key,value]) => $('<span>').addClass('filter-chip').html(`${key}: <strong>${escapeHtml(value)}</strong>`).append($('<button type="button">').text('×').on('click', () => { delete filters[key]; renderChips(); grid.refresh(); })).appendTo(host));
+        host.toggleClass('has-items', Object.keys(filters).length > 0);
+    }
+    function iso(value) { if (!value) return null; const d = new Date(value); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+    function formatDate(value) { if (!value) return 'Date missing'; return new Date(value + 'T00:00:00').toLocaleDateString('en-ZA',{day:'2-digit',month:'short',year:'numeric'}); }
+    function escapeHtml(value) { return $('<div>').text(value == null ? '' : String(value)).html(); }
+});
+</script>
 }

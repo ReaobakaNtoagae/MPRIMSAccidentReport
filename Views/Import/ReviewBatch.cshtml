@@ -1,0 +1,649 @@
+@model CrashReport.ViewModels.Import.ImportBatchReviewViewModel
+@{
+    ViewData["Title"] = "Review import batch";
+}
+
+<style>
+    .review-page { max-width:1280px; margin:0 auto; }
+    .review-head { display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; margin-bottom:1rem; background:linear-gradient(135deg,#fff 55%,#eff8f0); border:1px solid #dbe7dd; border-radius:14px; padding:1.25rem 1.35rem; box-shadow:0 8px 28px rgba(22,50,29,.05); }
+    .review-head h1 { font-size:1.55rem; margin:0 0 .35rem; color:#17251b; }
+    .review-eyebrow { color:var(--g-600); font:600 .66rem 'DM Mono',monospace; text-transform:uppercase; letter-spacing:1.2px; margin-bottom:.4rem; }
+    .review-muted { color:#66736b; font-size:.82rem; }
+    .review-stats { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:.75rem; margin-bottom:1rem; }
+    .review-stat { background:#fff; border:1px solid #dce7df; border-radius:11px; padding:1rem; position:relative; overflow:hidden; box-shadow:0 4px 16px rgba(22,50,29,.035); }
+    .review-stat::before { content:''; position:absolute; inset:0 auto 0 0; width:3px; background:#9bbda0; }
+    .review-stat.warn::before { background:#e4a72b; } .review-stat.danger::before { background:#c84c3d; }
+    .review-stat span { color:#66736b; font-size:.74rem; display:block; }
+    .review-stat strong { font-size:1.45rem; display:block; margin-top:.2rem; }
+    .review-card { background:#fff; border:1px solid #dce7df; border-radius:11px; margin-bottom:.75rem; overflow:hidden; box-shadow:0 4px 16px rgba(22,50,29,.035); transition:border-color .18s,box-shadow .18s; }
+    .review-card:hover { border-color:#bcd2c0; box-shadow:0 7px 22px rgba(22,50,29,.07); }
+    .review-row { display:grid; grid-template-columns:1.1fr .85fr .7fr .7fr 1.3fr auto; gap:.8rem; padding:1rem; align-items:center; }
+    .review-row strong, .review-row span { display:block; }
+    .review-badge { display:inline-block!important; width:max-content; padding:.28rem .6rem; border-radius:999px; font:500 .68rem 'DM Mono',monospace; background:#edf6f0; color:#25633a; }
+    .review-badge.Warning { background:#fff3dc; color:#8a570e; }
+    .review-badge.Error { background:#fde9e6; color:#a0352a; }
+    .review-issues { border-top:1px solid #e5ece7; background:#fafcfb; padding:.2rem 1rem; }
+    .review-issue { padding:.75rem 0; border-bottom:1px solid #e5ece7; display:grid; grid-template-columns:130px 1fr; gap:.75rem; }
+    .review-issue:last-child { border-bottom:0; }
+    .review-value { margin-top:.35rem; font-size:.78rem; color:#5d6b62; }
+    .review-blocking { color:#a0352a; font-weight:600; }
+    .review-actions { display:flex; gap:.4rem; flex-wrap:wrap; margin-top:.65rem; }
+    .review-actions form { display:flex; gap:.35rem; flex-wrap:wrap; }
+    .review-actions input { max-width:260px; font-size:.78rem; }
+    .review-row-actions { grid-column:1/-1; display:flex; justify-content:flex-end; gap:.5rem; border-top:1px solid #e5ece7; padding-top:.75rem; }
+    .review-toolbar { display:flex; gap:.55rem; flex-wrap:wrap; align-items:center; margin:1rem 0; padding:.7rem; background:#fff; border:1px solid #dce7df; border-radius:11px; position:sticky; top:0; z-index:5; box-shadow:0 5px 18px rgba(22,50,29,.06); }
+    .review-toolbar input { min-width:280px; flex:1; border-color:#d8e3da; }
+    .review-filter.active { background:var(--g-600); color:#fff; border-color:var(--g-600); }
+    .review-editor { border-top:1px solid #dce7df; padding:1rem; background:#f5fbfb; }
+    .review-editor summary { cursor:pointer; color:#075e6a; font-weight:600; }
+    .review-form-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.8rem; margin-top:1rem; }
+    .review-form-grid label { color:#52645a; font-size:.75rem; }
+    .review-form-grid .wide { grid-column:span 2; }
+    .review-empty { display:none; padding:2rem; text-align:center; background:#fff; border:1px solid #dce7df; border-radius:9px; }
+    .review-workflow { display:grid; grid-template-columns:repeat(4,1fr); background:#fff; border:1px solid #dce7df; border-radius:11px; margin-bottom:1rem; overflow:hidden; }
+    .review-workflow div { padding:.7rem 1rem; border-right:1px solid #e7eee8; color:#6b776e; font-size:.72rem; }
+    .review-workflow div:last-child { border-right:0; }
+    .review-workflow strong { display:block; color:#2f3d33; font-size:.76rem; margin-bottom:2px; }
+    .review-workflow .active { background:#edf7ef; } .review-workflow .active strong { color:#25633a; }
+    .review-batch-action { display:flex; align-items:center; gap:.75rem; padding:.85rem 1rem; background:#fff; border:1px solid #dce7df; border-radius:11px; margin-bottom:1rem; }
+    .review-batch-action .review-muted { margin-left:auto; }
+    .review-info { border:1px solid #cfe2d2; border-left:3px solid var(--g-600); background:#f2f8f3; color:#3e5143; border-radius:9px; padding:.75rem 1rem; font-size:.8rem; margin-bottom:1rem; }
+    .owner-referral { margin-top:.75rem; padding:.8rem; border:1px solid #cfe2e7; border-left:3px solid #0b7887; border-radius:8px; background:#f3fafb; }
+    .owner-referral strong { color:#075e6a; font-size:.78rem; }
+    .owner-form { display:grid!important; grid-template-columns:1fr 1.4fr auto; gap:.45rem!important; align-items:end; margin-top:.6rem; }
+    .owner-form label { color:#5f7073; font-size:.68rem; display:block; margin-bottom:3px; }
+    .owner-response { margin-top:.5rem; padding:.55rem .65rem; background:#fff; border:1px solid #dce9eb; border-radius:6px; color:#43575a; font-size:.76rem; }
+    @@media(max-width:900px) { .review-stats { grid-template-columns:repeat(2,1fr); } .review-row { grid-template-columns:1fr 1fr; } .review-workflow { grid-template-columns:1fr 1fr; } }
+    @@media(max-width:700px) { .review-form-grid,.owner-form { grid-template-columns:1fr!important; } .review-form-grid .wide { grid-column:auto; } }
+
+    /* Visual refinement only—the review workflow and posted form values stay unchanged. */
+    .review-page { padding-bottom:2rem; }
+    .review-head { position:relative; overflow:hidden; padding:1.35rem 1.45rem; }
+    .review-head::after { content:''; position:absolute; width:150px; height:150px; right:-55px; top:-75px; border-radius:50%; background:rgba(67,160,71,.08); pointer-events:none; }
+    .review-head > * { position:relative; z-index:1; }
+    .review-stats { gap:.65rem; }
+    .review-stat { min-height:84px; display:flex; flex-direction:column; justify-content:center; padding-left:1.1rem; }
+    .review-stat strong { letter-spacing:-.03em; }
+    .review-workflow { box-shadow:0 3px 12px rgba(22,50,29,.025); }
+    .review-workflow .active { box-shadow:inset 0 -2px 0 var(--g-600); }
+    .review-card.import-row { position:relative; }
+    .review-card.import-row[data-blocking="true"] { border-left:3px solid #c84c3d; }
+    .review-card.import-row[data-review="approved"] { border-left:3px solid #62a36b; }
+    .review-row { padding:1.05rem 1.1rem; }
+    .review-row > div { min-width:0; }
+    .review-row strong { overflow:hidden; text-overflow:ellipsis; }
+    .review-issues { background:#fbfcfb; padding:.2rem 1.1rem; }
+    .review-issue { padding:.9rem 0; }
+    .review-issue code { color:#3e5143; background:#eef3ef; border-radius:4px; padding:2px 5px; }
+    .review-row-actions { align-items:center; min-height:40px; }
+    .review-row-actions form { align-items:center; }
+    .review-editor { background:linear-gradient(180deg,#f8fcf9,#f2f8f3); }
+    .review-editor summary { list-style:none; display:flex; align-items:center; gap:.45rem; }
+    .review-editor summary::-webkit-details-marker { display:none; }
+    .review-editor summary::before { content:'✎'; width:25px; height:25px; display:grid; place-items:center; border-radius:7px; background:#e0f0e3; color:#2e7d32; }
+    .review-form-grid input,.review-actions input,.owner-form input { border-color:#d5e0d7; border-radius:7px; }
+    .review-form-grid input:focus,.review-actions input:focus,.owner-form input:focus { border-color:#72a97a; box-shadow:0 0 0 2px rgba(67,160,71,.1); }
+    .owner-referral { background:linear-gradient(135deg,#f4fbfb,#fff); }
+    .review-page .dx-button { border-radius:7px; }
+    .review-page .dx-button-text { font-size:.72rem; font-weight:600; }
+    .review-toolbar .dx-button { height:31px; }
+    @@media(max-width:900px) { .review-head { display:block; } .review-head > div:last-child { margin-top:.8rem; } }
+
+    /* Minimal review workspace: flat surfaces, restrained colour and progressive detail. */
+    .review-page { max-width:1180px; color:#183044; }
+    .review-head { padding:.25rem 0 1.15rem; background:transparent; border:0; border-radius:0; box-shadow:none; align-items:center; }
+    .review-head::after { display:none; }
+    .review-head h1 { color:#0b2742; font-size:1.65rem; letter-spacing:-.025em; }
+    .review-eyebrow { color:#008fa3; }
+    .review-muted { color:#71828c; }
+    .review-workflow { border-color:#d9e6e9; border-radius:9px; box-shadow:none; }
+    .review-workflow div { background:#fff; border-color:#e4edef; }
+    .review-workflow .active { background:#eaf9fb; box-shadow:inset 0 -2px 0 #00a9bd; }
+    .review-workflow .active strong { color:#007f91; }
+    .review-info { border:0; border-left:3px solid #00a9bd; border-radius:4px; background:#edf9fb; color:#3d5964; }
+    .review-stats { grid-template-columns:1.2fr repeat(4,1fr); gap:1px; overflow:hidden; border:1px solid #dce7ea; border-radius:9px; background:#dce7ea; }
+    .review-stat { min-height:72px; padding:.8rem 1rem; border:0; border-radius:0; box-shadow:none; }
+    .review-stat::before { display:none; }
+    .review-stat strong { font-size:1.3rem; color:#102e48; }
+    .review-stat.warn strong { color:#8d650d; } .review-stat.danger strong { color:#a43f47; }
+    .review-batch-action { padding:.7rem 0; background:transparent; border:0; border-radius:0; border-bottom:1px solid #dce7ea; }
+    .review-toolbar { top:.5rem; padding:.55rem; border-color:#d7e4e7; border-radius:9px; box-shadow:0 5px 18px rgba(15,54,71,.05); }
+    .review-toolbar .dx-texteditor { flex:1; min-width:260px; }
+    .review-card { border-color:#dce7ea; border-radius:9px; box-shadow:none; }
+    .review-card:hover { border-color:#b9d7dc; box-shadow:0 5px 18px rgba(15,54,71,.05); }
+    .review-card.import-row[data-blocking="true"] { border-left:3px solid #c84c55; }
+    .review-card.import-row[data-review="approved"] { border-left:3px solid #1aa37a; }
+    .review-row { grid-template-columns:.9fr .8fr .75fr .55fr 1.35fr auto; padding:.85rem 1rem; }
+    .review-row-actions { min-height:32px; padding-top:.6rem; border-color:#e6eef0; }
+    .review-issues { padding:0 1rem; background:#fbfdfe; }
+    .review-issue { grid-template-columns:180px minmax(0,1fr); padding:.75rem 0; }
+    .review-issue > div:first-child strong { overflow-wrap:anywhere; color:#17354d; }
+    .review-findings { border-top:1px solid #e5edef; }
+    .review-findings > summary { display:flex; align-items:center; justify-content:space-between; padding:.65rem 1rem; cursor:pointer; color:#315365; font-size:.78rem; font-weight:600; list-style:none; }
+    .review-findings > summary::-webkit-details-marker { display:none; }
+    .review-findings > summary::after { content:'＋'; color:#008fa3; font-size:1rem; }
+    .review-findings[open] > summary::after { content:'−'; }
+    .review-record-details { border-top:1px solid #e5edef; background:#fff; }
+    .review-record-details > summary { padding:.65rem 1rem; cursor:pointer; list-style:none; color:#177285; font-size:.76rem; font-weight:600; }
+    .review-record-details > summary::-webkit-details-marker { display:none; }
+    .review-record-details > summary::after { content:'＋'; float:right; color:#008fa3; font-size:1rem; }
+    .review-record-details[open] > summary::after { content:'−'; }
+    .review-field-groups { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1rem; padding:.25rem 1rem 1rem; }
+    .review-field-group { min-width:0; }
+    .review-field-group h3 { margin:.35rem 0 .55rem; color:#0b2742; font-size:.76rem; }
+    .review-field-list { display:grid; grid-template-columns:minmax(95px,.8fr) minmax(0,1.2fr); margin:0; font-size:.74rem; }
+    .review-field-list dt,.review-field-list dd { margin:0; padding:.33rem 0; border-bottom:1px solid #edf2f3; }
+    .review-field-list dt { color:#71828c; font-weight:500; }
+    .review-field-list dd { color:#183044; overflow-wrap:anywhere; }
+    .review-editor { padding:.75rem 1rem; background:#f5fafb; }
+    .review-editor summary::before { background:#dff5f7; color:#00899c; }
+    .owner-referral { border:1px solid #d5e7ea; border-left:2px solid #00a3b7; background:#f5fbfc; }
+    .review-page .dx-texteditor { border-color:#cedde1; border-radius:7px; background:#fff; }
+    .review-page .dx-texteditor.dx-state-focused { border-color:#00a9bd; box-shadow:0 0 0 2px rgba(0,169,189,.1); }
+    .review-page .dx-button { border-radius:7px; }
+    .review-page .dx-button-mode-contained.dx-button-default { background:#007f91; }
+    @@media(max-width:900px) { .review-stats { grid-template-columns:repeat(2,1fr); gap:1px; } .review-row { grid-template-columns:1fr 1fr; } }
+    @@media(max-width:900px) { .review-field-groups { grid-template-columns:1fr 1fr; } }
+    @@media(max-width:650px) { .review-issue { grid-template-columns:1fr; } .review-field-groups { grid-template-columns:1fr; } }
+</style>
+
+<div class="review-page">
+<div class="review-head">
+    <div>
+        <div class="review-eyebrow">Import quality review</div>
+        <h1>Review staged workbook</h1>
+        <div class="review-muted">@Model.FileName · @Model.Region · @Model.ReportingPeriod</div>
+        <div class="review-muted">Template: @Model.Template (@Model.TemplateConfidence?.ToString("P0") confidence)</div>
+    </div>
+    <div>
+        <span class="review-badge @Model.Status">@Model.Status</span>
+        <a asp-action="Index" class="btn btn-outline-secondary btn-sm ms-2">Upload another</a>
+    </div>
+</div>
+
+<div class="review-workflow" aria-label="Import workflow">
+    <div><strong>1 · Upload</strong>Workbook received</div>
+    <div><strong>2 · Validate</strong>Cleaning completed</div>
+    <div class="active"><strong>3 · Review</strong>Resolve exceptions</div>
+    <div><strong>4 · Import</strong>Commit approved rows</div>
+</div>
+
+@if (TempData["ImportWarning"] != null)
+{
+    <div class="alert alert-warning">@TempData["ImportWarning"]</div>
+}
+@if (TempData["ImportSuccess"] != null)
+{
+    <div class="alert alert-success">@TempData["ImportSuccess"]</div>
+}
+@if (TempData["ImportError"] != null)
+{
+    <div class="alert alert-danger">@TempData["ImportError"]</div>
+}
+
+<div class="review-info">
+    These rows are still in staging. Reviewing this page does not change the production crash registry.
+</div>
+
+<div class="review-stats">
+    <div class="review-stat"><span>Total rows</span><strong>@Model.TotalRows</strong></div>
+    <div class="review-stat"><span>Valid</span><strong>@Model.ValidRows</strong></div>
+    <div class="review-stat warn"><span>Warnings</span><strong>@Model.WarningRows</strong></div>
+    <div class="review-stat danger"><span>Errors</span><strong>@Model.ErrorRows</strong></div>
+    <div class="review-stat danger"><span>Blocking issues</span><strong>@Model.BlockingIssues</strong></div>
+</div>
+
+@if (Model.BatchIssues.Count > 0)
+{
+    <section class="review-card">
+        <div class="review-row">
+            <div style="grid-column:1/-1">
+                <strong>Workbook summary reconciliation</strong>
+                <span class="review-muted">Reported summary values compared with totals recalculated from the staged accident rows.</span>
+            </div>
+        </div>
+        <div class="review-issues">
+            @foreach (var issue in Model.BatchIssues)
+            {
+                <div class="review-issue">
+                    <div><strong>@issue.Field</strong><span class="review-badge @issue.Severity">@issue.Severity</span></div>
+                    <div>
+                        <span>@issue.Description</span>
+                        <div class="review-value">Reported: <code>@issue.OriginalValue</code> · Recalculated: <code>@issue.SuggestedValue</code></div>
+                        @if (issue.ResolutionStatus == "Open")
+                        {
+                            <div class="review-actions">
+                                <form asp-action="ResolveIssue" asp-route-issueId="@issue.IssueId" method="post">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="batchId" value="@Model.ImportBatchId" />
+                                    <input type="hidden" name="decision" value="ApplySuggestion" />
+                                    <button type="submit" class="btn btn-sm btn-success">Use recalculated (@issue.SuggestedValue)</button>
+                                </form>
+                                <form asp-action="ResolveIssue" asp-route-issueId="@issue.IssueId" method="post">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="batchId" value="@Model.ImportBatchId" />
+                                    <input type="hidden" name="decision" value="Accept" />
+                                    <button type="submit" class="btn btn-sm btn-outline-secondary">Keep reported (@issue.OriginalValue)</button>
+                                </form>
+                            </div>
+                            <div class="owner-referral">
+                                <strong>Need clarification before deciding?</strong>
+                                <form asp-action="ReferIssue" method="post" class="owner-form">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="issueId" value="@issue.IssueId" />
+                                    <input type="hidden" name="batchId" value="@Model.ImportBatchId" />
+                                    <div><label>Data owner / unit</label><input class="form-control form-control-sm" name="referredTo" required maxlength="200" placeholder="Station, district or person" /></div>
+                                    <div><label>Question requiring clarification</label><input class="form-control form-control-sm" name="question" required maxlength="2000" placeholder="What must the data owner confirm?" /></div>
+                                    <div><label>Reply due</label><input class="form-control form-control-sm" type="date" name="responseDueAt" /></div>
+                                    <button class="btn btn-sm btn-outline-info" type="submit">Refer finding</button>
+                                </form>
+                            </div>
+                        }
+                        else if (issue.ResolutionStatus == "PendingDataOwner")
+                        {
+                            <div class="owner-referral">
+                                <strong>Awaiting data owner · @issue.ReferredTo · Import allowed</strong>
+                                <div class="review-value">Question: @issue.ReferralQuestion</div>
+                                @if (issue.ResponseDueAt.HasValue) { <div class="review-value">Reply due: @issue.ResponseDueAt.Value.ToString("dd MMM yyyy")</div> }
+                                <form asp-action="RecordDataOwnerResponse" method="post" class="owner-form">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="issueId" value="@issue.IssueId" />
+                                    <input type="hidden" name="batchId" value="@Model.ImportBatchId" />
+                                    <div style="grid-column:span 2"><label>Data-owner response</label><input class="form-control form-control-sm" name="response" required maxlength="2000" placeholder="Record the answer exactly and add its source if useful" /></div>
+                                    <button class="btn btn-sm btn-info" type="submit">Record response</button>
+                                </form>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="review-value">
+                                Decision: <strong>@(issue.ResolutionStatus == "Corrected" ? $"Recalculated value {issue.SuggestedValue}" : $"Reported value {issue.OriginalValue}")</strong>
+                                @if (!string.IsNullOrWhiteSpace(issue.ResolutionNotes))
+                                {
+                                    <span> · @issue.ResolutionNotes</span>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    </section>
+}
+
+<form asp-action="ApproveBatch" asp-route-batchId="@Model.ImportBatchId" method="post" class="review-batch-action">
+    @Html.AntiForgeryToken()
+    <button type="submit" class="btn btn-success"
+            disabled="@(Model.CanApproveBatch ? null : "disabled")">
+        Mark batch ready for import
+    </button>
+    <span class="review-muted ms-2">Open findings must be decided or referred first.</span>
+</form>
+
+@if (Model.Status == "ReadyForImport")
+{
+    <form asp-action="CommitBatch" asp-route-batchId="@Model.ImportBatchId" method="post" class="mb-3"
+          onsubmit="return confirm('Import all approved rows into the production crash registry? This action is audited.');">
+        @Html.AntiForgeryToken()
+        <button type="submit" class="btn btn-primary">Import approved rows into registry</button>
+        <span class="review-muted ms-2">Rejected rows will remain in staging and will not be imported.</span>
+    </form>
+}
+else if (Model.Status == "Completed")
+{
+    <div class="alert alert-success">This batch has already been imported into the production registry.</div>
+}
+else if (Model.Status == "PartiallyCompleted")
+{
+    <div class="alert alert-info">
+        Approved rows were imported. Referred rows remain in staging and can be reviewed after the data owner responds.
+    </div>
+}
+
+@if (Model.Rows.Count == 0)
+{
+    <div class="alert alert-secondary">No accident rows were staged from this workbook.</div>
+}
+else
+{
+    <div class="review-toolbar">
+        <input id="rowSearch" class="form-control form-control-sm" type="search"
+               placeholder="Search station, route, location or source row" />
+        <button type="button" class="btn btn-sm btn-outline-secondary review-filter active" data-filter="review">Needs review</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary review-filter" data-filter="blocking">Blocking</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary review-filter" data-filter="approved">Approved</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary review-filter" data-filter="all">All rows</button>
+    </div>
+    <div id="noMatchingRows" class="review-empty">No staged rows match this filter.</div>
+    @foreach (var row in Model.Rows)
+    {
+        <article class="review-card import-row"
+                 data-review="@row.ReviewStatus.ToLowerInvariant()"
+                 data-blocking="@row.HasBlockingIssue.ToString().ToLowerInvariant()"
+                 data-search="@($"{row.Source} {row.Station} {row.Route} {row.Location} {row.ArNumber} {row.CasNumber} {row.CrashType} {row.Vehicles}".ToLowerInvariant())">
+            <div class="review-row">
+                <div><span class="review-muted">Source</span><strong>@row.Source</strong></div>
+                <div><span class="review-muted">Station</span><strong>@row.Station</strong></div>
+                <div><span class="review-muted">Date and time</span><strong>@row.Date</strong><span>@row.Time</span></div>
+                <div><span class="review-muted">Route</span><strong>@row.Route</strong></div>
+                <div><span class="review-muted">Location / crash type</span><strong>@row.Location</strong><span>@row.CrashType</span></div>
+                <div><span class="review-badge @row.ValidationStatus">@row.ValidationStatus</span></div>
+                <div class="review-row-actions">
+                    <span class="review-badge">Review: @row.ReviewStatus</span>
+                    @if (row.ReviewStatus == "Approved")
+                    {
+                        <span class="review-muted">
+                            @(row.Issues.Count == 0 ? "Automatically approved — no quality issues" : "Approved after issue review")
+                        </span>
+                    }
+                    else if (row.ReviewStatus != "Rejected")
+                    {
+                        @if (row.ReviewStatus == "Pending")
+                        {
+                            @* Pending is retained for older staged batches. New rows are
+                               approved automatically once their final issue is resolved. *@
+                            <form asp-action="ApproveRow" asp-route-stagingSummaryId="@row.StagingSummaryId" method="post">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="batchId" value="@Model.ImportBatchId" />
+                                <button type="submit" class="btn btn-sm btn-outline-success">Approve row</button>
+                            </form>
+                        }
+                        <form asp-action="RejectRow" asp-route-stagingSummaryId="@row.StagingSummaryId" method="post">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="batchId" value="@Model.ImportBatchId" />
+                            <input type="text" name="notes" class="form-control form-control-sm"
+                                   placeholder="Reason for rejection" required maxlength="1000" />
+                            <button type="submit" class="btn btn-sm btn-outline-danger">Reject row</button>
+                        </form>
+                    }
+                </div>
+            </div>
+
+            <details class="review-record-details">
+                <summary>View all captured fields</summary>
+                <div class="review-field-groups">
+                    <section class="review-field-group">
+                        <h3>Incident details</h3>
+                        <dl class="review-field-list">
+                            <dt>Source</dt><dd>@row.Source</dd>
+                            <dt>Station</dt><dd>@row.Station</dd>
+                            <dt>AR number</dt><dd>@(string.IsNullOrWhiteSpace(row.ArNumber) ? "—" : row.ArNumber)</dd>
+                            <dt>CAS number</dt><dd>@(string.IsNullOrWhiteSpace(row.CasNumber) ? "—" : row.CasNumber)</dd>
+                            <dt>Date</dt><dd>@row.Date</dd>
+                            <dt>Source day</dt><dd>@row.OriginalDay</dd>
+                            <dt>Calculated day</dt><dd>@row.CalculatedDay</dd>
+                            <dt>Time</dt><dd>@row.Time</dd>
+                            <dt>Route</dt><dd>@row.Route</dd>
+                            <dt>Location</dt><dd>@row.Location</dd>
+                            <dt>Crash type</dt><dd>@row.CrashType</dd>
+                            <dt>Vehicles</dt><dd>@row.Vehicles</dd>
+                            <dt>Vehicle count</dt><dd>@(row.VehicleCount?.ToString() ?? "—")</dd>
+                        </dl>
+                    </section>
+                    <section class="review-field-group">
+                        <h3>Fatalities</h3>
+                        <dl class="review-field-list">
+                            <dt>Drivers</dt><dd>@(row.FatalDrivers?.ToString() ?? "—")</dd>
+                            <dt>Passengers</dt><dd>@(row.FatalPassengers?.ToString() ?? "—")</dd>
+                            <dt>Pedestrians</dt><dd>@(row.FatalPedestrians?.ToString() ?? "—")</dd>
+                            <dt>Cyclists</dt><dd>@(row.FatalCyclists?.ToString() ?? "—")</dd>
+                            <dt>Male</dt><dd>@(row.FatalMale?.ToString() ?? "—")</dd>
+                            <dt>Female</dt><dd>@(row.FatalFemale?.ToString() ?? "—")</dd>
+                        </dl>
+                        <h3 class="mt-3">Serious injuries</h3>
+                        <dl class="review-field-list">
+                            <dt>Drivers</dt><dd>@(row.SeriousDrivers?.ToString() ?? "—")</dd>
+                            <dt>Passengers</dt><dd>@(row.SeriousPassengers?.ToString() ?? "—")</dd>
+                            <dt>Pedestrians</dt><dd>@(row.SeriousPedestrians?.ToString() ?? "—")</dd>
+                            <dt>Cyclists</dt><dd>@(row.SeriousCyclists?.ToString() ?? "—")</dd>
+                        </dl>
+                    </section>
+                    <section class="review-field-group">
+                        <h3>Slight injuries</h3>
+                        <dl class="review-field-list">
+                            <dt>Drivers</dt><dd>@(row.SlightDrivers?.ToString() ?? "—")</dd>
+                            <dt>Passengers</dt><dd>@(row.SlightPassengers?.ToString() ?? "—")</dd>
+                            <dt>Pedestrians</dt><dd>@(row.SlightPedestrians?.ToString() ?? "—")</dd>
+                            <dt>Cyclists</dt><dd>@(row.SlightCyclists?.ToString() ?? "—")</dd>
+                        </dl>
+                        <h3 class="mt-3">Workflow state</h3>
+                        <dl class="review-field-list">
+                            <dt>Validation</dt><dd>@row.ValidationStatus</dd>
+                            <dt>Review</dt><dd>@row.ReviewStatus</dd>
+                            <dt>Duplicate</dt><dd>@row.DuplicateStatus</dd>
+                            <dt>Open findings</dt><dd>@row.OpenIssueCount</dd>
+                        </dl>
+                    </section>
+                </div>
+            </details>
+
+            @if (row.Issues.Count > 0)
+            {
+                <details class="review-findings" data-open="@row.HasBlockingIssue.ToString().ToLowerInvariant()">
+                    <summary>@row.OpenIssueCount active finding@(row.OpenIssueCount == 1 ? "" : "s")</summary>
+                <div class="review-issues">
+                    @foreach (var issue in row.Issues)
+                    {
+                        <div class="review-issue">
+                            <div>
+                                <strong>@issue.Field</strong>
+                                <span class="review-badge @issue.Severity">@issue.Severity</span>
+                            </div>
+                            <div>
+                                <span class="@(issue.IsBlocking ? "review-blocking" : "")">@issue.Description</span>
+                                @if (!string.IsNullOrWhiteSpace(issue.OriginalValue))
+                                {
+                                    <div class="review-value">Original: <code>@issue.OriginalValue</code></div>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(issue.SuggestedValue))
+                                {
+                                    <div class="review-value">Suggested: <code>@issue.SuggestedValue</code></div>
+                                }
+                                <div class="review-value">Status: @issue.ResolutionStatus · Code: @issue.Code</div>
+                                @if (issue.ResolutionStatus == "Open")
+                                {
+                                    <div class="review-actions">
+                                        @if (!string.IsNullOrWhiteSpace(issue.SuggestedValue))
+                                        {
+                                            <form asp-action="ResolveIssue" asp-route-issueId="@issue.IssueId" method="post">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="batchId" value="@Model.ImportBatchId" />
+                                                <input type="hidden" name="decision" value="ApplySuggestion" />
+                                                <button type="submit" class="btn btn-sm btn-success">Apply suggestion</button>
+                                            </form>
+                                        }
+                                        @if (!issue.IsBlocking)
+                                        {
+                                            <form asp-action="ResolveIssue" asp-route-issueId="@issue.IssueId" method="post">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="batchId" value="@Model.ImportBatchId" />
+                                                <input type="hidden" name="decision" value="Accept" />
+                                                <input type="text" name="notes" class="form-control form-control-sm"
+                                                       placeholder="Optional review note" maxlength="1000" />
+                                                <button type="submit" class="btn btn-sm btn-outline-success">Accept value</button>
+                                            </form>
+                                            <form asp-action="ResolveIssue" asp-route-issueId="@issue.IssueId" method="post">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="batchId" value="@Model.ImportBatchId" />
+                                                <input type="hidden" name="decision" value="Dismiss" />
+                                                <input type="text" name="notes" class="form-control form-control-sm"
+                                                       placeholder="Why is this not an issue?" required maxlength="1000" />
+                                                <button type="submit" class="btn btn-sm btn-outline-secondary">Dismiss finding</button>
+                                            </form>
+                                        }
+                                    </div>
+                                    <div class="owner-referral">
+                                        <strong>Need clarification before deciding?</strong>
+                                        <form asp-action="ReferIssue" method="post" class="owner-form">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="issueId" value="@issue.IssueId" />
+                                            <input type="hidden" name="batchId" value="@Model.ImportBatchId" />
+                                            <div><label>Data owner / unit</label><input class="form-control form-control-sm" name="referredTo" required maxlength="200" placeholder="Station, district or person" /></div>
+                                            <div><label>Question requiring clarification</label><input class="form-control form-control-sm" name="question" required maxlength="2000" placeholder="What must they confirm?" /></div>
+                                            <div><label>Reply due</label><input class="form-control form-control-sm" type="date" name="responseDueAt" /></div>
+                                            <button class="btn btn-sm btn-outline-info" type="submit">Refer finding</button>
+                                        </form>
+                                    </div>
+                                }
+                                else if (issue.ResolutionStatus == "PendingDataOwner")
+                                {
+                                    <div class="owner-referral">
+                                        <strong>Awaiting data owner · @issue.ReferredTo · Import allowed</strong>
+                                        <div class="review-value">Question: @issue.ReferralQuestion</div>
+                                        @if (issue.ResponseDueAt.HasValue) { <div class="review-value">Reply due: @issue.ResponseDueAt.Value.ToString("dd MMM yyyy")</div> }
+                                        <form asp-action="RecordDataOwnerResponse" method="post" class="owner-form">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="issueId" value="@issue.IssueId" />
+                                            <input type="hidden" name="batchId" value="@Model.ImportBatchId" />
+                                            <div style="grid-column:span 2"><label>Data-owner response</label><input class="form-control form-control-sm" name="response" required maxlength="2000" placeholder="Record the answer exactly and add its source if useful" /></div>
+                                            <button class="btn btn-sm btn-info" type="submit">Record response</button>
+                                        </form>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+                </details>
+            }
+
+            @if (row.ReviewStatus != "Rejected" && Model.Status != "Completed")
+            {
+                <details class="review-editor">
+                    <summary>Edit cleaned row</summary>
+                    <div class="review-muted mt-1">The original Excel values stay unchanged for audit. Saving revalidates this staged row.</div>
+                    <form asp-action="UpdateRow" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="BatchId" value="@Model.ImportBatchId" />
+                        <input type="hidden" name="StagingSummaryId" value="@row.StagingSummaryId" />
+                        <div class="review-form-grid">
+                            <div><label>Station *</label><input class="form-control form-control-sm" name="Station" value="@row.Station" required maxlength="50" /></div>
+                            <div><label>AR number</label><input class="form-control form-control-sm" name="ArNumber" value="@row.ArNumber" maxlength="50" /></div>
+                            <div><label>CAS number</label><input class="form-control form-control-sm" name="CasNumber" value="@row.CasNumber" maxlength="50" /></div>
+                            <div><label>Crash date *</label><input class="form-control form-control-sm" name="CrashDate" value="@(row.Date == "Missing" ? "" : row.Date)" placeholder="yyyy-MM-dd" required /></div>
+                            <div><label>Crash time *</label><input class="form-control form-control-sm" name="CrashTime" value="@(row.Time == "Missing" ? "" : row.Time)" placeholder="HH:mm" required /></div>
+                            <div><label>Route</label><input class="form-control form-control-sm" name="Route" value="@(row.Route == "Missing" ? "" : row.Route)" maxlength="20" /></div>
+                            <div class="wide"><label>Location *</label><input class="form-control form-control-sm" name="Location" value="@(row.Location == "Missing" ? "" : row.Location)" required maxlength="150" /></div>
+                            <div><label>Crash type</label><input class="form-control form-control-sm" name="CrashType" value="@(row.CrashType == "Missing" ? "" : row.CrashType)" maxlength="30" /></div>
+                            <div class="wide"><label>Review note</label><input class="form-control form-control-sm" name="Notes" maxlength="1000" placeholder="Briefly explain the correction" /></div>
+                            <div class="d-flex align-items-end"><button class="btn btn-sm btn-primary" type="submit">Save and revalidate</button></div>
+                        </div>
+                    </form>
+                </details>
+            }
+        </article>
+    }
+}
+</div>
+
+@section Scripts {
+<script>
+    // Turn an MVC input into a DevExtreme editor while retaining the original named
+    // element as the posted value. This lets the controller contracts stay unchanged.
+    function enhanceReviewEditor(input) {
+        if (input.type === 'hidden' || input.dataset.dxEnhanced === 'true') return;
+
+        const host = document.createElement('div');
+        input.before(host);
+        input.dataset.dxEnhanced = 'true';
+        const wasRequired = input.required;
+        input.required = false;
+        input.style.display = 'none';
+
+        const common = {
+            value: input.value,
+            placeholder: input.placeholder,
+            width: '100%',
+            valueChangeEvent: 'input change',
+            onValueChanged: event => {
+                input.value = event.value ?? '';
+                // Search filtering already listens to this native event.
+                input.dispatchEvent(new Event('input'));
+            }
+        };
+
+        if (input.type === 'date') {
+            $(host).dxDateBox({
+                ...common,
+                type: 'date',
+                displayFormat: 'dd MMM yyyy',
+                value: input.value ? new Date(`${input.value}T00:00:00`) : null,
+                onValueChanged: event => {
+                    const date = event.value;
+                    input.value = date instanceof Date && !Number.isNaN(date.valueOf())
+                        ? `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+                        : '';
+                }
+            });
+        } else {
+            $(host).dxTextBox({ ...common, mode: input.type === 'search' ? 'search' : 'text' });
+        }
+
+        if (wasRequired) {
+            $(host).dxValidator({
+                validationGroup: input.form,
+                validationRules: [{ type: 'required', message: 'This field is required.' }]
+            });
+        }
+    }
+
+    document.querySelectorAll('.review-page input').forEach(enhanceReviewEditor);
+
+    // Blocking findings open immediately; routine warnings stay collapsed until needed.
+    document.querySelectorAll('.review-findings[data-open="true"]').forEach(section => section.open = true);
+
+    // DevExtreme enhances the existing buttons without changing MVC form submission.
+    document.querySelectorAll('.review-page button, .review-page a.btn').forEach(button => {
+        const isDanger = button.classList.contains('btn-danger') || button.classList.contains('btn-outline-danger');
+        const isPrimary = button.classList.contains('btn-primary') || button.classList.contains('btn-success');
+        const outlined = [...button.classList].some(name => name.startsWith('btn-outline-'));
+        $(button).dxButton({
+            text: button.textContent.trim(),
+            type: isDanger ? 'danger' : (isPrimary ? 'default' : 'normal'),
+            stylingMode: outlined ? 'outlined' : 'contained',
+            disabled: button.disabled,
+            useSubmitBehavior: button.type === 'submit'
+        });
+    });
+
+    // DevExtreme's submit behaviour validates editors that have a dxValidator.
+    // Do not intercept every form here: the batch-ready and registry-import forms
+    // contain only hidden values and must be allowed to submit immediately.
+
+    // Filtering happens in the browser; it never changes staging data.
+    (() => {
+        const rows = [...document.querySelectorAll('.import-row')];
+        const search = document.getElementById('rowSearch');
+        const buttons = [...document.querySelectorAll('.review-filter')];
+        const empty = document.getElementById('noMatchingRows');
+        if (!search) return;
+        let filter = 'review';
+
+        function refresh() {
+            const term = search.value.trim().toLowerCase();
+            let visible = 0;
+            rows.forEach(row => {
+                const stateMatches = filter === 'all' ||
+                    (filter === 'review' && row.dataset.review !== 'approved' && row.dataset.review !== 'rejected') ||
+                    (filter === 'blocking' && row.dataset.blocking === 'true') ||
+                    (filter === 'approved' && row.dataset.review === 'approved');
+                const show = stateMatches && row.dataset.search.includes(term);
+                row.hidden = !show;
+                if (show) visible++;
+            });
+            empty.style.display = visible ? 'none' : 'block';
+        }
+
+        search.addEventListener('input', refresh);
+        buttons.forEach(button => button.addEventListener('click', () => {
+            filter = button.dataset.filter;
+            buttons.forEach(item => {
+                item.classList.toggle('active', item === button);
+                $(item).dxButton('instance').option('stylingMode', item === button ? 'contained' : 'outlined');
+            });
+            refresh();
+        }));
+        refresh();
+    })();
+</script>
+}

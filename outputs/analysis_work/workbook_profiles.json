@@ -1,0 +1,3455 @@
+{
+  "profiles": {
+    "original": {
+      "path": "C:\\Users\\ReaobakaNtoagae\\OneDrive - atnetgroup.com\\EHL MARCH 2026.xlsx",
+      "sheet_names": [
+        "MARCH 2026 CAS"
+      ],
+      "defined_names": [],
+      "calculation": {
+        "mode": null,
+        "full_calc_on_load": true,
+        "force_full_calc": null
+      },
+      "sheets": [
+        {
+          "title": "MARCH 2026 CAS",
+          "visibility": "visible",
+          "dimensions": "A1:AM525",
+          "max_row": 525,
+          "max_column": 39,
+          "nonempty_cells": 2485,
+          "nonempty_rows": 249,
+          "formula_count": 22,
+          "formulas_sample": [
+            [
+              "J237",
+              "=SUM(J7:J236)",
+              9
+            ],
+            [
+              "K237",
+              "=SUM(K7:K236)",
+              4
+            ],
+            [
+              "L237",
+              "=SUM(L7:L236)",
+              13
+            ],
+            [
+              "M237",
+              "=SUM(M7:M236)",
+              0
+            ],
+            [
+              "N237",
+              "=SUM(N7:N236)",
+              14
+            ],
+            [
+              "O237",
+              "=SUM(O7:O236)",
+              11
+            ],
+            [
+              "P237",
+              "=SUM(P7:P236)",
+              37
+            ],
+            [
+              "Q237",
+              "=SUM(Q7:Q236)",
+              55
+            ],
+            [
+              "R237",
+              "=SUM(R7:R236)",
+              25
+            ],
+            [
+              "S237",
+              "=SUM(S7:S236)",
+              0
+            ],
+            [
+              "T237",
+              "=SUM(T7:T236)",
+              96
+            ],
+            [
+              "U237",
+              "=SUM(U7:U236)",
+              100
+            ],
+            [
+              "V237",
+              "=SUM(V7:V236)",
+              42
+            ],
+            [
+              "W237",
+              "=SUM(W7:W236)",
+              0
+            ],
+            [
+              "K238",
+              "=J237+K237+L237+M237",
+              26
+            ]
+          ],
+          "merged_ranges": [
+            "A1:D1",
+            "B244:G244",
+            "R1:X1",
+            "A254:A256",
+            "F1:K1",
+            "H238:I238",
+            "N238:O238",
+            "N5:O5",
+            "A4:F4",
+            "A3:B3",
+            "B252:D252"
+          ],
+          "style_ids": {
+            "533": 1,
+            "534": 1,
+            "535": 1,
+            "536": 1,
+            "537": 1,
+            "20": 1,
+            "28": 2,
+            "29": 1,
+            "40": 2,
+            "33": 1,
+            "35": 1,
+            "36": 7,
+            "37": 2,
+            "38": 2,
+            "39": 3,
+            "41": 1,
+            "42": 1,
+            "43": 3,
+            "44": 1,
+            "45": 3,
+            "46": 122,
+            "47": 99,
+            "48": 12,
+            "49": 72,
+            "50": 93,
+            "51": 93,
+            "52": 75,
+            "53": 99,
+            "54": 82,
+            "56": 51,
+            "59": 3,
+            "61": 87,
+            "65": 37,
+            "66": 26,
+            "67": 25,
+            "58": 7,
+            "69": 62,
+            "71": 60,
+            "72": 6,
+            "73": 2,
+            "74": 3,
+            "77": 19,
+            "81": 17,
+            "82": 11,
+            "83": 6,
+            "84": 15,
+            "85": 8,
+            "86": 6,
+            "87": 12,
+            "89": 5,
+            "93": 5,
+            "95": 44,
+            "96": 2,
+            "97": 22,
+            "98": 24,
+            "99": 3,
+            "76": 28,
+            "78": 2,
+            "104": 2,
+            "106": 6,
+            "107": 6,
+            "108": 5,
+            "109": 10,
+            "110": 1,
+            "111": 4,
+            "112": 4,
+            "113": 24,
+            "115": 5,
+            "117": 1,
+            "120": 10,
+            "121": 11,
+            "122": 3,
+            "92": 2,
+            "124": 1,
+            "125": 1,
+            "126": 10,
+            "127": 32,
+            "129": 12,
+            "130": 4,
+            "131": 1,
+            "132": 1,
+            "133": 5,
+            "135": 1,
+            "136": 1,
+            "138": 10,
+            "139": 12,
+            "140": 12,
+            "141": 14,
+            "142": 10,
+            "143": 1,
+            "144": 13,
+            "146": 1,
+            "147": 1,
+            "148": 3,
+            "150": 14,
+            "151": 16,
+            "152": 25,
+            "100": 3,
+            "153": 32,
+            "55": 1,
+            "155": 1,
+            "156": 1,
+            "157": 19,
+            "158": 8,
+            "159": 2,
+            "160": 3,
+            "161": 17,
+            "162": 13,
+            "165": 1,
+            "166": 16,
+            "168": 8,
+            "171": 16,
+            "172": 2,
+            "173": 1,
+            "163": 10,
+            "178": 1,
+            "179": 6,
+            "180": 11,
+            "182": 2,
+            "183": 3,
+            "185": 16,
+            "186": 5,
+            "187": 2,
+            "189": 6,
+            "191": 1,
+            "193": 3,
+            "194": 4,
+            "195": 2,
+            "196": 5,
+            "197": 1,
+            "198": 2,
+            "202": 2,
+            "200": 1,
+            "204": 2,
+            "205": 3,
+            "207": 7,
+            "208": 3,
+            "209": 2,
+            "210": 5,
+            "211": 2,
+            "212": 25,
+            "213": 12,
+            "214": 8,
+            "215": 33,
+            "216": 6,
+            "217": 8,
+            "218": 9,
+            "222": 4,
+            "60": 41,
+            "224": 2,
+            "225": 2,
+            "226": 1,
+            "227": 1,
+            "228": 1,
+            "229": 2,
+            "230": 1,
+            "231": 8,
+            "232": 1,
+            "233": 3,
+            "238": 3,
+            "235": 3,
+            "239": 1,
+            "240": 3,
+            "241": 3,
+            "242": 1,
+            "245": 1,
+            "244": 1,
+            "248": 13,
+            "249": 7,
+            "250": 6,
+            "251": 2,
+            "252": 2,
+            "253": 2,
+            "119": 3,
+            "259": 6,
+            "260": 4,
+            "261": 1,
+            "262": 1,
+            "266": 7,
+            "267": 7,
+            "268": 3,
+            "276": 3,
+            "277": 6,
+            "278": 5,
+            "279": 6,
+            "280": 6,
+            "281": 7,
+            "282": 6,
+            "284": 7,
+            "285": 2,
+            "286": 12,
+            "167": 10,
+            "287": 1,
+            "288": 7,
+            "289": 1,
+            "538": 2,
+            "291": 2,
+            "292": 1,
+            "293": 1,
+            "294": 2,
+            "295": 2,
+            "296": 6,
+            "302": 2,
+            "298": 2,
+            "303": 6,
+            "304": 4,
+            "102": 2,
+            "305": 2,
+            "306": 1,
+            "307": 1,
+            "308": 1,
+            "309": 1,
+            "313": 2,
+            "314": 3,
+            "315": 3,
+            "91": 1,
+            "316": 3,
+            "317": 1,
+            "319": 2,
+            "320": 1,
+            "322": 1,
+            "323": 1,
+            "325": 1,
+            "326": 1,
+            "327": 1,
+            "328": 1,
+            "329": 1,
+            "331": 1,
+            "336": 1,
+            "337": 1,
+            "339": 2,
+            "340": 1,
+            "344": 2,
+            "345": 2,
+            "349": 1,
+            "350": 1,
+            "352": 2,
+            "353": 2,
+            "237": 4,
+            "354": 1,
+            "355": 1,
+            "356": 1,
+            "101": 1,
+            "357": 1,
+            "358": 2,
+            "359": 1,
+            "347": 1,
+            "360": 4,
+            "361": 2,
+            "362": 2,
+            "363": 2,
+            "364": 2,
+            "365": 2,
+            "366": 2,
+            "367": 1,
+            "368": 1,
+            "370": 1,
+            "374": 5,
+            "375": 1,
+            "376": 1,
+            "377": 1,
+            "378": 1,
+            "379": 3,
+            "380": 1,
+            "381": 1,
+            "382": 1,
+            "383": 1,
+            "384": 1,
+            "385": 1,
+            "390": 1,
+            "391": 2,
+            "392": 3,
+            "395": 1,
+            "396": 1,
+            "397": 1,
+            "398": 1,
+            "399": 1,
+            "410": 4,
+            "411": 2,
+            "412": 2,
+            "413": 2,
+            "414": 2,
+            "416": 1,
+            "419": 1,
+            "420": 1,
+            "421": 1,
+            "422": 1,
+            "423": 1,
+            "424": 1,
+            "425": 1,
+            "429": 1,
+            "430": 1,
+            "433": 1,
+            "434": 1,
+            "435": 1,
+            "439": 1,
+            "440": 1,
+            "441": 1,
+            "442": 2,
+            "443": 1,
+            "460": 1,
+            "461": 6,
+            "462": 3,
+            "463": 1,
+            "464": 1,
+            "465": 1,
+            "466": 2,
+            "468": 1,
+            "539": 1,
+            "474": 3,
+            "540": 1,
+            "479": 3,
+            "483": 2,
+            "484": 1,
+            "485": 2,
+            "486": 1,
+            "487": 1,
+            "488": 3,
+            "489": 1,
+            "495": 1,
+            "541": 1,
+            "503": 1,
+            "505": 1,
+            "506": 1,
+            "509": 2,
+            "510": 2,
+            "511": 2,
+            "512": 1,
+            "513": 1,
+            "514": 1,
+            "515": 1,
+            "516": 1,
+            "517": 1,
+            "519": 1,
+            "542": 1,
+            "543": 1,
+            "524": 4,
+            "525": 1,
+            "527": 2
+          },
+          "freeze_panes": null,
+          "auto_filter": null,
+          "tables": [],
+          "data_validations": 0,
+          "header_candidate_row": 6,
+          "header_candidate": [
+            "SAPS",
+            "AR NO",
+            "CAS",
+            "DATE",
+            "DAY",
+            "TIME",
+            "ROUTE",
+            "LOCATION",
+            "TYPE",
+            "D",
+            "P",
+            "PD",
+            "C",
+            "M",
+            "F",
+            "D",
+            "P",
+            "PD",
+            "C",
+            "D",
+            "P",
+            "PD",
+            "C",
+            "INVOLVED",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "sample_nonempty": [
+            [
+              "A1",
+              "CONSOLIDATED"
+            ],
+            [
+              "F1",
+              "ACCIDENT REPORT: 01 - 31 MARCH 2026"
+            ],
+            [
+              "R1",
+              "REPORTED ACCIDENTS"
+            ],
+            [
+              "A3",
+              "EHLANZENI"
+            ],
+            [
+              "A4",
+              "CONSOLIDATED REPORT"
+            ],
+            [
+              "J4",
+              "NATURE OF INJURIES"
+            ],
+            [
+              "I5",
+              "ACCIDENT"
+            ],
+            [
+              "J5",
+              "FATAL"
+            ],
+            [
+              "N5",
+              "GENDER"
+            ],
+            [
+              "P5",
+              "SERIOUS"
+            ],
+            [
+              "T5",
+              "SLIGHT"
+            ],
+            [
+              "X5",
+              "VEHICLES"
+            ],
+            [
+              "A6",
+              "SAPS"
+            ],
+            [
+              "B6",
+              "AR NO"
+            ],
+            [
+              "C6",
+              "CAS"
+            ],
+            [
+              "D6",
+              "DATE"
+            ],
+            [
+              "E6",
+              "DAY"
+            ],
+            [
+              "F6",
+              "TIME"
+            ],
+            [
+              "G6",
+              "ROUTE"
+            ],
+            [
+              "H6",
+              "LOCATION"
+            ],
+            [
+              "I6",
+              "TYPE"
+            ],
+            [
+              "J6",
+              "D"
+            ],
+            [
+              "K6",
+              "P"
+            ],
+            [
+              "L6",
+              "PD"
+            ],
+            [
+              "M6",
+              "C"
+            ],
+            [
+              "N6",
+              "M"
+            ],
+            [
+              "O6",
+              "F"
+            ],
+            [
+              "P6",
+              "D"
+            ],
+            [
+              "Q6",
+              "P"
+            ],
+            [
+              "R6",
+              "PD"
+            ],
+            [
+              "S6",
+              "C"
+            ],
+            [
+              "T6",
+              "D"
+            ],
+            [
+              "U6",
+              "P"
+            ],
+            [
+              "V6",
+              "PD"
+            ],
+            [
+              "W6",
+              "C"
+            ],
+            [
+              "X6",
+              "INVOLVED"
+            ],
+            [
+              "A7",
+              "KAMHLUSHWA"
+            ],
+            [
+              "B7",
+              2
+            ],
+            [
+              "C7",
+              "12/03/2026"
+            ],
+            [
+              "D7",
+              "03/03"
+            ]
+          ],
+          "row_samples": {
+            "1": [
+              "CONSOLIDATED",
+              "ACCIDENT REPORT: 01 - 31 MARCH 2026",
+              "REPORTED ACCIDENTS"
+            ],
+            "3": [
+              "EHLANZENI"
+            ],
+            "4": [
+              "CONSOLIDATED REPORT",
+              "NATURE OF INJURIES"
+            ],
+            "5": [
+              "ACCIDENT",
+              "FATAL",
+              "GENDER",
+              "SERIOUS",
+              "SLIGHT",
+              "VEHICLES"
+            ],
+            "6": [
+              "SAPS",
+              "AR NO",
+              "CAS",
+              "DATE",
+              "DAY",
+              "TIME",
+              "ROUTE",
+              "LOCATION",
+              "TYPE",
+              "D",
+              "P",
+              "PD",
+              "C",
+              "M",
+              "F",
+              "D",
+              "P",
+              "PD",
+              "C",
+              "D",
+              "P",
+              "PD",
+              "C",
+              "INVOLVED"
+            ],
+            "7": [
+              "KAMHLUSHWA",
+              2,
+              "12/03/2026",
+              "03/03",
+              "TU",
+              "18H30",
+              "R581/1",
+              "NEXT TO FEED MASTER",
+              "PEDESTRIAN",
+              1,
+              1,
+              "P/D / SED"
+            ],
+            "8": [
+              "ACORNHOEK",
+              12,
+              "85/03/2026",
+              "06/03",
+              "FR",
+              "23H20",
+              "R40",
+              "ACORNHOKE PLAZA",
+              "PEDESTRIAN",
+              1,
+              1,
+              "P/D / TRUCK"
+            ],
+            "9": [
+              "MATSULU",
+              13,
+              "23/03/2026",
+              "12/03",
+              "TH",
+              "16H45",
+              "MUN",
+              "MADIBA DRIVE",
+              "PEDESTRIAN",
+              1,
+              1,
+              "P/D / TRUCK"
+            ],
+            "10": [
+              "MALALANE",
+              10,
+              "45/03/2026",
+              "14/03",
+              "SA",
+              "22H50",
+              "N4",
+              "ESKOM ENTRANCE MALELANE",
+              "PEDESTRIAN",
+              1,
+              1,
+              "P/D / SED"
+            ],
+            "11": [
+              "MHALA",
+              11,
+              "75/03/2026",
+              "13/03",
+              "FR",
+              "13H00",
+              "D4390",
+              "MP STREAM RD",
+              "PEDESTRIAN",
+              1,
+              1,
+              "P/D / LDV"
+            ],
+            "12": [
+              "CALCUTTA",
+              "29",
+              "172/03/2026",
+              "23/03",
+              "M",
+              "17H00",
+              "D3969",
+              "XIMHUNGWE NEXT TO SHOPRITE",
+              "PEDESTRIAN",
+              1,
+              1,
+              "P/D / LDV"
+            ],
+            "13": [
+              "BARBERTON",
+              "32",
+              "347/03/2026",
+              "29/03",
+              "SU",
+              "16H03",
+              "R38",
+              "SHIBA SIDING NEAR KALANGA TAVERN",
+              "PEDESTRIAN",
+              1,
+              1,
+              "P/D / SED"
+            ]
+          }
+        }
+      ]
+    },
+    "converted": {
+      "path": "C:\\Users\\ReaobakaNtoagae\\Downloads\\Upload EHLANZENI 2026-03.xlsx",
+      "sheet_names": [
+        "UPLOAD TEMPLATE",
+        "Stations",
+        "MARCH 2026"
+      ],
+      "defined_names": [],
+      "calculation": {
+        "mode": null,
+        "full_calc_on_load": true,
+        "force_full_calc": null
+      },
+      "sheets": [
+        {
+          "title": "UPLOAD TEMPLATE",
+          "visibility": "visible",
+          "dimensions": "A1:AC16",
+          "max_row": 16,
+          "max_column": 29,
+          "nonempty_cells": 72,
+          "nonempty_rows": 15,
+          "formula_count": 0,
+          "formulas_sample": [],
+          "merged_ranges": [],
+          "style_ids": {
+            "1": 72
+          },
+          "freeze_panes": null,
+          "auto_filter": null,
+          "tables": [],
+          "data_validations": 0,
+          "header_candidate_row": 6,
+          "header_candidate": [
+            "SAPS",
+            "AR NO",
+            "CASE NO.",
+            "DATE",
+            "DAY",
+            "TIME",
+            "ROUTE",
+            "LOCATION",
+            "TYPE",
+            "D",
+            "P",
+            "PD",
+            "C",
+            "M",
+            "F",
+            "AGE",
+            "D",
+            "P",
+            "PD",
+            "C",
+            "D",
+            "P",
+            "PD",
+            "C",
+            "INVOLVED",
+            "COST CENTER",
+            "REGION",
+            "YEAR",
+            "MONTH"
+          ],
+          "sample_nonempty": [
+            [
+              "A1",
+              "CONSOLIDATED"
+            ],
+            [
+              "E1",
+              "ACCIDENT REPORT: MARCH 2026"
+            ],
+            [
+              "L1",
+              "REGIONAL ACCIDENT / CRASH REGISTER"
+            ],
+            [
+              "A3",
+              "EHLANZENI"
+            ],
+            [
+              "A4",
+              "CONSOLIDATED REPORT"
+            ],
+            [
+              "J4",
+              "NATURE OF INJURIES"
+            ],
+            [
+              "I5",
+              "ACCIDENT"
+            ],
+            [
+              "J5",
+              "FATAL"
+            ],
+            [
+              "N5",
+              "GENDER"
+            ],
+            [
+              "P5",
+              "AGE"
+            ],
+            [
+              "Q5",
+              "SERIOUS"
+            ],
+            [
+              "U5",
+              "SLIGHT"
+            ],
+            [
+              "Y5",
+              "VEHICLES"
+            ],
+            [
+              "A6",
+              "SAPS"
+            ],
+            [
+              "B6",
+              "AR NO"
+            ],
+            [
+              "C6",
+              "CASE NO."
+            ],
+            [
+              "D6",
+              "DATE"
+            ],
+            [
+              "E6",
+              "DAY"
+            ],
+            [
+              "F6",
+              "TIME"
+            ],
+            [
+              "G6",
+              "ROUTE"
+            ],
+            [
+              "H6",
+              "LOCATION"
+            ],
+            [
+              "I6",
+              "TYPE"
+            ],
+            [
+              "J6",
+              "D"
+            ],
+            [
+              "K6",
+              "P"
+            ],
+            [
+              "L6",
+              "PD"
+            ],
+            [
+              "M6",
+              "C"
+            ],
+            [
+              "N6",
+              "M"
+            ],
+            [
+              "O6",
+              "F"
+            ],
+            [
+              "P6",
+              "AGE"
+            ],
+            [
+              "Q6",
+              "D"
+            ],
+            [
+              "R6",
+              "P"
+            ],
+            [
+              "S6",
+              "PD"
+            ],
+            [
+              "T6",
+              "C"
+            ],
+            [
+              "U6",
+              "D"
+            ],
+            [
+              "V6",
+              "P"
+            ],
+            [
+              "W6",
+              "PD"
+            ],
+            [
+              "X6",
+              "C"
+            ],
+            [
+              "Y6",
+              "INVOLVED"
+            ],
+            [
+              "Z6",
+              "COST CENTER"
+            ],
+            [
+              "AA6",
+              "REGION"
+            ]
+          ],
+          "row_samples": {
+            "1": [
+              "CONSOLIDATED",
+              "ACCIDENT REPORT: MARCH 2026",
+              "REGIONAL ACCIDENT / CRASH REGISTER"
+            ],
+            "3": [
+              "EHLANZENI"
+            ],
+            "4": [
+              "CONSOLIDATED REPORT",
+              "NATURE OF INJURIES"
+            ],
+            "5": [
+              "ACCIDENT",
+              "FATAL",
+              "GENDER",
+              "AGE",
+              "SERIOUS",
+              "SLIGHT",
+              "VEHICLES"
+            ],
+            "6": [
+              "SAPS",
+              "AR NO",
+              "CASE NO.",
+              "DATE",
+              "DAY",
+              "TIME",
+              "ROUTE",
+              "LOCATION",
+              "TYPE",
+              "D",
+              "P",
+              "PD",
+              "C",
+              "M",
+              "F",
+              "AGE",
+              "D",
+              "P",
+              "PD",
+              "C",
+              "D",
+              "P",
+              "PD",
+              "C",
+              "INVOLVED",
+              "COST CENTER",
+              "REGION",
+              "YEAR",
+              "MONTH"
+            ],
+            "7": [
+              "EHLANZENI",
+              2026,
+              "MAR"
+            ],
+            "8": [
+              "EHLANZENI",
+              2026,
+              "MAR"
+            ],
+            "9": [
+              "EHLANZENI",
+              2026,
+              "MAR"
+            ],
+            "10": [
+              "EHLANZENI",
+              2026,
+              "MAR"
+            ],
+            "11": [
+              "EHLANZENI",
+              2026,
+              "MAR"
+            ],
+            "12": [
+              "EHLANZENI",
+              2026,
+              "MAR"
+            ],
+            "13": [
+              "EHLANZENI",
+              2026,
+              "MAR"
+            ]
+          }
+        },
+        {
+          "title": "Stations",
+          "visibility": "visible",
+          "dimensions": "A1:A26",
+          "max_row": 26,
+          "max_column": 1,
+          "nonempty_cells": 26,
+          "nonempty_rows": 26,
+          "formula_count": 0,
+          "formulas_sample": [],
+          "merged_ranges": [],
+          "style_ids": {
+            "1": 26
+          },
+          "freeze_panes": null,
+          "auto_filter": null,
+          "tables": [],
+          "data_validations": 0,
+          "header_candidate_row": 1,
+          "header_candidate": [
+            "Valid station names for Ehlanzeni"
+          ],
+          "sample_nonempty": [
+            [
+              "A1",
+              "Valid station names for Ehlanzeni"
+            ],
+            [
+              "A2",
+              "BARBERTON"
+            ],
+            [
+              "A3",
+              "DAANTJIE"
+            ],
+            [
+              "A4",
+              "GRASKOP"
+            ],
+            [
+              "A5",
+              "HAZYVIEW"
+            ],
+            [
+              "A6",
+              "KAAPMUIDEN"
+            ],
+            [
+              "A7",
+              "KABOKWENI"
+            ],
+            [
+              "A8",
+              "KAMHLUSHWA"
+            ],
+            [
+              "A9",
+              "KANYAMAZANE"
+            ],
+            [
+              "A10",
+              "KOMATIPOORT"
+            ],
+            [
+              "A11",
+              "LOWS CREEK"
+            ],
+            [
+              "A12",
+              "MALALANE"
+            ],
+            [
+              "A13",
+              "MASHISHING"
+            ],
+            [
+              "A14",
+              "MASOYI"
+            ],
+            [
+              "A15",
+              "MATSULU"
+            ],
+            [
+              "A16",
+              "MBOMBELA TRAF"
+            ],
+            [
+              "A17",
+              "MBUZINI"
+            ],
+            [
+              "A18",
+              "MZINTI"
+            ],
+            [
+              "A19",
+              "NELSPRUIT"
+            ],
+            [
+              "A20",
+              "NGODWANA"
+            ],
+            [
+              "A21",
+              "PIENAAR"
+            ],
+            [
+              "A22",
+              "PILGRIMS REST"
+            ],
+            [
+              "A23",
+              "SABIE"
+            ],
+            [
+              "A24",
+              "SCHOEMANSDAL"
+            ],
+            [
+              "A25",
+              "TONGA"
+            ],
+            [
+              "A26",
+              "WHITE RIVER"
+            ]
+          ],
+          "row_samples": {
+            "1": [
+              "Valid station names for Ehlanzeni"
+            ],
+            "2": [
+              "BARBERTON"
+            ],
+            "3": [
+              "DAANTJIE"
+            ],
+            "4": [
+              "GRASKOP"
+            ],
+            "5": [
+              "HAZYVIEW"
+            ],
+            "6": [
+              "KAAPMUIDEN"
+            ],
+            "7": [
+              "KABOKWENI"
+            ],
+            "8": [
+              "KAMHLUSHWA"
+            ],
+            "9": [
+              "KANYAMAZANE"
+            ],
+            "10": [
+              "KOMATIPOORT"
+            ],
+            "11": [
+              "LOWS CREEK"
+            ],
+            "12": [
+              "MALALANE"
+            ]
+          }
+        },
+        {
+          "title": "MARCH 2026",
+          "visibility": "visible",
+          "dimensions": "A1:U871",
+          "max_row": 871,
+          "max_column": 21,
+          "nonempty_cells": 2398,
+          "nonempty_rows": 237,
+          "formula_count": 15,
+          "formulas_sample": [
+            [
+              "I237",
+              "=SUM(I7:I236)",
+              9
+            ],
+            [
+              "J237",
+              "=SUM(J7:J236)",
+              4
+            ],
+            [
+              "K237",
+              "=SUM(K7:K236)",
+              13
+            ],
+            [
+              "L237",
+              "=SUM(L7:L236)",
+              0
+            ],
+            [
+              "M237",
+              "=SUM(M7:M236)",
+              37
+            ],
+            [
+              "N237",
+              "=SUM(N7:N236)",
+              55
+            ],
+            [
+              "O237",
+              "=SUM(O7:O236)",
+              25
+            ],
+            [
+              "P237",
+              "=SUM(P7:P236)",
+              0
+            ],
+            [
+              "Q237",
+              "=SUM(Q7:Q236)",
+              96
+            ],
+            [
+              "R237",
+              "=SUM(R7:R236)",
+              100
+            ],
+            [
+              "S237",
+              "=SUM(S7:S236)",
+              42
+            ],
+            [
+              "T237",
+              "=SUM(T7:T236)",
+              0
+            ],
+            [
+              "J238",
+              "=I237+J237+K237+L237",
+              26
+            ],
+            [
+              "N238",
+              "=M237+N237+O237+P237",
+              117
+            ],
+            [
+              "R238",
+              "=SUM(Q237:T237)",
+              238
+            ]
+          ],
+          "merged_ranges": [
+            "G238:H238",
+            "E1:J1",
+            "A4:E4",
+            "A1:C1",
+            "O1:U1",
+            "A3:B3"
+          ],
+          "style_ids": {
+            "1": 2398
+          },
+          "freeze_panes": null,
+          "auto_filter": null,
+          "tables": [],
+          "data_validations": 0,
+          "header_candidate_row": 6,
+          "header_candidate": [
+            "SAPS",
+            "AR NO",
+            "DATE",
+            "DAY",
+            "TIME",
+            "ROUTE",
+            "LOCATION",
+            "TYPE",
+            "D",
+            "P",
+            "PD",
+            "C",
+            "D",
+            "P",
+            "PD",
+            "C",
+            "D",
+            "P",
+            "PD",
+            "C",
+            "INVOLVED"
+          ],
+          "sample_nonempty": [
+            [
+              "A1",
+              "CONSOLIDATED"
+            ],
+            [
+              "E1",
+              "ACCIDENT REPORT: 01 - 31 MARCH 2026"
+            ],
+            [
+              "O1",
+              "REPORTED ACCIDENTS"
+            ],
+            [
+              "A3",
+              "EHLANZENI"
+            ],
+            [
+              "A4",
+              "CONSOLIDATED REPORT"
+            ],
+            [
+              "I4",
+              "NATURE OF INJURIES"
+            ],
+            [
+              "H5",
+              "ACCIDENT"
+            ],
+            [
+              "I5",
+              "FATAL"
+            ],
+            [
+              "M5",
+              "SERIOUS"
+            ],
+            [
+              "Q5",
+              "SLIGHT"
+            ],
+            [
+              "U5",
+              "VEHICLES"
+            ],
+            [
+              "A6",
+              "SAPS"
+            ],
+            [
+              "B6",
+              "AR NO"
+            ],
+            [
+              "C6",
+              "DATE"
+            ],
+            [
+              "D6",
+              "DAY"
+            ],
+            [
+              "E6",
+              "TIME"
+            ],
+            [
+              "F6",
+              "ROUTE"
+            ],
+            [
+              "G6",
+              "LOCATION"
+            ],
+            [
+              "H6",
+              "TYPE"
+            ],
+            [
+              "I6",
+              "D"
+            ],
+            [
+              "J6",
+              "P"
+            ],
+            [
+              "K6",
+              "PD"
+            ],
+            [
+              "L6",
+              "C"
+            ],
+            [
+              "M6",
+              "D"
+            ],
+            [
+              "N6",
+              "P"
+            ],
+            [
+              "O6",
+              "PD"
+            ],
+            [
+              "P6",
+              "C"
+            ],
+            [
+              "Q6",
+              "D"
+            ],
+            [
+              "R6",
+              "P"
+            ],
+            [
+              "S6",
+              "PD"
+            ],
+            [
+              "T6",
+              "C"
+            ],
+            [
+              "U6",
+              "INVOLVED"
+            ],
+            [
+              "A7",
+              "MASHISHING"
+            ],
+            [
+              "B7",
+              61
+            ],
+            [
+              "C7",
+              "24/03"
+            ],
+            [
+              "D7",
+              "TU"
+            ],
+            [
+              "E7",
+              "12H15"
+            ],
+            [
+              "F7",
+              "D210"
+            ],
+            [
+              "G7",
+              "WELTEVREDE RD"
+            ],
+            [
+              "H7",
+              "FIXED OBJECT"
+            ]
+          ],
+          "row_samples": {
+            "1": [
+              "CONSOLIDATED",
+              "ACCIDENT REPORT: 01 - 31 MARCH 2026",
+              "REPORTED ACCIDENTS"
+            ],
+            "3": [
+              "EHLANZENI"
+            ],
+            "4": [
+              "CONSOLIDATED REPORT",
+              "NATURE OF INJURIES"
+            ],
+            "5": [
+              "ACCIDENT",
+              "FATAL",
+              "SERIOUS",
+              "SLIGHT",
+              "VEHICLES"
+            ],
+            "6": [
+              "SAPS",
+              "AR NO",
+              "DATE",
+              "DAY",
+              "TIME",
+              "ROUTE",
+              "LOCATION",
+              "TYPE",
+              "D",
+              "P",
+              "PD",
+              "C",
+              "D",
+              "P",
+              "PD",
+              "C",
+              "D",
+              "P",
+              "PD",
+              "C",
+              "INVOLVED"
+            ],
+            "7": [
+              "MASHISHING",
+              61,
+              "24/03",
+              "TU",
+              "12H15",
+              "D210",
+              "WELTEVREDE RD",
+              "FIXED OBJECT",
+              1,
+              "ART"
+            ],
+            "8": [
+              "HAZYVIEW",
+              "31",
+              "27/03",
+              "FR",
+              "21H20",
+              "R40",
+              "HAZYVIEW T_JUNCTION",
+              "LOST CONTROL",
+              1,
+              "ART"
+            ],
+            "9": [
+              "NGODWANA",
+              5,
+              "05/03",
+              "TH",
+              "08H45",
+              "N4",
+              "SCHOEMANSKLOOF ROAD",
+              "HEAD REAR",
+              1,
+              "ART / ART"
+            ],
+            "10": [
+              "MASHISHING",
+              42,
+              "16/03",
+              "M",
+              "06H00",
+              "R577",
+              "ROOSSENEKAL RD",
+              "HEAD ON",
+              1,
+              "ART / LDV"
+            ],
+            "11": [
+              "MASHISHING",
+              42,
+              "16/03",
+              "M",
+              "06H00",
+              "R577",
+              "ROOSSENEKAL RD",
+              "HEAD ON",
+              1,
+              "ART / LDV"
+            ],
+            "12": [
+              "HAZYVIEW",
+              "33",
+              "29/03",
+              "SU",
+              "18H45",
+              "R40",
+              "KIEPERSOL NEXT TO",
+              "HEAD REAR",
+              1,
+              2,
+              "ART / LDV"
+            ],
+            "13": [
+              "NGODWANA",
+              9,
+              "10/03",
+              "TU",
+              "09H24",
+              "N4",
+              "SCHOEMANSKLOOF ROAD",
+              "SIDE SWIPE",
+              1,
+              "ART / LDV / LDV"
+            ]
+          }
+        }
+      ]
+    },
+    "filled": {
+      "path": "C:\\Users\\ReaobakaNtoagae\\Downloads\\Upload EHLANZENI 2026-03 (filled).xlsx",
+      "sheet_names": [
+        "UPLOAD TEMPLATE",
+        "Stations"
+      ],
+      "defined_names": [],
+      "calculation": {
+        "mode": null,
+        "full_calc_on_load": true,
+        "force_full_calc": null
+      },
+      "sheets": [
+        {
+          "title": "UPLOAD TEMPLATE",
+          "visibility": "visible",
+          "dimensions": "A1:AC235",
+          "max_row": 235,
+          "max_column": 29,
+          "nonempty_cells": 3076,
+          "nonempty_rows": 234,
+          "formula_count": 0,
+          "formulas_sample": [],
+          "merged_ranges": [],
+          "style_ids": {
+            "0": 3022,
+            "1": 52,
+            "2": 2
+          },
+          "freeze_panes": null,
+          "auto_filter": null,
+          "tables": [],
+          "data_validations": 0,
+          "header_candidate_row": 6,
+          "header_candidate": [
+            "SAPS",
+            "AR NO",
+            "CASE NO.",
+            "DATE",
+            "DAY",
+            "TIME",
+            "ROUTE",
+            "LOCATION",
+            "TYPE",
+            "D",
+            "P",
+            "PD",
+            "C",
+            "M",
+            "F",
+            "AGE",
+            "D",
+            "P",
+            "PD",
+            "C",
+            "D",
+            "P",
+            "PD",
+            "C",
+            "INVOLVED",
+            "COST CENTER",
+            "REGION",
+            "YEAR",
+            "MONTH"
+          ],
+          "sample_nonempty": [
+            [
+              "A1",
+              "CONSOLIDATED"
+            ],
+            [
+              "E1",
+              "ACCIDENT REPORT: MARCH 2026"
+            ],
+            [
+              "L1",
+              "REGIONAL ACCIDENT / CRASH REGISTER"
+            ],
+            [
+              "A3",
+              "EHLANZENI"
+            ],
+            [
+              "A4",
+              "CONSOLIDATED REPORT"
+            ],
+            [
+              "J4",
+              "NATURE OF INJURIES"
+            ],
+            [
+              "I5",
+              "ACCIDENT"
+            ],
+            [
+              "J5",
+              "FATAL"
+            ],
+            [
+              "N5",
+              "GENDER"
+            ],
+            [
+              "P5",
+              "AGE"
+            ],
+            [
+              "Q5",
+              "SERIOUS"
+            ],
+            [
+              "U5",
+              "SLIGHT"
+            ],
+            [
+              "Y5",
+              "VEHICLES"
+            ],
+            [
+              "A6",
+              "SAPS"
+            ],
+            [
+              "B6",
+              "AR NO"
+            ],
+            [
+              "C6",
+              "CASE NO."
+            ],
+            [
+              "D6",
+              "DATE"
+            ],
+            [
+              "E6",
+              "DAY"
+            ],
+            [
+              "F6",
+              "TIME"
+            ],
+            [
+              "G6",
+              "ROUTE"
+            ],
+            [
+              "H6",
+              "LOCATION"
+            ],
+            [
+              "I6",
+              "TYPE"
+            ],
+            [
+              "J6",
+              "D"
+            ],
+            [
+              "K6",
+              "P"
+            ],
+            [
+              "L6",
+              "PD"
+            ],
+            [
+              "M6",
+              "C"
+            ],
+            [
+              "N6",
+              "M"
+            ],
+            [
+              "O6",
+              "F"
+            ],
+            [
+              "P6",
+              "AGE"
+            ],
+            [
+              "Q6",
+              "D"
+            ],
+            [
+              "R6",
+              "P"
+            ],
+            [
+              "S6",
+              "PD"
+            ],
+            [
+              "T6",
+              "C"
+            ],
+            [
+              "U6",
+              "D"
+            ],
+            [
+              "V6",
+              "P"
+            ],
+            [
+              "W6",
+              "PD"
+            ],
+            [
+              "X6",
+              "C"
+            ],
+            [
+              "Y6",
+              "INVOLVED"
+            ],
+            [
+              "Z6",
+              "COST CENTER"
+            ],
+            [
+              "AA6",
+              "REGION"
+            ]
+          ],
+          "row_samples": {
+            "1": [
+              "CONSOLIDATED",
+              "ACCIDENT REPORT: MARCH 2026",
+              "REGIONAL ACCIDENT / CRASH REGISTER"
+            ],
+            "3": [
+              "EHLANZENI"
+            ],
+            "4": [
+              "CONSOLIDATED REPORT",
+              "NATURE OF INJURIES"
+            ],
+            "5": [
+              "ACCIDENT",
+              "FATAL",
+              "GENDER",
+              "AGE",
+              "SERIOUS",
+              "SLIGHT",
+              "VEHICLES"
+            ],
+            "6": [
+              "SAPS",
+              "AR NO",
+              "CASE NO.",
+              "DATE",
+              "DAY",
+              "TIME",
+              "ROUTE",
+              "LOCATION",
+              "TYPE",
+              "D",
+              "P",
+              "PD",
+              "C",
+              "M",
+              "F",
+              "AGE",
+              "D",
+              "P",
+              "PD",
+              "C",
+              "D",
+              "P",
+              "PD",
+              "C",
+              "INVOLVED",
+              "COST CENTER",
+              "REGION",
+              "YEAR",
+              "MONTH"
+            ],
+            "7": [
+              "MASHISHING",
+              "61",
+              "24/03",
+              "TU",
+              "12H15",
+              "D210",
+              "WELTEVREDE RD",
+              "FIXED OBJECT",
+              "1",
+              "ART",
+              "EHLANZENI",
+              "2026",
+              "MAR"
+            ],
+            "8": [
+              "HAZYVIEW",
+              "31",
+              "27/03",
+              "FR",
+              "21H20",
+              "R40",
+              "HAZYVIEW T_JUNCTION",
+              "LOST CONTROL",
+              "1",
+              "ART",
+              "EHLANZENI",
+              "2026",
+              "MAR"
+            ],
+            "9": [
+              "NGODWANA",
+              "5",
+              "05/03",
+              "TH",
+              "08H45",
+              "N4",
+              "SCHOEMANSKLOOF ROAD",
+              "HEAD REAR",
+              "1",
+              "ART / ART",
+              "EHLANZENI",
+              "2026",
+              "MAR"
+            ],
+            "10": [
+              "MASHISHING",
+              "42",
+              "16/03",
+              "M",
+              "06H00",
+              "R577",
+              "ROOSSENEKAL RD",
+              "HEAD ON",
+              "1",
+              "ART / LDV",
+              "EHLANZENI",
+              "2026",
+              "MAR"
+            ],
+            "11": [
+              "MASHISHING",
+              "42",
+              "16/03",
+              "M",
+              "06H00",
+              "R577",
+              "ROOSSENEKAL RD",
+              "HEAD ON",
+              "1",
+              "ART / LDV",
+              "EHLANZENI",
+              "2026",
+              "MAR"
+            ],
+            "12": [
+              "HAZYVIEW",
+              "33",
+              "29/03",
+              "SU",
+              "18H45",
+              "R40",
+              "KIEPERSOL NEXT TO",
+              "HEAD REAR",
+              "1",
+              "2",
+              "ART / LDV",
+              "EHLANZENI",
+              "2026",
+              "MAR"
+            ],
+            "13": [
+              "NGODWANA",
+              "9",
+              "10/03",
+              "TU",
+              "09H24",
+              "N4",
+              "SCHOEMANSKLOOF ROAD",
+              "SIDE SWIPE",
+              "1",
+              "ART / LDV / LDV",
+              "EHLANZENI",
+              "2026",
+              "MAR"
+            ]
+          }
+        },
+        {
+          "title": "Stations",
+          "visibility": "visible",
+          "dimensions": "A1:A26",
+          "max_row": 26,
+          "max_column": 1,
+          "nonempty_cells": 26,
+          "nonempty_rows": 26,
+          "formula_count": 0,
+          "formulas_sample": [],
+          "merged_ranges": [],
+          "style_ids": {
+            "0": 26
+          },
+          "freeze_panes": null,
+          "auto_filter": null,
+          "tables": [],
+          "data_validations": 0,
+          "header_candidate_row": 1,
+          "header_candidate": [
+            "Valid station names for Ehlanzeni"
+          ],
+          "sample_nonempty": [
+            [
+              "A1",
+              "Valid station names for Ehlanzeni"
+            ],
+            [
+              "A2",
+              "BARBERTON"
+            ],
+            [
+              "A3",
+              "DAANTJIE"
+            ],
+            [
+              "A4",
+              "GRASKOP"
+            ],
+            [
+              "A5",
+              "HAZYVIEW"
+            ],
+            [
+              "A6",
+              "KAAPMUIDEN"
+            ],
+            [
+              "A7",
+              "KABOKWENI"
+            ],
+            [
+              "A8",
+              "KAMHLUSHWA"
+            ],
+            [
+              "A9",
+              "KANYAMAZANE"
+            ],
+            [
+              "A10",
+              "KOMATIPOORT"
+            ],
+            [
+              "A11",
+              "LOWS CREEK"
+            ],
+            [
+              "A12",
+              "MALALANE"
+            ],
+            [
+              "A13",
+              "MASHISHING"
+            ],
+            [
+              "A14",
+              "MASOYI"
+            ],
+            [
+              "A15",
+              "MATSULU"
+            ],
+            [
+              "A16",
+              "MBOMBELA TRAF"
+            ],
+            [
+              "A17",
+              "MBUZINI"
+            ],
+            [
+              "A18",
+              "MZINTI"
+            ],
+            [
+              "A19",
+              "NELSPRUIT"
+            ],
+            [
+              "A20",
+              "NGODWANA"
+            ],
+            [
+              "A21",
+              "PIENAAR"
+            ],
+            [
+              "A22",
+              "PILGRIMS REST"
+            ],
+            [
+              "A23",
+              "SABIE"
+            ],
+            [
+              "A24",
+              "SCHOEMANSDAL"
+            ],
+            [
+              "A25",
+              "TONGA"
+            ],
+            [
+              "A26",
+              "WHITE RIVER"
+            ]
+          ],
+          "row_samples": {
+            "1": [
+              "Valid station names for Ehlanzeni"
+            ],
+            "2": [
+              "BARBERTON"
+            ],
+            "3": [
+              "DAANTJIE"
+            ],
+            "4": [
+              "GRASKOP"
+            ],
+            "5": [
+              "HAZYVIEW"
+            ],
+            "6": [
+              "KAAPMUIDEN"
+            ],
+            "7": [
+              "KABOKWENI"
+            ],
+            "8": [
+              "KAMHLUSHWA"
+            ],
+            "9": [
+              "KANYAMAZANE"
+            ],
+            "10": [
+              "KOMATIPOORT"
+            ],
+            "11": [
+              "LOWS CREEK"
+            ],
+            "12": [
+              "MALALANE"
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "tabular": {
+    "original": [
+      {
+        "sheet": "MARCH 2026 CAS",
+        "header_row": 6,
+        "headers": [
+          "SAPS",
+          "AR NO",
+          "CAS",
+          "DATE",
+          "DAY",
+          "TIME",
+          "ROUTE",
+          "LOCATION",
+          "TYPE",
+          "D",
+          "P",
+          "PD",
+          "C",
+          "M",
+          "F",
+          "D",
+          "P",
+          "PD",
+          "C",
+          "D",
+          "P",
+          "PD",
+          "C",
+          "INVOLVED",
+          "__blank_25",
+          "__blank_26",
+          "__blank_27",
+          "__blank_28",
+          "__blank_29",
+          "__blank_30",
+          "__blank_31",
+          "__blank_32",
+          "__blank_33",
+          "__blank_34",
+          "__blank_35",
+          "__blank_36",
+          "__blank_37",
+          "__blank_38",
+          "__blank_39"
+        ],
+        "record_count": 244,
+        "records_sample": [
+          {
+            "SAPS": "KAMHLUSHWA",
+            "AR NO": 2,
+            "CAS": "12/03/2026",
+            "DATE": "03/03",
+            "DAY": "TU",
+            "TIME": "18H30",
+            "ROUTE": "R581/1",
+            "LOCATION": "NEXT TO FEED MASTER",
+            "TYPE": "PEDESTRIAN",
+            "D": null,
+            "P": null,
+            "PD": null,
+            "C": null,
+            "M": null,
+            "F": 1,
+            "INVOLVED": "P/D / SED",
+            "__blank_25": null,
+            "__blank_26": null,
+            "__blank_27": null,
+            "__blank_28": null,
+            "__blank_29": null,
+            "__blank_30": null,
+            "__blank_31": null,
+            "__blank_32": null,
+            "__blank_33": null,
+            "__blank_34": null,
+            "__blank_35": null,
+            "__blank_36": null,
+            "__blank_37": null,
+            "__blank_38": null,
+            "__blank_39": null
+          },
+          {
+            "SAPS": "ACORNHOEK",
+            "AR NO": 12,
+            "CAS": "85/03/2026",
+            "DATE": "06/03",
+            "DAY": "FR",
+            "TIME": "23H20",
+            "ROUTE": "R40",
+            "LOCATION": "ACORNHOKE PLAZA",
+            "TYPE": "PEDESTRIAN",
+            "D": null,
+            "P": null,
+            "PD": null,
+            "C": null,
+            "M": 1,
+            "F": null,
+            "INVOLVED": "P/D / TRUCK",
+            "__blank_25": null,
+            "__blank_26": null,
+            "__blank_27": null,
+            "__blank_28": null,
+            "__blank_29": null,
+            "__blank_30": null,
+            "__blank_31": null,
+            "__blank_32": null,
+            "__blank_33": null,
+            "__blank_34": null,
+            "__blank_35": null,
+            "__blank_36": null,
+            "__blank_37": null,
+            "__blank_38": null,
+            "__blank_39": null
+          },
+          {
+            "SAPS": "MATSULU",
+            "AR NO": 13,
+            "CAS": "23/03/2026",
+            "DATE": "12/03",
+            "DAY": "TH",
+            "TIME": "16H45",
+            "ROUTE": "MUN",
+            "LOCATION": "MADIBA DRIVE",
+            "TYPE": "PEDESTRIAN",
+            "D": null,
+            "P": null,
+            "PD": null,
+            "C": null,
+            "M": 1,
+            "F": null,
+            "INVOLVED": "P/D / TRUCK",
+            "__blank_25": null,
+            "__blank_26": null,
+            "__blank_27": null,
+            "__blank_28": null,
+            "__blank_29": null,
+            "__blank_30": null,
+            "__blank_31": null,
+            "__blank_32": null,
+            "__blank_33": null,
+            "__blank_34": null,
+            "__blank_35": null,
+            "__blank_36": null,
+            "__blank_37": null,
+            "__blank_38": null,
+            "__blank_39": null
+          },
+          {
+            "SAPS": "MALALANE",
+            "AR NO": 10,
+            "CAS": "45/03/2026",
+            "DATE": "14/03",
+            "DAY": "SA",
+            "TIME": "22H50",
+            "ROUTE": "N4",
+            "LOCATION": "ESKOM ENTRANCE MALELANE",
+            "TYPE": "PEDESTRIAN",
+            "D": null,
+            "P": null,
+            "PD": null,
+            "C": null,
+            "M": 1,
+            "F": null,
+            "INVOLVED": "P/D / SED",
+            "__blank_25": null,
+            "__blank_26": null,
+            "__blank_27": null,
+            "__blank_28": null,
+            "__blank_29": null,
+            "__blank_30": null,
+            "__blank_31": null,
+            "__blank_32": null,
+            "__blank_33": null,
+            "__blank_34": null,
+            "__blank_35": null,
+            "__blank_36": null,
+            "__blank_37": null,
+            "__blank_38": null,
+            "__blank_39": null
+          },
+          {
+            "SAPS": "MHALA",
+            "AR NO": 11,
+            "CAS": "75/03/2026",
+            "DATE": "13/03",
+            "DAY": "FR",
+            "TIME": "13H00",
+            "ROUTE": "D4390",
+            "LOCATION": "MP STREAM RD",
+            "TYPE": "PEDESTRIAN",
+            "D": null,
+            "P": null,
+            "PD": null,
+            "C": null,
+            "M": null,
+            "F": 1,
+            "INVOLVED": "P/D / LDV",
+            "__blank_25": null,
+            "__blank_26": null,
+            "__blank_27": null,
+            "__blank_28": null,
+            "__blank_29": null,
+            "__blank_30": null,
+            "__blank_31": null,
+            "__blank_32": null,
+            "__blank_33": null,
+            "__blank_34": null,
+            "__blank_35": null,
+            "__blank_36": null,
+            "__blank_37": null,
+            "__blank_38": null,
+            "__blank_39": null
+          },
+          {
+            "SAPS": "CALCUTTA",
+            "AR NO": "29",
+            "CAS": "172/03/2026",
+            "DATE": "23/03",
+            "DAY": "M",
+            "TIME": "17H00",
+            "ROUTE": "D3969",
+            "LOCATION": "XIMHUNGWE NEXT TO SHOPRITE",
+            "TYPE": "PEDESTRIAN",
+            "D": null,
+            "P": null,
+            "PD": null,
+            "C": null,
+            "M": null,
+            "F": 1,
+            "INVOLVED": "P/D / LDV",
+            "__blank_25": null,
+            "__blank_26": null,
+            "__blank_27": null,
+            "__blank_28": null,
+            "__blank_29": null,
+            "__blank_30": null,
+            "__blank_31": null,
+            "__blank_32": null,
+            "__blank_33": null,
+            "__blank_34": null,
+            "__blank_35": null,
+            "__blank_36": null,
+            "__blank_37": null,
+            "__blank_38": null,
+            "__blank_39": null
+          },
+          {
+            "SAPS": "BARBERTON",
+            "AR NO": "32",
+            "CAS": "347/03/2026",
+            "DATE": "29/03",
+            "DAY": "SU",
+            "TIME": "16H03",
+            "ROUTE": "R38",
+            "LOCATION": "SHIBA SIDING NEAR KALANGA TAVERN",
+            "TYPE": "PEDESTRIAN",
+            "D": null,
+            "P": null,
+            "PD": null,
+            "C": null,
+            "M": 1,
+            "F": null,
+            "INVOLVED": "P/D / SED",
+            "__blank_25": null,
+            "__blank_26": null,
+            "__blank_27": null,
+            "__blank_28": null,
+            "__blank_29": null,
+            "__blank_30": null,
+            "__blank_31": null,
+            "__blank_32": null,
+            "__blank_33": null,
+            "__blank_34": null,
+            "__blank_35": null,
+            "__blank_36": null,
+            "__blank_37": null,
+            "__blank_38": null,
+            "__blank_39": null
+          },
+          {
+            "SAPS": "TONGA",
+            "AR NO": 36,
+            "CAS": "257/03/2026",
+            "DATE": "26/03",
+            "DAY": "TH",
+            "TIME": "15H25",
+            "ROUTE": "D2945",
+            "LOCATION": "MAGUDU",
+            "TYPE": "PEDESTRIAN",
+            "D": null,
+            "P": null,
+            "PD": null,
+            "C": null,
+            "M": null,
+            "F": 1,
+            "INVOLVED": "P/D / LDV",
+            "__blank_25": null,
+            "__blank_26": null,
+            "__blank_27": null,
+            "__blank_28": null,
+            "__blank_29": null,
+            "__blank_30": null,
+            "__blank_31": null,
+            "__blank_32": null,
+            "__blank_33": null,
+            "__blank_34": null,
+            "__blank_35": null,
+            "__blank_36": null,
+            "__blank_37": null,
+            "__blank_38": null,
+            "__blank_39": null
+          }
+        ],
+        "column_nonblank": {
+          "SAPS": 241,
+          "AR NO": 241,
+          "CAS": 28,
+          "DATE": 233,
+          "DAY": 232,
+          "TIME": 232,
+          "ROUTE": 229,
+          "LOCATION": 230,
+          "TYPE": 230,
+          "D": 87,
+          "P": 55,
+          "PD": 42,
+          "C": 1,
+          "M": 14,
+          "F": 9,
+          "INVOLVED": 229,
+          "__blank_25": 0,
+          "__blank_26": 0,
+          "__blank_27": 0,
+          "__blank_28": 0,
+          "__blank_29": 0,
+          "__blank_30": 0,
+          "__blank_31": 0,
+          "__blank_32": 0,
+          "__blank_33": 0,
+          "__blank_34": 0,
+          "__blank_35": 0,
+          "__blank_36": 0,
+          "__blank_37": 0,
+          "__blank_38": 0,
+          "__blank_39": 0
+        },
+        "column_unique": {
+          "SAPS": 40,
+          "AR NO": 109,
+          "CAS": 27,
+          "DATE": 36,
+          "DAY": 11,
+          "TIME": 136,
+          "ROUTE": 46,
+          "LOCATION": 171,
+          "TYPE": 15,
+          "D": 3,
+          "P": 8,
+          "PD": 3,
+          "C": 1,
+          "M": 4,
+          "F": 3,
+          "INVOLVED": 47,
+          "__blank_25": 0,
+          "__blank_26": 0,
+          "__blank_27": 0,
+          "__blank_28": 0,
+          "__blank_29": 0,
+          "__blank_30": 0,
+          "__blank_31": 0,
+          "__blank_32": 0,
+          "__blank_33": 0,
+          "__blank_34": 0,
+          "__blank_35": 0,
+          "__blank_36": 0,
+          "__blank_37": 0,
+          "__blank_38": 0,
+          "__blank_39": 0
+        }
+      }
+    ],
+    "converted": [
+      {
+        "sheet": "UPLOAD TEMPLATE",
+        "header_row": 6,
+        "headers": [
+          "SAPS",
+          "AR NO",
+          "CASE NO.",
+          "DATE",
+          "DAY",
+          "TIME",
+          "ROUTE",
+          "LOCATION",
+          "TYPE",
+          "D",
+          "P",
+          "PD",
+          "C",
+          "M",
+          "F",
+          "AGE",
+          "D",
+          "P",
+          "PD",
+          "C",
+          "D",
+          "P",
+          "PD",
+          "C",
+          "INVOLVED",
+          "COST CENTER",
+          "REGION",
+          "YEAR",
+          "MONTH"
+        ],
+        "record_count": 10,
+        "records_sample": [
+          {
+            "SAPS": null,
+            "AR NO": null,
+            "CASE NO.": null,
+            "DATE": null,
+            "DAY": null,
+            "TIME": null,
+            "ROUTE": null,
+            "LOCATION": null,
+            "TYPE": null,
+            "D": null,
+            "P": null,
+            "PD": null,
+            "C": null,
+            "M": null,
+            "F": null,
+            "AGE": null,
+            "INVOLVED": null,
+            "COST CENTER": null,
+            "REGION": "EHLANZENI",
+            "YEAR": 2026,
+            "MONTH": "MAR"
+          },
+          {
+            "SAPS": null,
+            "AR NO": null,
+            "CASE NO.": null,
+            "DATE": null,
+            "DAY": null,
+            "TIME": null,
+            "ROUTE": null,
+            "LOCATION": null,
+            "TYPE": null,
+            "D": null,
+            "P": null,
+            "PD": null,
+            "C": null,
+            "M": null,
+            "F": null,
+            "AGE": null,
+            "INVOLVED": null,
+            "COST CENTER": null,
+            "REGION": "EHLANZENI",
+            "YEAR": 2026,
+            "MONTH": "MAR"
+          },
+          {
+            "SAPS": null,
+            "AR NO": null,
+            "CASE NO.": null,
+            "DATE": null,
+            "DAY": null,
+            "TIME": null,
+            "ROUTE": null,
+            "LOCATION": null,
+            "TYPE": null,
+            "D": null,
+            "P": null,
+            "PD": null,
+            "C": null,
+            "M": null,
+            "F": null,
+            "AGE": null,
+            "INVOLVED": null,
+            "COST CENTER": null,
+            "REGION": "EHLANZENI",
+            "YEAR": 2026,
+            "MONTH": "MAR"
+          },
+          {
+            "SAPS": null,
+            "AR NO": null,
+            "CASE NO.": null,
+            "DATE": null,
+            "DAY": null,
+            "TIME": null,
+            "ROUTE": null,
+            "LOCATION": null,
+            "TYPE": null,
+            "D": null,
+            "P": null,
+            "PD": null,
+            "C": null,
+            "M": null,
+            "F": null,
+            "AGE": null,
+            "INVOLVED": null,
+            "COST CENTER": null,
+            "REGION": "EHLANZENI",
+            "YEAR": 2026,
+            "MONTH": "MAR"
+          },
+          {
+            "SAPS": null,
+            "AR NO": null,
+            "CASE NO.": null,
+            "DATE": null,
+            "DAY": null,
+            "TIME": null,
+            "ROUTE": null,
+            "LOCATION": null,
+            "TYPE": null,
+            "D": null,
+            "P": null,
+            "PD": null,
+            "C": null,
+            "M": null,
+            "F": null,
+            "AGE": null,
+            "INVOLVED": null,
+            "COST CENTER": null,
+            "REGION": "EHLANZENI",
+            "YEAR": 2026,
+            "MONTH": "MAR"
+          },
+          {
+            "SAPS": null,
+            "AR NO": null,
+            "CASE NO.": null,
+            "DATE": null,
+            "DAY": null,
+            "TIME": null,
+            "ROUTE": null,
+            "LOCATION": null,
+            "TYPE": null,
+            "D": null,
+            "P": null,
+            "PD": null,
+            "C": null,
+            "M": null,
+            "F": null,
+            "AGE": null,
+            "INVOLVED": null,
+            "COST CENTER": null,
+            "REGION": "EHLANZENI",
+            "YEAR": 2026,
+            "MONTH": "MAR"
+          },
+          {
+            "SAPS": null,
+            "AR NO": null,
+            "CASE NO.": null,
+            "DATE": null,
+            "DAY": null,
+            "TIME": null,
+            "ROUTE": null,
+            "LOCATION": null,
+            "TYPE": null,
+            "D": null,
+            "P": null,
+            "PD": null,
+            "C": null,
+            "M": null,
+            "F": null,
+            "AGE": null,
+            "INVOLVED": null,
+            "COST CENTER": null,
+            "REGION": "EHLANZENI",
+            "YEAR": 2026,
+            "MONTH": "MAR"
+          },
+          {
+            "SAPS": null,
+            "AR NO": null,
+            "CASE NO.": null,
+            "DATE": null,
+            "DAY": null,
+            "TIME": null,
+            "ROUTE": null,
+            "LOCATION": null,
+            "TYPE": null,
+            "D": null,
+            "P": null,
+            "PD": null,
+            "C": null,
+            "M": null,
+            "F": null,
+            "AGE": null,
+            "INVOLVED": null,
+            "COST CENTER": null,
+            "REGION": "EHLANZENI",
+            "YEAR": 2026,
+            "MONTH": "MAR"
+          }
+        ],
+        "column_nonblank": {
+          "SAPS": 0,
+          "AR NO": 0,
+          "CASE NO.": 0,
+          "DATE": 0,
+          "DAY": 0,
+          "TIME": 0,
+          "ROUTE": 0,
+          "LOCATION": 0,
+          "TYPE": 0,
+          "D": 0,
+          "P": 0,
+          "PD": 0,
+          "C": 0,
+          "M": 0,
+          "F": 0,
+          "AGE": 0,
+          "INVOLVED": 0,
+          "COST CENTER": 0,
+          "REGION": 10,
+          "YEAR": 10,
+          "MONTH": 10
+        },
+        "column_unique": {
+          "SAPS": 0,
+          "AR NO": 0,
+          "CASE NO.": 0,
+          "DATE": 0,
+          "DAY": 0,
+          "TIME": 0,
+          "ROUTE": 0,
+          "LOCATION": 0,
+          "TYPE": 0,
+          "D": 0,
+          "P": 0,
+          "PD": 0,
+          "C": 0,
+          "M": 0,
+          "F": 0,
+          "AGE": 0,
+          "INVOLVED": 0,
+          "COST CENTER": 0,
+          "REGION": 1,
+          "YEAR": 1,
+          "MONTH": 1
+        }
+      },
+      {
+        "sheet": "Stations",
+        "header_row": 1,
+        "headers": [
+          "Valid station names for Ehlanzeni"
+        ],
+        "record_count": 25,
+        "records_sample": [
+          {
+            "Valid station names for Ehlanzeni": "BARBERTON"
+          },
+          {
+            "Valid station names for Ehlanzeni": "DAANTJIE"
+          },
+          {
+            "Valid station names for Ehlanzeni": "GRASKOP"
+          },
+          {
+            "Valid station names for Ehlanzeni": "HAZYVIEW"
+          },
+          {
+            "Valid station names for Ehlanzeni": "KAAPMUIDEN"
+          },
+          {
+            "Valid station names for Ehlanzeni": "KABOKWENI"
+          },
+          {
+            "Valid station names for Ehlanzeni": "KAMHLUSHWA"
+          },
+          {
+            "Valid station names for Ehlanzeni": "KANYAMAZANE"
+          }
+        ],
+        "column_nonblank": {
+          "Valid station names for Ehlanzeni": 25
+        },
+        "column_unique": {
+          "Valid station names for Ehlanzeni": 25
+        }
+      },
+      {
+        "sheet": "MARCH 2026",
+        "header_row": 6,
+        "headers": [
+          "SAPS",
+          "AR NO",
+          "DATE",
+          "DAY",
+          "TIME",
+          "ROUTE",
+          "LOCATION",
+          "TYPE",
+          "D",
+          "P",
+          "PD",
+          "C",
+          "D",
+          "P",
+          "PD",
+          "C",
+          "D",
+          "P",
+          "PD",
+          "C",
+          "INVOLVED"
+        ],
+        "record_count": 232,
+        "records_sample": [
+          {
+            "SAPS": "MASHISHING",
+            "AR NO": 61,
+            "DATE": "24/03",
+            "DAY": "TU",
+            "TIME": "12H15",
+            "ROUTE": "D210",
+            "LOCATION": "WELTEVREDE RD",
+            "TYPE": "FIXED OBJECT",
+            "D": null,
+            "P": null,
+            "PD": null,
+            "C": null,
+            "INVOLVED": "ART"
+          },
+          {
+            "SAPS": "HAZYVIEW",
+            "AR NO": "31",
+            "DATE": "27/03",
+            "DAY": "FR",
+            "TIME": "21H20",
+            "ROUTE": "R40",
+            "LOCATION": "HAZYVIEW T_JUNCTION",
+            "TYPE": "LOST CONTROL",
+            "D": null,
+            "P": null,
+            "PD": null,
+            "C": null,
+            "INVOLVED": "ART"
+          },
+          {
+            "SAPS": "NGODWANA",
+            "AR NO": 5,
+            "DATE": "05/03",
+            "DAY": "TH",
+            "TIME": "08H45",
+            "ROUTE": "N4",
+            "LOCATION": "SCHOEMANSKLOOF ROAD",
+            "TYPE": "HEAD REAR",
+            "D": 1,
+            "P": null,
+            "PD": null,
+            "C": null,
+            "INVOLVED": "ART / ART"
+          },
+          {
+            "SAPS": "MASHISHING",
+            "AR NO": 42,
+            "DATE": "16/03",
+            "DAY": "M",
+            "TIME": "06H00",
+            "ROUTE": "R577",
+            "LOCATION": "ROOSSENEKAL RD",
+            "TYPE": "HEAD ON",
+            "D": null,
+            "P": null,
+            "PD": null,
+            "C": null,
+            "INVOLVED": "ART / LDV"
+          },
+          {
+            "SAPS": "MASHISHING",
+            "AR NO": 42,
+            "DATE": "16/03",
+            "DAY": "M",
+            "TIME": "06H00",
+            "ROUTE": "R577",
+            "LOCATION": "ROOSSENEKAL RD",
+            "TYPE": "HEAD ON",
+            "D": null,
+            "P": null,
+            "PD": null,
+            "C": null,
+            "INVOLVED": "ART / LDV"
+          },
+          {
+            "SAPS": "HAZYVIEW",
+            "AR NO": "33",
+            "DATE": "29/03",
+            "DAY": "SU",
+            "TIME": "18H45",
+            "ROUTE": "R40",
+            "LOCATION": "KIEPERSOL NEXT TO",
+            "TYPE": "HEAD REAR",
+            "D": null,
+            "P": null,
+            "PD": null,
+            "C": null,
+            "INVOLVED": "ART / LDV"
+          },
+          {
+            "SAPS": "NGODWANA",
+            "AR NO": 9,
+            "DATE": "10/03",
+            "DAY": "TU",
+            "TIME": "09H24",
+            "ROUTE": "N4",
+            "LOCATION": "SCHOEMANSKLOOF ROAD",
+            "TYPE": "SIDE SWIPE",
+            "D": null,
+            "P": null,
+            "PD": null,
+            "C": null,
+            "INVOLVED": "ART / LDV / LDV"
+          },
+          {
+            "SAPS": "MASHISHIHG",
+            "AR NO": 17,
+            "DATE": "08/03",
+            "DAY": "SU",
+            "TIME": "15H00",
+            "ROUTE": "R540",
+            "LOCATION": "DULLSTROOM RD",
+            "TYPE": "SIDE SWIPE",
+            "D": 1,
+            "P": null,
+            "PD": null,
+            "C": null,
+            "INVOLVED": "ART / SED"
+          }
+        ],
+        "column_nonblank": {
+          "SAPS": 231,
+          "AR NO": 229,
+          "DATE": 229,
+          "DAY": 229,
+          "TIME": 229,
+          "ROUTE": 229,
+          "LOCATION": 230,
+          "TYPE": 230,
+          "D": 87,
+          "P": 55,
+          "PD": 42,
+          "C": 1,
+          "INVOLVED": 229
+        },
+        "column_unique": {
+          "SAPS": 29,
+          "AR NO": 105,
+          "DATE": 32,
+          "DAY": 7,
+          "TIME": 133,
+          "ROUTE": 46,
+          "LOCATION": 171,
+          "TYPE": 15,
+          "D": 3,
+          "P": 8,
+          "PD": 3,
+          "C": 1,
+          "INVOLVED": 48
+        }
+      }
+    ],
+    "filled": [
+      {
+        "sheet": "UPLOAD TEMPLATE",
+        "header_row": 6,
+        "headers": [
+          "SAPS",
+          "AR NO",
+          "CASE NO.",
+          "DATE",
+          "DAY",
+          "TIME",
+          "ROUTE",
+          "LOCATION",
+          "TYPE",
+          "D",
+          "P",
+          "PD",
+          "C",
+          "M",
+          "F",
+          "AGE",
+          "D",
+          "P",
+          "PD",
+          "C",
+          "D",
+          "P",
+          "PD",
+          "C",
+          "INVOLVED",
+          "COST CENTER",
+          "REGION",
+          "YEAR",
+          "MONTH"
+        ],
+        "record_count": 229,
+        "records_sample": [
+          {
+            "SAPS": "MASHISHING",
+            "AR NO": "61",
+            "CASE NO.": null,
+            "DATE": "24/03",
+            "DAY": "TU",
+            "TIME": "12H15",
+            "ROUTE": "D210",
+            "LOCATION": "WELTEVREDE RD",
+            "TYPE": "FIXED OBJECT",
+            "D": null,
+            "P": null,
+            "PD": null,
+            "C": null,
+            "M": null,
+            "F": null,
+            "AGE": null,
+            "INVOLVED": "ART",
+            "COST CENTER": null,
+            "REGION": "EHLANZENI",
+            "YEAR": "2026",
+            "MONTH": "MAR"
+          },
+          {
+            "SAPS": "HAZYVIEW",
+            "AR NO": "31",
+            "CASE NO.": null,
+            "DATE": "27/03",
+            "DAY": "FR",
+            "TIME": "21H20",
+            "ROUTE": "R40",
+            "LOCATION": "HAZYVIEW T_JUNCTION",
+            "TYPE": "LOST CONTROL",
+            "D": null,
+            "P": null,
+            "PD": null,
+            "C": null,
+            "M": null,
+            "F": null,
+            "AGE": null,
+            "INVOLVED": "ART",
+            "COST CENTER": null,
+            "REGION": "EHLANZENI",
+            "YEAR": "2026",
+            "MONTH": "MAR"
+          },
+          {
+            "SAPS": "NGODWANA",
+            "AR NO": "5",
+            "CASE NO.": null,
+            "DATE": "05/03",
+            "DAY": "TH",
+            "TIME": "08H45",
+            "ROUTE": "N4",
+            "LOCATION": "SCHOEMANSKLOOF ROAD",
+            "TYPE": "HEAD REAR",
+            "D": "1",
+            "P": null,
+            "PD": null,
+            "C": null,
+            "M": null,
+            "F": null,
+            "AGE": null,
+            "INVOLVED": "ART / ART",
+            "COST CENTER": null,
+            "REGION": "EHLANZENI",
+            "YEAR": "2026",
+            "MONTH": "MAR"
+          },
+          {
+            "SAPS": "MASHISHING",
+            "AR NO": "42",
+            "CASE NO.": null,
+            "DATE": "16/03",
+            "DAY": "M",
+            "TIME": "06H00",
+            "ROUTE": "R577",
+            "LOCATION": "ROOSSENEKAL RD",
+            "TYPE": "HEAD ON",
+            "D": null,
+            "P": null,
+            "PD": null,
+            "C": null,
+            "M": null,
+            "F": null,
+            "AGE": null,
+            "INVOLVED": "ART / LDV",
+            "COST CENTER": null,
+            "REGION": "EHLANZENI",
+            "YEAR": "2026",
+            "MONTH": "MAR"
+          },
+          {
+            "SAPS": "MASHISHING",
+            "AR NO": "42",
+            "CASE NO.": null,
+            "DATE": "16/03",
+            "DAY": "M",
+            "TIME": "06H00",
+            "ROUTE": "R577",
+            "LOCATION": "ROOSSENEKAL RD",
+            "TYPE": "HEAD ON",
+            "D": null,
+            "P": null,
+            "PD": null,
+            "C": null,
+            "M": null,
+            "F": null,
+            "AGE": null,
+            "INVOLVED": "ART / LDV",
+            "COST CENTER": null,
+            "REGION": "EHLANZENI",
+            "YEAR": "2026",
+            "MONTH": "MAR"
+          },
+          {
+            "SAPS": "HAZYVIEW",
+            "AR NO": "33",
+            "CASE NO.": null,
+            "DATE": "29/03",
+            "DAY": "SU",
+            "TIME": "18H45",
+            "ROUTE": "R40",
+            "LOCATION": "KIEPERSOL NEXT TO",
+            "TYPE": "HEAD REAR",
+            "D": null,
+            "P": null,
+            "PD": null,
+            "C": null,
+            "M": null,
+            "F": null,
+            "AGE": null,
+            "INVOLVED": "ART / LDV",
+            "COST CENTER": null,
+            "REGION": "EHLANZENI",
+            "YEAR": "2026",
+            "MONTH": "MAR"
+          },
+          {
+            "SAPS": "NGODWANA",
+            "AR NO": "9",
+            "CASE NO.": null,
+            "DATE": "10/03",
+            "DAY": "TU",
+            "TIME": "09H24",
+            "ROUTE": "N4",
+            "LOCATION": "SCHOEMANSKLOOF ROAD",
+            "TYPE": "SIDE SWIPE",
+            "D": null,
+            "P": null,
+            "PD": null,
+            "C": null,
+            "M": null,
+            "F": null,
+            "AGE": null,
+            "INVOLVED": "ART / LDV / LDV",
+            "COST CENTER": null,
+            "REGION": "EHLANZENI",
+            "YEAR": "2026",
+            "MONTH": "MAR"
+          },
+          {
+            "SAPS": "MASHISHIHG",
+            "AR NO": "17",
+            "CASE NO.": null,
+            "DATE": "08/03",
+            "DAY": "SU",
+            "TIME": "15H00",
+            "ROUTE": "R540",
+            "LOCATION": "DULLSTROOM RD",
+            "TYPE": "SIDE SWIPE",
+            "D": "1",
+            "P": null,
+            "PD": null,
+            "C": null,
+            "M": null,
+            "F": null,
+            "AGE": null,
+            "INVOLVED": "ART / SED",
+            "COST CENTER": null,
+            "REGION": "EHLANZENI",
+            "YEAR": "2026",
+            "MONTH": "MAR"
+          }
+        ],
+        "column_nonblank": {
+          "SAPS": 229,
+          "AR NO": 229,
+          "CASE NO.": 0,
+          "DATE": 229,
+          "DAY": 229,
+          "TIME": 229,
+          "ROUTE": 229,
+          "LOCATION": 229,
+          "TYPE": 229,
+          "D": 86,
+          "P": 53,
+          "PD": 41,
+          "C": 0,
+          "M": 0,
+          "F": 0,
+          "AGE": 0,
+          "INVOLVED": 229,
+          "COST CENTER": 0,
+          "REGION": 229,
+          "YEAR": 229,
+          "MONTH": 229
+        },
+        "column_unique": {
+          "SAPS": 28,
+          "AR NO": 107,
+          "CASE NO.": 0,
+          "DATE": 31,
+          "DAY": 7,
+          "TIME": 133,
+          "ROUTE": 46,
+          "LOCATION": 170,
+          "TYPE": 14,
+          "D": 2,
+          "P": 6,
+          "PD": 2,
+          "C": 0,
+          "M": 0,
+          "F": 0,
+          "AGE": 0,
+          "INVOLVED": 48,
+          "COST CENTER": 0,
+          "REGION": 1,
+          "YEAR": 1,
+          "MONTH": 1
+        }
+      },
+      {
+        "sheet": "Stations",
+        "header_row": 1,
+        "headers": [
+          "Valid station names for Ehlanzeni"
+        ],
+        "record_count": 25,
+        "records_sample": [
+          {
+            "Valid station names for Ehlanzeni": "BARBERTON"
+          },
+          {
+            "Valid station names for Ehlanzeni": "DAANTJIE"
+          },
+          {
+            "Valid station names for Ehlanzeni": "GRASKOP"
+          },
+          {
+            "Valid station names for Ehlanzeni": "HAZYVIEW"
+          },
+          {
+            "Valid station names for Ehlanzeni": "KAAPMUIDEN"
+          },
+          {
+            "Valid station names for Ehlanzeni": "KABOKWENI"
+          },
+          {
+            "Valid station names for Ehlanzeni": "KAMHLUSHWA"
+          },
+          {
+            "Valid station names for Ehlanzeni": "KANYAMAZANE"
+          }
+        ],
+        "column_nonblank": {
+          "Valid station names for Ehlanzeni": 25
+        },
+        "column_unique": {
+          "Valid station names for Ehlanzeni": 25
+        }
+      }
+    ]
+  },
+  "errors": {}
+}

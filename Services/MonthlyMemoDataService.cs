@@ -133,7 +133,7 @@ public class MonthlyMemoDataService
                 var yF = new DateOnly(y, from.Month, 1);
                 var yT = yF.AddMonths(1).AddDays(-1);
                 var yRows = await LoadAsync(yF, yT);
-                vm.FiveYearHistory.Add(new YearHistory
+                vm.FiveYearHistory.Add(new ViewModels.YearHistory
                 {
                     Year = y,
                     Crashes = yRows.Count,

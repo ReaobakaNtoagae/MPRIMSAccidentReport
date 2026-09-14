@@ -29,9 +29,13 @@ public class LookupController : ControllerBase
 
 
     [HttpGet("stations")]
-    public async Task<IActionResult> SearchStations(string? q = null)
+    public async Task<IActionResult> SearchStations(string? q = null, string? district = null)
     {
         var query = _context.SapsStations.Where(s => s.IsActive);
+        // Quick Capture can narrow stations without changing the authoritative lookup.
+        if (!string.IsNullOrWhiteSpace(district))
+            query = query.Where(s => s.DistrictLookup != null
+                ? s.DistrictLookup.DistrictName == district : s.District == district);
         if (!string.IsNullOrEmpty(q))
             query = query.Where(s => s.StationName.Contains(q));
 

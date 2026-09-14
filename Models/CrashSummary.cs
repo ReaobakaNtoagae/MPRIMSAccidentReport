@@ -6,7 +6,6 @@ namespace CrashReport.Models;
 
 
 [Table("crash_summaries")]
-[Index(nameof(CrNo), nameof(SourceFile), IsUnique = true)]
 public class CrashSummary
 {
     [Key]
@@ -86,7 +85,12 @@ public class CrashSummary
     [Column("imported_at")]
     public DateTime ImportedAt { get; set; } = DateTime.UtcNow;
 
-    [NotMapped] public int Fatalities => FatalDrivers + FatalPassengers + FatalPedestrians + FatalCyclists;
-    [NotMapped] public int Serious => SeriousDrivers + SeriousPassengers + SeriousPedestrians + SeriousCyclists;
-    [NotMapped] public int Slight => SlightDrivers + SlightPassengers + SlightPedestrians + SlightCyclists;
+    // The total remains known even when post-mortem road-user details are still pending.
+    [Column("fatalities_total"), Range(0, 255)] public int? FatalitiesTotal { get; set; }
+    [NotMapped] public int Fatalities => FatalitiesTotal ?? (FatalDrivers + FatalPassengers + FatalPedestrians + FatalCyclists);
+    // Null keeps historical role-based reports working; zero is an explicit no-injuries total.
+    [Column("serious_injuries_total"), Range(0, 10000)] public int? SeriousInjuriesTotal { get; set; }
+    [Column("slight_injuries_total"), Range(0, 10000)] public int? SlightInjuriesTotal { get; set; }
+    [NotMapped] public int Serious => SeriousInjuriesTotal ?? (SeriousDrivers + SeriousPassengers + SeriousPedestrians + SeriousCyclists);
+    [NotMapped] public int Slight => SlightInjuriesTotal ?? (SlightDrivers + SlightPassengers + SlightPedestrians + SlightCyclists);
 }

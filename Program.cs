@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json.Serialization;
 using CrashReport.Security;
+using CrashReport.Options;
+using CrashReport.Services.Import;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -30,7 +32,19 @@ builder.Services.AddControllersWithViews(options =>
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-builder.Services.AddScoped<ExcelImportService>();
+// Register the persisted staged-import pipeline. Each stage has one job: accept
+// the file, parse/validate it, record human review decisions, then commit it.
+builder.Services.Configure<ImportWorkbookOptions>(
+    builder.Configuration.GetSection(ImportWorkbookOptions.SectionName));
+builder.Services.AddScoped<IImportBatchRepository, EfImportBatchRepository>();
+builder.Services.AddScoped<IImportWorkbookIntakeService, ImportWorkbookIntakeService>();
+builder.Services.AddScoped<IWorkbookTemplateDetector, WorkbookTemplateDetector>();
+builder.Services.AddScoped<IWorkbookCrashRowParser, WorkbookCrashRowParser>();
+builder.Services.AddScoped<IWorkbookSummaryParser, WorkbookSummaryParser>();
+builder.Services.AddScoped<IStagingCrashQualityValidator, StagingCrashQualityValidator>();
+builder.Services.AddScoped<IImportBatchProcessingService, ImportBatchProcessingService>();
+builder.Services.AddScoped<IImportReviewService, ImportReviewService>();
+builder.Services.AddScoped<IImportCommitService, ImportCommitService>();
 builder.Services.AddScoped<WordexportService>();
 builder.Services.AddScoped<StandbyReportDataService>();
 builder.Services.AddScoped<StandbyReportWordService>();

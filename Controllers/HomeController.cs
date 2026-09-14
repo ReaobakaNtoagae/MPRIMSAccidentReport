@@ -176,7 +176,11 @@ public class HomeController : Controller
         if (id != crash.CrashId) return NotFound();
         if (ModelState.IsValid)
         {
-            try { _context.Update(crash); await _context.SaveChangesAsync(); }
+            try { 
+                _context.Update(crash); 
+                
+                await _context.SaveChangesAsync(); 
+            }
             catch (DbUpdateConcurrencyException)
             {
                 if (!_context.Crashes.Any(c => c.CrashId == id)) return NotFound();
@@ -251,6 +255,23 @@ public class HomeController : Controller
             return RedirectToAction(nameof(Create));
         }
 
+        // Normalise before validation and saving so duplicate checks use the same key.
+        // SapsStation is the accident report field submitted by the full-capture wizard.
+        var formNode = System.Text.Json.Nodes.JsonNode.Parse(formJson);
+        try
+        {
+            var info = formNode?["CrashInfo"] ?? throw new ArgumentException("Accident details are required.");
+            info["CrNo"] = CrashNumberFormatter.Format(info["SapsStation"]?.GetValue<string>() ?? "",
+                info["CrNo"]?.GetValue<string>() ?? "");
+            formJson = formNode!.ToJsonString();
+        }
+        catch (ArgumentException ex)
+        {
+            TempData["ValidationErrors"] = new List<string> { ex.Message };
+            TempData["FormJson"] = formJson;
+            return RedirectToAction(nameof(CreateWithErrors));
+        }
+
         // Validated by deserializing formJson into the ViewModel SEPARATELY
         // from the raw JsonDocument parsing the save logic below still
         // uses -- the ViewModel is a narrower slice of the real posted
@@ -262,6 +283,19 @@ public class HomeController : Controller
             formJson, new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new();
 
         var validationErrors = await _validation.ValidateAsync(vmForValidation, existingCrashId: null);
+        // A full report may follow an imported/quick summary because it is the
+        // authoritative source. Only a second full report is a genuine duplicate.
+        // Preserve the posted form when rejecting one so the user loses no work.
+        using (var duplicateDocument = JsonDocument.Parse(formJson))
+        {
+            if (duplicateDocument.RootElement.TryGetProperty("CrashInfo", out var info))
+            {
+                var number = GetString(info, "CrNo");
+                if (!string.IsNullOrWhiteSpace(number) &&
+                    await _context.Crashes.AnyAsync(c => c.CrNo == number))
+                    validationErrors.Add($"A full accident report with AR/CR number '{number}' already exists.");
+            }
+        }
         if (validationErrors.Count > 0)
         {
             TempData["ValidationErrors"] = validationErrors;

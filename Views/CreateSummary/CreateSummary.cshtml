@@ -222,27 +222,54 @@
         margin-bottom: 16px;
         flex-wrap: wrap;
     }
+
+    /* Page-level polish: these rules keep all existing DevExtreme editors and
+       reorganise their surrounding layout to match the application shell. */
+    .qa-page { max-width:1180px; margin:0 auto; }
+    .qa-hero { margin-bottom:1rem; }
+    .qa-eyebrow { color:var(--g-600); font:600 .66rem 'DM Mono',monospace; letter-spacing:1.2px; text-transform:uppercase; margin-bottom:.4rem; }
+    .qa-hero h1 { margin:0 0 .35rem; color:#17251b; font-size:1.65rem; }
+    .qa-layout { display:block; }
+    .qa-card { max-width:none; padding:0; border-color:#dce7df; border-radius:12px; box-shadow:0 7px 24px rgba(22,50,29,.055); overflow:hidden; }
+    .qa-note { margin:0; border:0; border-bottom:1px solid #dce8de; border-radius:0; padding:13px 20px; color:#3c5942; background:#f3f8f4; line-height:1.45; }
+    .qa-form-body { padding:2px 22px 22px; }
+    .qa-section-title { display:flex; align-items:center; gap:.65rem; margin:22px 0 12px; color:#275f31; }
+    .qa-section-title::after { content:''; height:1px; flex:1; background:#e3ebe4; }
+    .qa-row { gap:14px; margin-bottom:14px; }
+    .qa-field label { color:#56645a; font-weight:600; }
+    .qa-field label .required { color:#b4493d; }
+    .qa-card .dx-texteditor { border-color:#d6e1d8; border-radius:7px; background:#fff; }
+    .qa-card .dx-texteditor.dx-state-focused { border-color:#69a772; box-shadow:0 0 0 2px rgba(67,160,71,.10); }
+    .qa-vehicle-card { padding:11px 12px; border-color:#dce7df; background:#fafcfb; border-radius:9px; }
+    .qa-vehicle-badge { border-radius:8px; width:30px; height:30px; background:#e8f5e9; color:#2e7d32; font-family:'DM Mono',monospace; }
+    .qa-casualty-grid { padding:12px; border:1px solid #e0e8e2; border-radius:9px; background:#fafcfb; }
+    .qa-stepper { min-height:38px; }
+    .qa-stepper .dx-button { width:25px; height:25px; min-width:25px; border-radius:6px; }
+    .qa-stepper .dx-button-content { padding:0; }
+    .qa-person-row { border-radius:8px; padding:8px 10px; }
+    .qa-savebar { display:flex; align-items:center; gap:10px; padding-top:4px; }
+    .qa-savebar::after { content:'Required fields are checked before saving'; margin-left:auto; color:#89938c; font-size:.68rem; }
+    @@media(max-width:700px) { .qa-row { grid-template-columns:1fr; } .qa-casualty-grid { grid-template-columns:75px repeat(4,minmax(54px,1fr)); overflow-x:auto; } .qa-person-row { grid-template-columns:1fr 1fr; } .qa-savebar::after { display:none; } }
 </style>
 
-<div class="qa-card">
-    <div class="qa-note">
-        <i class="ti ti-bolt" style="font-size:16px;" aria-hidden="true"></i>
-        <span>
-            Quick add — logs the key details needed for reporting directly, without
-            the full CR1 form. Enter the CR number exactly as written on the completed
-            form. The record is saved the same way an imported row is, and can
-            be edited later from the crash reports grid.
-        </span>
+<div class="qa-page">
+<header class="qa-hero">
+    <div>
+        <div class="qa-eyebrow">Crash registry</div>
+        <h1>Quick add crash record</h1>
     </div>
-
+</header>
+<div class="qa-layout">
+<div class="qa-card">
+    <div class="qa-form-body">
     <div class="qa-section-title">Identification</div>
     <div class="qa-row">
-        <div class="qa-field"><label>CR number</label><div id="crNoBox"></div></div>
+        <div class="qa-field"><label>CR number <span class="required">*</span></label><div id="crNoBox"></div></div>
         <div class="qa-field"><label>CAS number</label><div id="casNoBox"></div></div>
         <div class="qa-field"><label>District</label><div id="districtBox"></div></div>
     </div>
     <div class="qa-row">
-        <div class="qa-field"><label>Station</label><div id="stationBox"></div></div>
+        <div class="qa-field"><label>Station <span class="required">*</span></label><div id="stationBox"></div></div>
         <div class="qa-field"><label>Route</label><div id="routeBox"></div></div>
         <div class="qa-field"><label>Location</label><div id="locationBox"></div></div>
     </div>
@@ -267,18 +294,17 @@
         <div class="qa-col-header">Cyclist</div>
     </div>
 
-    <div style="font-size:.75rem;color:#9ca3af;margin:0 0 12px;">
-        Tap + for each casualty by severity and role — a labelled entry appears below for each one.
-        Remove an entry directly with the × and the count above updates to match. Age, gender, race,
-        and vehicle are all optional.
-    </div>
     <div id="personRows"></div>
 
     <div class="qa-section-title" style="margin-top: 28px;">Save</div>
-    <div style="display:flex; gap:10px;">
+    <div class="qa-savebar">
         <div id="btnSave" style="min-width:140px;"></div>
         <div id="btnCancel" style="min-width:100px;"></div>
     </div>
+    </div>
+</div>
+
+</div>
 </div>
 
 @section Scripts {
@@ -408,7 +434,10 @@
                     onValueChanged: function (e) { entry.Registration = e.value; }
                 });
 
-                $("<button class='qa-person-remove' title='Remove vehicle'>").html("&times;").appendTo(card).on("click", function () {
+                // Use the same DevExtreme button behaviour as the rest of the form.
+                $("<div>").appendTo(card).dxButton({
+                    icon: "trash", hint: "Remove vehicle", type: "danger", stylingMode: "text",
+                    onClick: function () {
                     var idx = vehicles.indexOf(entry);
                     if (idx > -1) vehicles.splice(idx, 1);
                     card.remove();
@@ -426,6 +455,7 @@
                         );
                     }
                     refreshVehicleDropdowns();
+                    }
                 });
             }
 
@@ -500,13 +530,16 @@
                     onValueChanged: function (e) { entry.Race = e.value; }
                 });
 
-                $("<button class='qa-person-remove' title='Remove'>").html("&times;").appendTo(row).on("click", function () {
+                $("<div>").appendTo(row).dxButton({
+                    icon: "trash", hint: "Remove casualty", type: "danger", stylingMode: "text",
+                    onClick: function () {
                     var hasData = entry.Age !== null || entry.Gender || entry.Race || entry.VehicleNumber !== null;
                     if (hasData && !confirm("This entry has details filled in. Remove it anyway?")) return;
                     var idx = personRows.indexOf(entry);
                     if (idx > -1) personRows.splice(idx, 1);
                     row.remove();
                     syncStepperDisplay(sev, role);
+                    }
                 });
 
                 entry._row = row;
@@ -532,14 +565,14 @@
                 var rowHeader = $("<div class='qa-row-header " + severityClass(sev) + "'>").text(sev).appendTo("#casualtyGrid");
                 ROLES.forEach(function (role) {
                     var cell = $("<div class='qa-stepper " + severityClass(sev) + "'>").appendTo("#casualtyGrid");
-                    var minusBtn = $("<button type='button' class='qa-stepper-btn'>").text("-").appendTo(cell);
+                    var minusBtn = $("<div>").appendTo(cell);
                     var countEl = $("<span class='qa-stepper-count'>").text("0").appendTo(cell);
-                    var plusBtn = $("<button type='button' class='qa-stepper-btn'>").text("+").appendTo(cell);
+                    var plusBtn = $("<div>").appendTo(cell);
 
                     stepperWidgets[groupKey(sev, role)] = { countEl: countEl };
 
-                    plusBtn.on("click", function () { addPersonRow(sev, role); });
-                    minusBtn.on("click", function () { removeLastPersonRow(sev, role); syncStepperDisplay(sev, role); });
+                    plusBtn.dxButton({ icon:"plus", hint:"Add " + sev.toLowerCase() + " " + role.toLowerCase(), stylingMode:"outlined", onClick:function () { addPersonRow(sev, role); } });
+                    minusBtn.dxButton({ icon:"minus", hint:"Remove last " + sev.toLowerCase() + " " + role.toLowerCase(), stylingMode:"outlined", onClick:function () { removeLastPersonRow(sev, role); syncStepperDisplay(sev, role); } });
                 });
             });
 

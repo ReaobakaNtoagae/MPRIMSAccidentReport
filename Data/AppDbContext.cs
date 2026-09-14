@@ -1,4 +1,5 @@
 ﻿using CrashReport.Models;
+using CrashReport.Models.Import.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 
@@ -43,6 +44,13 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<LookupVehicleType> LookupVehicleTypes { get; set; }
 
     public DbSet<OptionListItem> OptionListItems { get; set; }
+
+    // These tables hold uploaded data until validation and human review are complete.
+    // They are intentionally separate from the production crash-summary tables.
+    public DbSet<ImportBatch> ImportBatches { get; set; }
+    public DbSet<StagingCrashSummary> StagingCrashSummaries { get; set; }
+    public DbSet<StagingImportDemographics> StagingImportDemographics { get; set; }
+    public DbSet<ImportDataQualityIssue> ImportDataQualityIssues { get; set; }
 
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -412,6 +420,17 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
                 .HasForeignKey(s => s.CrashId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("fk_cs_crash");
+        });
+
+        modelBuilder.Entity<CrashSummary>(entity =>
+        {
+            // AR sequences repeat across stations, so station is part of the real identity.
+            entity.HasIndex(summary => new { summary.Station, summary.CrNo }).IsUnique();
+
+            // CAS is optional. When present, the complete CAS may occur only once per station.
+            entity.HasIndex(summary => new { summary.Station, summary.CasNo })
+                .IsUnique()
+                .HasFilter("[cas_no] IS NOT NULL");
         });
 
         modelBuilder.Entity<CrashSummaryVehicle>()

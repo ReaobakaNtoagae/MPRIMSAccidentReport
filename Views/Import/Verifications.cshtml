@@ -1,0 +1,223 @@
+@model CrashReport.ViewModels.Import.DataVerificationViewModel
+@{
+    ViewData["Title"] = "Data verification";
+}
+
+<style>
+    .verify-page { max-width:1220px; margin:0 auto; }
+    .verify-hero { display:flex; justify-content:space-between; gap:2rem; align-items:flex-end; padding:1.35rem 1.45rem; border:1px solid #dce7df; border-radius:14px; background:linear-gradient(135deg,#fff 55%,#edf7ef); box-shadow:0 8px 28px rgba(22,50,29,.05); }
+    .verify-eyebrow { color:var(--g-600); font:600 .66rem 'DM Mono',monospace; letter-spacing:1.2px; text-transform:uppercase; margin-bottom:.4rem; }
+    .verify-hero h1 { margin:0 0 .35rem; font-size:1.6rem; color:#17251b; }
+    .verify-hero p { margin:0; max-width:690px; color:var(--muted); font-size:.84rem; line-height:1.55; }
+    .verify-policy { max-width:310px; padding:.7rem .8rem; color:#31583a; background:#fff; border:1px solid #cee2d1; border-radius:9px; font-size:.72rem; line-height:1.45; }
+    .verify-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:.75rem; margin:1rem 0; }
+    .verify-stat { padding:.9rem 1rem; background:#fff; border:1px solid #dce7df; border-radius:10px; }
+    .verify-stat span { display:block; color:#6b776e; font-size:.7rem; }
+    .verify-stat strong { display:block; color:#203027; font-size:1.35rem; margin-top:.15rem; }
+    .verify-toolbar { display:flex; gap:.55rem; padding:.7rem; margin-bottom:.8rem; background:#fff; border:1px solid #dce7df; border-radius:10px; position:sticky; top:0; z-index:5; box-shadow:0 5px 18px rgba(22,50,29,.05); }
+    .verify-toolbar input { flex:1; min-width:230px; }
+    .verify-filter.active { color:#fff; background:var(--g-600); border-color:var(--g-600); }
+    .verify-card { display:grid; grid-template-columns:minmax(0,1.2fr) minmax(300px,.8fr); background:#fff; border:1px solid #dce7df; border-radius:11px; margin-bottom:.75rem; overflow:hidden; box-shadow:0 4px 16px rgba(22,50,29,.035); }
+    .verify-main { padding:1rem 1.1rem; }
+    .verify-side { padding:1rem; background:#f7faf8; border-left:1px solid #e1e9e3; }
+    .verify-top { display:flex; justify-content:space-between; gap:1rem; margin-bottom:.7rem; }
+    .verify-source { font-weight:600; color:#243128; font-size:.86rem; }
+    .verify-meta { color:#758078; font:400 .68rem 'DM Mono',monospace; margin-top:3px; }
+    .verify-badge { display:inline-block; width:max-content; padding:.27rem .58rem; border-radius:999px; font:500 .66rem 'DM Mono',monospace; color:#8a570e; background:#fff2d9; }
+    .verify-badge.blocking { color:#9c352b; background:#fde9e6; }
+    .verify-question { margin:.75rem 0; padding:.72rem .8rem; border-left:3px solid #0b7887; background:#f2fafb; color:#354e52; font-size:.78rem; line-height:1.5; }
+    .verify-field { font-size:.76rem; color:#56645a; line-height:1.5; }
+    .verify-field strong { color:#34463a; }
+    .verify-value { display:inline-block; margin-top:.35rem; padding:.2rem .4rem; border-radius:4px; background:#f1f4f2; font:400 .69rem 'DM Mono',monospace; }
+    .verify-owner { color:#284632; font-weight:600; font-size:.8rem; }
+    .verify-due { color:#68766c; font-size:.72rem; margin:.3rem 0 .8rem; }
+    .verify-due.overdue { color:#a0352a; font-weight:600; }
+    .verify-side textarea { min-height:78px; resize:vertical; font-size:.78rem; }
+    .verify-actions { display:flex; justify-content:space-between; align-items:center; gap:.6rem; margin-top:.55rem; }
+    .verify-empty { text-align:center; padding:3rem 1rem; background:#fff; border:1px solid #dce7df; border-radius:11px; color:#657168; }
+    @@media(max-width:860px) { .verify-card { grid-template-columns:1fr; } .verify-side { border-left:0; border-top:1px solid #e1e9e3; } .verify-stats { grid-template-columns:1fr 1fr; } .verify-policy { display:none; } }
+    @@media(max-width:600px) { .verify-toolbar { flex-wrap:wrap; } .verify-toolbar input { flex-basis:100%; } }
+
+    .verify-hero { position:relative; overflow:hidden; }
+    .verify-hero::after { content:''; position:absolute; width:165px; height:165px; right:-60px; top:-85px; border-radius:50%; background:rgba(67,160,71,.08); }
+    .verify-hero > * { position:relative; z-index:1; }
+    .verify-stat { position:relative; overflow:hidden; min-height:78px; display:flex; flex-direction:column; justify-content:center; padding-left:1.1rem; box-shadow:0 3px 14px rgba(22,50,29,.025); }
+    .verify-stat::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:#74aa7b; }
+    .verify-stat:nth-child(3)::before { background:#d59327; }
+    .verify-stat:nth-child(4)::before { background:#c65a4d; }
+    .verify-toolbar { backdrop-filter:blur(8px); }
+    .verify-card { transition:transform .16s,border-color .16s,box-shadow .16s; }
+    .verify-card:hover { transform:translateY(-1px); border-color:#b9cfbd; box-shadow:0 8px 23px rgba(22,50,29,.07); }
+    .verify-main { position:relative; }
+    .verify-card[data-blocking="true"] .verify-main::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:#c84c3d; }
+    .verify-question { border-radius:0 7px 7px 0; }
+    .verify-side textarea { border-color:#d5e0d7; border-radius:7px; }
+    .verify-side textarea:focus { border-color:#72a97a; box-shadow:0 0 0 2px rgba(67,160,71,.1); }
+    .verify-page .dx-button { border-radius:7px; }
+    .verify-page .dx-button-text { font-size:.71rem; font-weight:600; }
+
+    /* Minimal verification queue: information first, response controls on demand. */
+    .verify-page { max-width:1120px; color:#183044; }
+    .verify-hero { padding:.25rem 0 1.15rem; align-items:center; background:transparent; border:0; border-radius:0; box-shadow:none; }
+    .verify-hero::after { display:none; }
+    .verify-hero h1 { color:#0b2742; font-size:1.65rem; letter-spacing:-.025em; }
+    .verify-eyebrow { color:#008fa3; }
+    .verify-hero p { color:#71828c; }
+    .verify-policy { border:0; border-left:2px solid #00a9bd; border-radius:3px; background:#edf9fb; color:#315965; }
+    .verify-stats { grid-template-columns:repeat(4,1fr); gap:1px; overflow:hidden; border:1px solid #dce7ea; border-radius:9px; background:#dce7ea; }
+    .verify-stat { min-height:72px; padding:.8rem 1rem; border:0; border-radius:0; box-shadow:none; }
+    .verify-stat::before { display:none; }
+    .verify-stat strong { color:#102e48; font-size:1.3rem; }
+    .verify-toolbar { top:.5rem; padding:.55rem; border-color:#d7e4e7; border-radius:9px; box-shadow:0 5px 18px rgba(15,54,71,.05); }
+    .verify-toolbar .dx-texteditor { flex:1; min-width:260px; }
+    .verify-card { display:block; border-color:#dce7ea; border-radius:9px; box-shadow:none; }
+    .verify-card:hover { transform:none; border-color:#b9d7dc; box-shadow:0 5px 18px rgba(15,54,71,.05); }
+    .verify-main { padding:.9rem 1rem; }
+    .verify-side { padding:0; background:#f8fbfc; border:0; border-top:1px solid #e4edef; }
+    .verify-side > summary { display:flex; justify-content:space-between; align-items:center; padding:.65rem 1rem; list-style:none; cursor:pointer; color:#177285; font-size:.76rem; font-weight:600; }
+    .verify-side > summary::-webkit-details-marker { display:none; }
+    .verify-side > summary::after { content:'＋'; color:#008fa3; font-size:1rem; }
+    .verify-side[open] > summary::after { content:'−'; }
+    .verify-side form { padding:0 1rem .9rem; }
+    .verify-page .dx-texteditor { border-color:#cedde1; border-radius:7px; background:#fff; }
+    .verify-page .dx-texteditor.dx-state-focused { border-color:#00a9bd; box-shadow:0 0 0 2px rgba(0,169,189,.1); }
+    .verify-page .dx-button-mode-contained.dx-button-default { background:#007f91; }
+    @@media(max-width:700px) { .verify-stats { grid-template-columns:1fr 1fr; } .verify-top { align-items:flex-start; } }
+</style>
+
+<div class="verify-page">
+    <header class="verify-hero">
+        <div>
+            <div class="verify-eyebrow">Data quality follow-up</div>
+            <h1>Data verification</h1>
+            <p>Track findings referred to data owners without delaying operational imports. Referred items remain visible here until a response and final decision are recorded.</p>
+        </div>
+        <div class="verify-policy"><strong>Import policy</strong><br />A referral is deferred follow-up work. Import still requires a usable station and crash date.</div>
+    </header>
+
+    @if (TempData["ImportSuccess"] is not null) { <div class="alert alert-success mt-3">@TempData["ImportSuccess"]</div> }
+    @if (TempData["ImportError"] is not null) { <div class="alert alert-danger mt-3">@TempData["ImportError"]</div> }
+
+    <section class="verify-stats">
+        <div class="verify-stat"><span>Awaiting response</span><strong>@Model.Total</strong></div>
+        <div class="verify-stat"><span>Import allowed</span><strong>@Model.ImportAllowed</strong></div>
+        <div class="verify-stat"><span>High priority</span><strong>@Model.Blocking</strong></div>
+        <div class="verify-stat"><span>Overdue</span><strong>@Model.Overdue</strong></div>
+    </section>
+
+    @if (Model.Items.Count == 0)
+    {
+        <div class="verify-empty"><strong>No outstanding referrals</strong><br />Findings referred to data owners will appear here.</div>
+    }
+    else
+    {
+        <div class="verify-toolbar">
+            <input id="verificationSearch" type="search" class="form-control form-control-sm" placeholder="Search owner, station, file, field or issue code" />
+            <button type="button" class="btn btn-sm btn-outline-secondary verify-filter active" data-filter="all">All</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary verify-filter" data-filter="blocking">Blocking</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary verify-filter" data-filter="overdue">Overdue</button>
+        </div>
+
+        @foreach (var item in Model.Items)
+        {
+            <article class="verify-card verification-item" data-blocking="@item.IsBlocking.ToString().ToLowerInvariant()" data-overdue="@item.IsOverdue.ToString().ToLowerInvariant()"
+                     data-search="@($"{item.ReferredTo} {item.RecordSummary} {item.FileName} {item.Field} {item.IssueCode}".ToLowerInvariant())">
+                <div class="verify-main">
+                    <div class="verify-top">
+                        <div><div class="verify-source">@item.RecordSummary</div><div class="verify-meta">@item.Source · @item.ReportingPeriod</div></div>
+                        <span class="verify-badge @(item.IsBlocking ? "blocking" : "")">@(item.IsBlocking ? "High priority · import allowed" : "Import allowed")</span>
+                    </div>
+                    <div class="verify-field"><strong>@item.Field</strong> · @item.Description</div>
+                    @if (!string.IsNullOrWhiteSpace(item.OriginalValue)) { <div class="verify-value">Original: @item.OriginalValue</div> }
+                    <div class="verify-question"><strong>Question:</strong> @item.Question</div>
+                    <div class="verify-meta">@item.FileName · Batch @item.ImportBatchId · @item.BatchStatus · @item.IssueCode</div>
+                </div>
+                <details class="verify-side">
+                    <summary>Record data-owner response</summary>
+                    <div class="px-3 pt-2">
+                    <div class="verify-owner">Awaiting @item.ReferredTo</div>
+                    <div class="verify-due @(item.IsOverdue ? "overdue" : "")">
+                        Referred @item.ReferredAt.ToString("dd MMM yyyy") · @(item.ResponseDueAt.HasValue ? $"Due {item.ResponseDueAt:dd MMM yyyy}" : "No due date")
+                    </div>
+                    </div>
+                    <form asp-action="RecordVerificationResponse" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="issueId" value="@item.IssueId" />
+                        <textarea name="response" class="form-control" maxlength="2000" required placeholder="Record the data owner's response and its source…"></textarea>
+                        <div class="verify-actions">
+                            <a asp-action="ReviewBatch" asp-route-batchId="@item.ImportBatchId" class="btn btn-sm btn-outline-secondary">Open batch</a>
+                            <button type="submit" class="btn btn-sm btn-success">Record response</button>
+                        </div>
+                    </form>
+                </details>
+            </article>
+        }
+    }
+</div>
+
+@section Scripts {
+<script>
+    // Keep the textarea's MVC name/value for model binding, while DevExtreme owns
+    // the visible editor and its validation experience.
+    document.querySelectorAll('.verify-page input:not([type="hidden"]), .verify-page textarea').forEach(input => {
+        const host = document.createElement('div');
+        input.before(host);
+        const wasRequired = input.required;
+        input.required = false;
+        input.style.display = 'none';
+        const options = {
+            value: input.value,
+            placeholder: input.placeholder,
+            width: '100%',
+            valueChangeEvent: 'input change',
+            onValueChanged: event => {
+                input.value = event.value ?? '';
+                input.dispatchEvent(new Event('input'));
+            }
+        };
+        input.tagName === 'TEXTAREA'
+            ? $(host).dxTextArea({ ...options, minHeight: 76, autoResizeEnabled: true })
+            : $(host).dxTextBox({ ...options, mode: input.type === 'search' ? 'search' : 'text' });
+        if (wasRequired) {
+            $(host).dxValidator({
+                validationGroup: input.form,
+                validationRules: [{ type: 'required', message: 'Please record the response.' }]
+            });
+        }
+    });
+
+    // Retain normal MVC forms while using DevExtreme for every visible action.
+    document.querySelectorAll('.verify-page button, .verify-page a.btn').forEach(button => {
+        const isSubmit = button.type === 'submit';
+        $(button).dxButton({
+            text: button.textContent.trim(),
+            type: isSubmit ? 'default' : 'normal',
+            stylingMode: isSubmit ? 'contained' : 'outlined',
+            useSubmitBehavior: isSubmit
+        });
+    });
+
+    // Search and filters are client-side because this queue is expected to remain modest;
+    // no data is changed until a response form is deliberately submitted.
+    (() => {
+        const input = document.getElementById('verificationSearch');
+        if (!input) return;
+        const items = [...document.querySelectorAll('.verification-item')];
+        const buttons = [...document.querySelectorAll('.verify-filter')];
+        let filter = 'all';
+        const refresh = () => items.forEach(item => {
+            const category = filter === 'all' || item.dataset[filter] === 'true';
+            item.hidden = !category || !item.dataset.search.includes(input.value.trim().toLowerCase());
+        });
+        input.addEventListener('input', refresh);
+        buttons.forEach(button => button.addEventListener('click', () => {
+            filter = button.dataset.filter;
+            buttons.forEach(candidate => {
+                candidate.classList.toggle('active', candidate === button);
+                $(candidate).dxButton('instance').option('stylingMode', candidate === button ? 'contained' : 'outlined');
+            });
+            refresh();
+        }));
+    })();
+</script>
+}

@@ -2,6 +2,7 @@
 using CrashReport.Data;
 using CrashReport.Models;
 using CrashReport.Security;
+using CrashReport.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -23,13 +24,14 @@ namespace CrashReport.Controllers
         }
 
         [HttpGet]
+        [Authorize(Policy = Privileges.Crashes.CreateSummary)]
         public IActionResult CreateSummary()
         {
             var model = new CrashSummary
             {
                 CrashDate = DateOnly.FromDateTime(DateTime.Today)
             };
-            return View(model);
+            return View("QuickCapture", model);
         }
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -42,6 +44,14 @@ namespace CrashReport.Controllers
 
             if (string.IsNullOrWhiteSpace(model.CrNo))
                 return Json(new { success = false, message = "CR number is required." });
+
+            try
+            {
+                // Users enter only the AR sequence. The stored value includes the crash month/year.
+                model.CrNo = QuickCaptureIdentifier.FormatAr(model.CrNo, model.CrashDate);
+                model.CasNo = QuickCaptureIdentifier.FormatCas(model.CasNo, model.CrashDate);
+            }
+            catch (ArgumentException ex) { return Json(new { success = false, message = ex.Message }); }
 
             if (!ModelState.IsValid)
             {
@@ -90,15 +100,24 @@ namespace CrashReport.Controllers
             }
 
             var validSeverities = new[] { "Fatal", "Serious", "Slight" };
+            // Bound person counts before casting role/demographic counts to byte columns.
+            if (injuries.Count > 255 || vehicles.Count > 255)
+                return Json(new { success = false, message = "A quick record supports up to 255 people and vehicles." });
             var validRoles = new[] { "Driver", "Passenger", "Pedestrian", "Cyclist" };
 
             foreach (var inj in injuries)
             {
+                if (inj.AgeGroupCode != null && !new[] { "0-7", "8-12", "13-18", "19-35", "36+" }.Contains(inj.AgeGroupCode))
+                    return Json(new { success = false, message = "Select a valid age group." });
                 if (!validSeverities.Contains(inj.Severity))
                     return Json(new { success = false, message = $"Each casualty needs a valid severity (Fatal, Serious, or Slight) -- got '{inj.Severity}'." });
 
-                if (!validRoles.Contains(inj.Role))
+                // Fatality details may be unknown until the post-mortem. Serious and
+                // slight injuries still require the road-user classification requested.
+                if (inj.Severity != "Fatal" && !validRoles.Contains(inj.Role))
                     return Json(new { success = false, message = $"Each casualty needs a valid role (Driver, Passenger, Pedestrian, or Cyclist) -- got '{inj.Role}'." });
+                if (inj.Role is not null && !validRoles.Contains(inj.Role))
+                    return Json(new { success = false, message = "Select a valid road user when fatality details are supplied." });
 
                 // Demographics are optional -- a mass-casualty day still
                 // works even if nobody has time to fill these in. Only
@@ -116,7 +135,9 @@ namespace CrashReport.Controllers
                 // Pedestrian/Cyclist must NOT (no vehicle to link to).
                 if ((inj.Role == "Driver" || inj.Role == "Passenger"))
                 {
-                    if (inj.VehicleNumber == null || !vehicleNumbers.Contains(inj.VehicleNumber.Value))
+                    // Quick Capture may not know which vehicle a fatality occupied.
+                    // A supplied link must still point at a submitted vehicle.
+                    if (inj.VehicleNumber.HasValue && !vehicleNumbers.Contains(inj.VehicleNumber.Value))
                         return Json(new { success = false, message = $"A {inj.Role.ToLower()} casualty must reference one of the vehicles entered above." });
                 }
                 else if (inj.VehicleNumber != null)
@@ -128,6 +149,16 @@ namespace CrashReport.Controllers
 
             int Count(string severity, string role) =>
                 injuries.Count(i => i.Severity == severity && i.Role == role);
+
+            // The role-based Quick Capture sends one road-user row per count. Require
+            // exact agreement, while keeping compatibility with previous callers.
+            var seriousRows = injuries.Count(i => i.Severity == "Serious");
+            var slightRows = injuries.Count(i => i.Severity == "Slight");
+            var roleBasedEditor = Request.Form.ContainsKey("RoleBasedInjuryEditor");
+            if ((roleBasedEditor && (model.SeriousInjuriesTotal != seriousRows || model.SlightInjuriesTotal != slightRows)) ||
+                (!roleBasedEditor && ((seriousRows > 0 && model.SeriousInjuriesTotal.HasValue && model.SeriousInjuriesTotal != seriousRows) ||
+                 (slightRows > 0 && model.SlightInjuriesTotal.HasValue && model.SlightInjuriesTotal != slightRows))))
+                return Json(new { success = false, message = "Injury totals must match the supplied casualty details." });
 
             model.FatalDrivers = (byte)Count("Fatal", "Driver");
             model.FatalPassengers = (byte)Count("Fatal", "Passenger");
@@ -151,6 +182,17 @@ namespace CrashReport.Controllers
             // breakdowns for non-fatal severities. ─────────────────────────
             foreach (var inj in injuries.Where(i => i.Severity == "Fatal"))
             {
+                if (!inj.Age.HasValue)
+                {
+                    switch (inj.AgeGroupCode)
+                    {
+                        case "0-7": model.FatalAge0to7++; break;
+                        case "8-12": model.FatalAge8to12++; break;
+                        case "13-18": model.FatalAge13to18++; break;
+                        case "19-35": model.FatalAge19to35++; break;
+                        case "36+": model.FatalAge36Plus++; break;
+                    }
+                }
                 if (inj.Age.HasValue)
                 {
                     var age = inj.Age.Value;
@@ -174,15 +216,22 @@ namespace CrashReport.Controllers
                 }
             }
 
-            // Duplicate check against the real, manually-entered CrNo.
-            if (await _context.CrashSummaries.AnyAsync(s => s.CrNo == model.CrNo))
-                return Json(new { success = false, message = $"A record with CR number '{model.CrNo}' already exists as a Quick Add / imported record." });
+            // AR and CAS sequences are scoped to the SAPS station.
+            if (await _context.CrashSummaries.AnyAsync(s => s.Station == model.Station && s.CrNo == model.CrNo))
+                return Json(new { success = false, message = $"AR number '{model.CrNo}' already exists for {model.Station}." });
+            if (model.CasNo is not null && await _context.CrashSummaries.AnyAsync(s => s.Station == model.Station && s.CasNo == model.CasNo))
+                return Json(new { success = false, message = $"CAS number '{model.CasNo}' already exists for {model.Station}." });
 
             var existsAsFullReport = await _context.Crashes.AnyAsync(c => c.CrNo == model.CrNo);
+            // Quick Capture is the lighter record, so do not add it after an
+            // authoritative full report already exists.
+            if (existsAsFullReport)
+                return Json(new { success = false, message = $"A record with AR/CR number '{model.CrNo}' already exists as a full report." });
 
             model.SourceFile = "Quick add (manual entry)";
             model.ImportedAt = DateTime.UtcNow;
             model.VehicleCount = (byte)vehicles.Count;
+            model.FatalitiesTotal = injuries.Count(i => i.Severity == "Fatal");
 
             await using var transaction = await _context.Database.BeginTransactionAsync();
 
@@ -217,6 +266,7 @@ namespace CrashReport.Controllers
                         Severity = inj.Severity,
                         Role = inj.Role,
                         Age = (byte?)inj.Age,
+                        AgeGroupCode = inj.AgeGroupCode,
                         Gender = string.IsNullOrEmpty(inj.Gender) ? null : inj.Gender,
                         Race = string.IsNullOrEmpty(inj.Race) ? null : inj.Race
                     });
@@ -256,9 +306,10 @@ namespace CrashReport.Controllers
     public class InjuryEntryInput
     {
         public string Severity { get; set; } = "";
-        public string Role { get; set; } = "";
+        public string? Role { get; set; }
         public byte? VehicleNumber { get; set; } // null for Pedestrian/Cyclist
         public int? Age { get; set; }
+        public string? AgeGroupCode { get; set; }
         public string? Gender { get; set; }
         public string? Race { get; set; }
     }

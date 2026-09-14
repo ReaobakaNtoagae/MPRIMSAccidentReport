@@ -38,6 +38,8 @@ public static class Privileges
         public const string Monthly = "Reports.Monthly";
         public const string FiveYear = "Reports.FiveYear";
         public const string Quarterly = "Reports.Quarterly";
+        public const string SixMonth = "Reports.SixMonth";
+        public const string Annual = "Reports.Annual";
     }
 
     public static class Admin
@@ -63,6 +65,8 @@ public static class Privileges
         (Reports.Monthly,   "Generate monthly memo",       "Reports"),
         (Reports.FiveYear,  "Generate 5-year report",      "Reports"),
         (Reports.Quarterly, "Generate quarterly report",   "Reports"),
+        (Reports.SixMonth,  "Generate six-month report",   "Reports"),
+        (Reports.Annual,    "Generate annual report",      "Reports"),
         (Admin.Users,       "Manage users",                "Administration"),
         (Admin.Roles,       "Manage roles and privileges", "Administration"),
         (Admin.Lookups,     "Manage lookup tables",        "Administration"),
@@ -93,7 +97,8 @@ public static class Privileges
         [
             Crashes.View,
             Import.Excel,
-            Reports.Standby, Reports.Monthly, Reports.FiveYear, Reports.Quarterly
+            Reports.Standby, Reports.Monthly, Reports.FiveYear, Reports.Quarterly,
+            Reports.SixMonth, Reports.Annual
         ];
 
    
@@ -102,6 +107,7 @@ public static class Privileges
             Crashes.View, Crashes.Create, Crashes.CreateSummary, Crashes.Edit, Crashes.Delete,
             Import.Excel,
             Reports.Standby, Reports.Monthly, Reports.FiveYear, Reports.Quarterly,
+            Reports.SixMonth, Reports.Annual,
             Admin.Users, Admin.Roles, Admin.Lookups
         ];
     }

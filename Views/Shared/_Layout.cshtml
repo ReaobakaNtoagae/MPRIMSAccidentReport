@@ -494,6 +494,12 @@
                         <span class="nav-label">Import Excel</span>
                     </a>
                 </div>
+                <div class="nav-item" data-label="Data Verification">
+                    <a class="nav-link" asp-controller="Import" asp-action="Verifications">
+                        <span class="nav-dot"></span>
+                        <span class="nav-label">Data Verification</span>
+                    </a>
+                </div>
             }
 
             @if (canQuickAdd)
@@ -510,45 +516,18 @@
             {
                 <div class="nav-section-label"><span>Reports</span></div>
 
-                @if (canStandby)
-                {
-                    <div class="nav-item" data-label="Weekly Standby Report">
-                        <a class="nav-link" asp-controller="StandbyReport" asp-action="Index">
+               
+                    <div class="nav-item" data-label="Crash ReportsHub">
+                        <a class="nav-link" asp-controller="ReportsHub" asp-action="Index">
                             <span class="nav-dot"></span>
-                            <span class="nav-label">Weekly Standby Report</span>
+                            <span class="nav-label">Reports</span>
                         </a>
                     </div>
-                }
+                
 
-                @if (canMonthly)
-                {
-                    <div class="nav-item" data-label="Monthly Memo Report">
-                        <a class="nav-link" asp-controller="MemoReport" asp-action="Index">
-                            <span class="nav-dot"></span>
-                            <span class="nav-label">Monthly Memo Report</span>
-                        </a>
-                    </div>
-                }
+                
 
-                @if (canQuarterly)
-                {
-                    <div class="nav-item" data-label="Quarterly Report">
-                        <a class="nav-link" asp-controller="QuarterlyReport" asp-action="Index">
-                            <span class="nav-dot"></span>
-                            <span class="nav-label">Quarterly Report</span>
-                        </a>
-                    </div>
-                }
 
-                @if (canFiveYear)
-                {
-                    <div class="nav-item" data-label="Five Year Report">
-                        <a class="nav-link" asp-controller="FiveYearReport" asp-action="Index">
-                            <span class="nav-dot"></span>
-                            <span class="nav-label">Five Year Report</span>
-                        </a>
-                    </div>
-                }
             }
 
             @if (canView)

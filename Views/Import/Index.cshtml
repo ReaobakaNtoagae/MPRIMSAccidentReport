@@ -4,21 +4,27 @@
 
 <style>
     .imp-wrap {
-        max-width: 560px;
+        max-width: 1120px;
+        margin: 0 auto;
     }
+
+    .imp-hero { margin-bottom:18px; }
+    .imp-eyebrow { color:var(--g-600); font:600 .68rem 'DM Mono',monospace; letter-spacing:1.25px; text-transform:uppercase; margin-bottom:7px; }
+    .imp-title { font-size:1.65rem; line-height:1.2; margin:0 0 7px; color:#17251b; }
+    .imp-grid { display:grid; grid-template-columns:minmax(0,1fr) 280px; gap:18px; align-items:start; }
 
     .imp-card {
         background: #fff;
-        border-radius: 10px;
-        border: 1px solid #c8e6c9;
-        box-shadow: 0 2px 8px rgba(0,0,0,.06);
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        box-shadow: 0 8px 28px rgba(22,50,29,.06);
         overflow: hidden;
         margin-bottom: 14px;
     }
 
     .imp-card-head {
-        padding: 11px 20px;
-        border-bottom: 2px solid #e8f5e9;
+        padding: 15px 20px;
+        border-bottom: 1px solid #e8efe9;
         font-size: .72rem;
         text-transform: uppercase;
         letter-spacing: .8px;
@@ -45,15 +51,33 @@
         display: block;
         margin-bottom: 5px;
     }
+
+    .imp-form-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    .imp-card .dx-texteditor { border-color:#d6e1d8; border-radius:7px; }
+    .imp-card .dx-texteditor.dx-state-focused { border-color:#69a772; box-shadow:0 0 0 2px rgba(67,160,71,.10); }
+    #fileUploader { border:1px dashed #a9cbae; border-radius:10px; background:#f8fcf8; padding:12px; }
+    #btnSubmit .dx-button { height:40px; border-radius:7px; }
+    #btnDownloadTemplate .dx-button { height:38px; border-radius:7px; }
+    .imp-template-mark { width:44px; height:44px; margin:2px auto 14px; display:grid; place-items:center; border-radius:11px; background:#e8f5e9; color:#2e7d32; font:700 .75rem 'DM Mono',monospace; }
+    @@media(max-width:850px) { .imp-grid { grid-template-columns:1fr; } }
+    @@media(max-width:560px) { .imp-form-row { grid-template-columns:1fr; gap:0; } .imp-title { font-size:1.4rem; } }
 </style>
 
 <div class="imp-wrap">
+
+    <header class="imp-hero">
+        <div>
+            <div class="imp-eyebrow">Data imports</div>
+            <h1 class="imp-title">Import an accident report</h1>
+        </div>
+    </header>
 
     @if (TempData["ImportError"] != null)
     {
         <div id="errMsg" data-msg="@TempData["ImportError"]"></div>
     }
 
+    <div class="imp-grid">
     <div class="imp-card">
         <div class="imp-card-head">Upload Accident Report Workbook</div>
         <div class="imp-card-body">
@@ -66,13 +90,33 @@
                 @Html.AntiForgeryToken()
                 <input type="hidden" id="provinceHidden" name="province" value="MP" />
 
+                <div class="imp-form-row">
                 <div class="imp-field">
                     <label class="imp-field-label">Province — applied to all imported records</label>
                     <div id="provinceSelect"></div>
                 </div>
 
                 <div class="imp-field">
-                    <label class="imp-field-label">Excel File (.xlsx / .xls — maximum 10 MB)</label>
+                    <label class="imp-field-label" for="reportingMonth">Reporting month</label>
+                    <div id="reportingMonthBox"></div>
+                    <input type="hidden" id="reportingMonth" name="reportingMonth" value="@DateTime.Today.Month" />
+                </div>
+                </div>
+
+                <div class="imp-field">
+                    <label class="imp-field-label" for="reportingYear">Reporting year</label>
+                    <div id="reportingYearBox"></div>
+                    <input id="reportingYear" name="reportingYear" type="hidden" value="@DateTime.Today.Year" />
+                </div>
+
+                <div class="imp-field">
+                    <label class="imp-field-label" for="notes">Import notes (optional)</label>
+                    <div id="notesBox"></div>
+                    <input id="notes" name="notes" type="hidden" />
+                </div>
+
+                <div class="imp-field">
+                    <label class="imp-field-label">Excel workbook (.xlsx — maximum 10 MB)</label>
                     <div id="fileUploader"></div>
                 </div>
 
@@ -84,16 +128,15 @@
         </div>
     </div>
 
+    <aside>
     <div class="imp-card">
-        <div class="imp-card-head">Standard Import Template</div>
-        <div class="imp-card-body">
-            <p style="font-size:.82rem; color:#444; line-height:1.5; margin:0 0 14px;">
-                Use the standard template to avoid formatting issues on import. It has the same
-                layout your station already uses, plus a District column and Fatal Age/Race
-                breakdown fields (highlighted in green) that older workbooks may be missing.
-            </p>
+        <div class="imp-card-head">Standard template</div>
+        <div class="imp-card-body" style="text-align:center">
+            <div class="imp-template-mark">XLSX</div>
             <div id="btnDownloadTemplate"></div>
         </div>
+    </div>
+    </aside>
     </div>
 
 </div>
@@ -131,6 +174,26 @@
                 DevExpress.ui.notify("Could not load the province list. Please refresh and try again.", "error", 4000);
             });
 
+            // DevExtreme editors update hidden form fields so the existing MVC action
+            // receives exactly the same names and values as before the visual refresh.
+            var months = Array.from({ length: 12 }, function (_, index) {
+                var month = index + 1;
+                return { value: month, text: new Date(2000, index, 1).toLocaleString("en-ZA", { month: "long" }) };
+            });
+            $("#reportingMonthBox").dxSelectBox({
+                items: months, displayExpr: "text", valueExpr: "value",
+                value: @DateTime.Today.Month,
+                onValueChanged: function (e) { $("#reportingMonth").val(e.value); }
+            });
+            $("#reportingYearBox").dxNumberBox({
+                value: @DateTime.Today.Year, min: 2000, max: 2100, showSpinButtons: true,
+                onValueChanged: function (e) { $("#reportingYear").val(e.value); }
+            });
+            $("#notesBox").dxTextArea({
+                height: 68, maxLength: 1000,
+                onValueChanged: function (e) { $("#notes").val(e.value); }
+            });
+
             // ── File uploader ─────────────────────────────────────────
             // uploadMode:"useForm" means the widget does NOT upload
             // automatically — it just holds the file for the form POST.
@@ -138,13 +201,13 @@
             var fileUploaderInst = $("#fileUploader").dxFileUploader({
                 name:             "file",
                 uploadMode:       "useForm",
-                accept:           ".xlsx,.xls",
+                accept:           ".xlsx",
                 multiple:         false,
                 selectButtonText: "Select Excel file",
                 labelText:        "or drop it here",
-                allowedFileExtensions: [".xlsx", ".xls"],
+                allowedFileExtensions: [".xlsx"],
                 maxFileSize:      10 * 1024 * 1024,   // 10 MB
-                invalidFileExtensionMessage: "Only .xlsx and .xls files are supported.",
+                invalidFileExtensionMessage: "Only .xlsx workbooks are supported.",
                 invalidMaxFileSizeMessage:   "File size must not exceed 10 MB.",
                 onValueChanged: function (e) {
                     var hasFile = e.value && e.value.length > 0;
@@ -154,7 +217,7 @@
 
             // ── Submit button ─────────────────────────────────────────
             var submitBtnInst = $("#btnSubmit").dxButton({
-                text:          "Import Records",
+                text:          "Stage workbook for review",
                 type:          "default",
                 icon:          "upload",
                 width:         "100%",
@@ -165,9 +228,9 @@
                         DevExpress.ui.notify("Please select an Excel file first.", "warning", 3000);
                         return;
                     }
-                    submitBtnInst.option("text",     "Importing — please wait…");
+                    submitBtnInst.option("text",     "Staging — please wait…");
                     submitBtnInst.option("disabled", true);
-                    DevExpress.ui.notify("Importing workbook. This may take a moment.", "info", 10000);
+                    DevExpress.ui.notify("Cleaning and validating the workbook in staging.", "info", 10000);
                     document.getElementById("uploadForm").submit();
                 }
             }).dxButton("instance");

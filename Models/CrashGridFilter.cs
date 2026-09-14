@@ -11,6 +11,9 @@ public class CrashGridFilter
     public string? Severity { get; set; }  
     public string? Source { get; set; }  
     public string? Search { get; set; }    
+    public string? Station { get; set; }
+    public string? Route { get; set; }
+    public string? CrashType { get; set; }
 
     public string SortBy { get; set; } = "Date";
     public bool SortDesc { get; set; } = true;

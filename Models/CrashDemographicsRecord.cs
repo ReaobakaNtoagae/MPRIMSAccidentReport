@@ -14,6 +14,12 @@ public class CrashDemographicRecord
     [Column("period_to")] public DateOnly PeriodTo { get; set; }
     [Column("province_code"), MaxLength(5)] public string? ProvinceCode { get; set; }
 
+    // Demographic summaries belong to a district. The production database requires
+    // this FK, so staged imports must resolve it from the worksheet's station rows.
+    // Null represents a regional/provincial summary that legitimately spans more
+    // than one district, such as the combined Ehlanzeni workbook.
+    [Column("district_id")] public int? DistrictId { get; set; }
+
     [Column("age_0_7")] public int Age0to7 { get; set; }
     [Column("age_8_12")] public int Age8to12 { get; set; }
     [Column("age_13_18")] public int Age13to18 { get; set; }

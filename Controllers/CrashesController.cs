@@ -227,6 +227,11 @@ public class CrashesController : Controller
               "NoOfAppendices,NoOfVehiclesInvolved,ProvinceCode,SpeedLimitKmh," +
               "RoadNumber,KmMarker,BriefDescription")] Crash crash)
     {
+        // Full reports are authoritative and may coexist with an earlier quick/imported
+        // summary. Only another full report is a genuine duplicate here.
+        if (!string.IsNullOrWhiteSpace(crash.CrNo) &&
+            await _context.Crashes.AnyAsync(c => c.CrNo == crash.CrNo))
+            ModelState.AddModelError(nameof(crash.CrNo), $"A full accident report with AR/CR number '{crash.CrNo}' already exists.");
         if (ModelState.IsValid)
         {
             _context.Add(crash);
@@ -314,12 +319,25 @@ public class CrashesController : Controller
         if (!string.IsNullOrWhiteSpace(filter.Source))
             rows = rows.Where(r => string.Equals(r.Source, filter.Source, StringComparison.OrdinalIgnoreCase)).ToList();
 
+        if (!string.IsNullOrWhiteSpace(filter.Station))
+            rows = rows.Where(r => r.Station.Contains(filter.Station.Trim(), StringComparison.OrdinalIgnoreCase)).ToList();
+
+        if (!string.IsNullOrWhiteSpace(filter.Route))
+            rows = rows.Where(r => r.Route.Contains(filter.Route.Trim(), StringComparison.OrdinalIgnoreCase)).ToList();
+
+        if (!string.IsNullOrWhiteSpace(filter.CrashType))
+            rows = rows.Where(r => r.CrashType.Contains(filter.CrashType.Trim(), StringComparison.OrdinalIgnoreCase)).ToList();
+
         if (!string.IsNullOrWhiteSpace(filter.Search))
         {
             var term = filter.Search.Trim();
             rows = rows.Where(r =>
                 r.CrNo.Contains(term, StringComparison.OrdinalIgnoreCase) ||
-                r.Route.Contains(term, StringComparison.OrdinalIgnoreCase)
+                r.CasNo.Contains(term, StringComparison.OrdinalIgnoreCase) ||
+                r.ArNo.Contains(term, StringComparison.OrdinalIgnoreCase) ||
+                r.Route.Contains(term, StringComparison.OrdinalIgnoreCase) ||
+                r.Station.Contains(term, StringComparison.OrdinalIgnoreCase) ||
+                r.Location.Contains(term, StringComparison.OrdinalIgnoreCase)
             ).ToList();
         }
 
@@ -337,14 +355,19 @@ public class CrashesController : Controller
                 r.CrashId,
                 r.SummaryId,
                 r.CrNo,
+                r.CasNo,
+                r.ArNo,
                 r.Station,
                 r.District,
                 Date = r.Date.ToString("yyyy-MM-dd"),
+                Time = r.Time?.ToString("HH:mm"),
                 r.Route,
+                r.Location,
                 r.CrashType,
                 r.VehicleCount,
                 r.Fatalities,
                 r.Serious,
+                r.Slight,
                 Severity = r.OverallSeverity,
                 r.Source
             });
@@ -387,17 +410,30 @@ public class CrashesController : Controller
                 Role = i.Role,
                 VehicleNumber = i.Vehicle != null ? i.Vehicle.VehicleNumber : (byte?)null,
                 Age = i.Age,
+                AgeGroupCode = i.AgeGroupCode,
                 Gender = i.Gender,
                 Race = i.Race
             })
             .ToListAsync();
 
-        return View(new EditSummaryViewModel
-        {
-            Summary = summary,
-            Vehicles = vehicles,
-            Injuries = injuries
-        });
+        // Only manually quick-captured summaries use this editor. Imported summaries
+        // retain their detailed editor; Full Capture has its own separate edit action.
+        if (summary.SourceFile != "Quick add (manual entry)")
+            return View(new EditSummaryViewModel { Summary = summary, Vehicles = vehicles, Injuries = injuries });
+
+        var station = await _context.SapsStations.AsNoTracking().Include(s => s.DistrictLookup)
+            .FirstOrDefaultAsync(s => s.StationName == summary.Station);
+        // Both quick actions share one view, including the existing lookup selections.
+        ViewData["QuickCaptureInitial"] = new { data = summary, vehicles,
+            district = station?.DistrictLookup?.DistrictName ?? station?.District,
+            arSequence = QuickCaptureIdentifier.ExtractArSequence(summary.CrNo),
+            protectedVehicles = injuries.Where(i => i.Severity != "Fatal" && i.VehicleNumber.HasValue)
+                .Select(i => i.VehicleNumber).Distinct().ToArray(),
+            // Quick Capture now edits all severities. Serious and slight entries
+            // expose their road-user role; fatal entries also expose demographics.
+            people = injuries.ToArray() };
+        ViewData["QuickCaptureEdit"] = true;
+        return View("~/Views/CreateSummary/QuickCapture.cshtml", summary);
     }
 
     [HttpPost]
@@ -408,6 +444,19 @@ public class CrashesController : Controller
     {
         var summary = await _context.CrashSummaries.FindAsync(model.SummaryId);
         if (summary == null) return NotFound();
+
+        try
+        {
+            model.CrNo = QuickCaptureIdentifier.FormatAr(model.CrNo, model.CrashDate);
+            model.CasNo = QuickCaptureIdentifier.FormatCas(model.CasNo, model.CrashDate);
+        }
+        catch (ArgumentException ex) { return Json(new { success = false, message = ex.Message }); }
+        if (await _context.CrashSummaries.AnyAsync(s => s.SummaryId != model.SummaryId && s.Station == model.Station && s.CrNo == model.CrNo))
+            return Json(new { success = false, message = $"AR number '{model.CrNo}' already exists for {model.Station}." });
+        if (model.CasNo is not null && await _context.CrashSummaries.AnyAsync(s => s.SummaryId != model.SummaryId && s.Station == model.Station && s.CasNo == model.CasNo))
+            return Json(new { success = false, message = $"CAS number '{model.CasNo}' already exists for {model.Station}." });
+        if (!ModelState.IsValid)
+            return Json(new { success = false, message = "Check the values entered before saving." });
 
         if (string.IsNullOrWhiteSpace(model.Station))
             return Json(new { success = false, message = "Station is required." });
@@ -453,16 +502,36 @@ public class CrashesController : Controller
             }
         }
 
+        // Compatibility for the previous totals-only Quick Capture screen. The new
+        // role-based screen sends every severity, so it does not use this marker.
+        if (Request.Form.ContainsKey("TotalsOnlyEditor"))
+        {
+            var historical = await _context.CrashSummaryInjuries.AsNoTracking()
+                .Where(i => i.SummaryId == model.SummaryId && i.Severity != "Fatal")
+                .Select(i => new InjuryEntryInput { Severity = i.Severity, Role = i.Role,
+                    Age = i.Age, AgeGroupCode = i.AgeGroupCode, Gender = i.Gender, Race = i.Race,
+                    VehicleNumber = i.Vehicle != null ? i.Vehicle.VehicleNumber : (byte?)null }).ToListAsync();
+            if ((historical.Any(i => i.Severity == "Serious") && model.SeriousInjuriesTotal != historical.Count(i => i.Severity == "Serious")) ||
+                (historical.Any(i => i.Severity == "Slight") && model.SlightInjuriesTotal != historical.Count(i => i.Severity == "Slight")))
+                return Json(new { success = false, message = "These totals have existing casualty details. Reconcile that breakdown before changing the totals." });
+            injuries.AddRange(historical);
+        }
+        if (injuries.Count > 255 || vehicles.Count > 255)
+            return Json(new { success = false, message = "Too many casualty or vehicle entries for a quick record." });
         var validSeverities = new[] { "Fatal", "Serious", "Slight" };
         var validRoles = new[] { "Driver", "Passenger", "Pedestrian", "Cyclist" };
 
         foreach (var inj in injuries)
         {
+            if (inj.AgeGroupCode != null && !new[] { "0-7", "8-12", "13-18", "19-35", "36+" }.Contains(inj.AgeGroupCode))
+                return Json(new { success = false, message = "Select a valid age group." });
             if (!validSeverities.Contains(inj.Severity))
                 return Json(new { success = false, message = $"Each casualty needs a valid severity (Fatal, Serious, or Slight) — got '{inj.Severity}'." });
 
-            if (!validRoles.Contains(inj.Role))
+            if (inj.Severity != "Fatal" && !validRoles.Contains(inj.Role))
                 return Json(new { success = false, message = $"Each casualty needs a valid role (Driver, Passenger, Pedestrian, or Cyclist) — got '{inj.Role}'." });
+            if (inj.Role is not null && !validRoles.Contains(inj.Role))
+                return Json(new { success = false, message = "Select a valid road user when fatality details are supplied." });
 
             if (inj.Age.HasValue && (inj.Age.Value < 0 || inj.Age.Value > 120))
                 return Json(new { success = false, message = $"Age {inj.Age} is out of range (0–120)." });
@@ -475,7 +544,8 @@ public class CrashesController : Controller
 
             if (inj.Role == "Driver" || inj.Role == "Passenger")
             {
-                if (inj.VehicleNumber == null || !vehicleNumbers.Contains(inj.VehicleNumber.Value))
+                // Simplified Quick Capture can leave the occupied vehicle unknown.
+                if (inj.VehicleNumber.HasValue && !vehicleNumbers.Contains(inj.VehicleNumber.Value))
                     return Json(new { success = false, message = $"A {inj.Role.ToLower()} casualty must reference one of the vehicles entered above." });
             }
             else if (inj.VehicleNumber != null)
@@ -490,7 +560,19 @@ public class CrashesController : Controller
         int Count(string severity, string role) =>
             injuries.Count(i => i.Severity == severity && i.Role == role);
 
+        var roleBasedEditor = Request.Form.ContainsKey("RoleBasedInjuryEditor");
+        var seriousRows = injuries.Count(i => i.Severity == "Serious");
+        var slightRows = injuries.Count(i => i.Severity == "Slight");
+        if (roleBasedEditor &&
+            (model.SeriousInjuriesTotal != seriousRows || model.SlightInjuriesTotal != slightRows))
+            return Json(new { success = false, message = "Injury totals must match the road-user details supplied." });
+
         summary.Station = model.Station;
+        if (Request.Form.ContainsKey("TotalsOnlyEditor") || roleBasedEditor)
+        {
+            summary.SeriousInjuriesTotal = model.SeriousInjuriesTotal;
+            summary.SlightInjuriesTotal = model.SlightInjuriesTotal;
+        }
         summary.CasNo = model.CasNo;
         summary.CrNo = model.CrNo;
         summary.CrashDate = model.CrashDate;
@@ -499,6 +581,7 @@ public class CrashesController : Controller
         summary.Location = model.Location;
         summary.CrashType = model.CrashType;
         summary.VehicleCount = (byte)vehicles.Count;
+        summary.FatalitiesTotal = injuries.Count(i => i.Severity == "Fatal");
 
         summary.FatalDrivers = (byte)Count("Fatal", "Driver");
         summary.FatalPassengers = (byte)Count("Fatal", "Passenger");
@@ -525,6 +608,18 @@ public class CrashesController : Controller
 
         foreach (var inj in injuries.Where(i => i.Severity == "Fatal"))
         {
+            // Keep grouped ages captured by the simplified form when editing a record.
+            if (!inj.Age.HasValue)
+            {
+                switch (inj.AgeGroupCode)
+                {
+                    case "0-7": summary.FatalAge0to7++; break;
+                    case "8-12": summary.FatalAge8to12++; break;
+                    case "13-18": summary.FatalAge13to18++; break;
+                    case "19-35": summary.FatalAge19to35++; break;
+                    case "36+": summary.FatalAge36Plus++; break;
+                }
+            }
             if (inj.Age.HasValue)
             {
                 var age = inj.Age.Value;
@@ -588,6 +683,7 @@ public class CrashesController : Controller
                     Severity = inj.Severity,
                     Role = inj.Role,
                     Age = (byte?)inj.Age,
+                    AgeGroupCode = inj.AgeGroupCode,
                     Gender = string.IsNullOrEmpty(inj.Gender) ? null : inj.Gender,
                     Race = string.IsNullOrEmpty(inj.Race) ? null : inj.Race
                 });

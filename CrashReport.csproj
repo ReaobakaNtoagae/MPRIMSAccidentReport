@@ -26,4 +26,12 @@
     <Folder Include="wwwroot\uploads\crashes\" />
   </ItemGroup>
 
+  <!-- Verification helpers and generated analysis files live under outputs, but
+       they are not application source code and must not be compiled into the web app. -->
+  <ItemGroup>
+    <Compile Remove="outputs\**\*.cs" />
+    <Content Remove="outputs\**\*" />
+    <None Remove="outputs\**\*" />
+  </ItemGroup>
+
 </Project>

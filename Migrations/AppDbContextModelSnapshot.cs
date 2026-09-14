@@ -359,6 +359,10 @@ namespace CrashReport.Migrations
                         .HasColumnType("int")
                         .HasColumnName("cyclist_male");
 
+                    b.Property<int?>("DistrictId")
+                        .HasColumnType("int")
+                        .HasColumnName("district_id");
+
                     b.Property<int>("DriverFemale")
                         .HasColumnType("int")
                         .HasColumnName("driver_female");
@@ -418,7 +422,52 @@ namespace CrashReport.Migrations
 
                     b.HasKey("DemoId");
 
-                    b.ToTable("crash_demographics");
+                    b.ToTable("crash_demographics", (string)null);
+                });
+
+            modelBuilder.Entity("CrashReport.Models.CrashFatality", b =>
+                {
+                    b.Property<int>("FatalityId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("fatality_id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("FatalityId"));
+
+                    b.Property<byte>("Age")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("age");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Gender")
+                        .IsRequired()
+                        .HasMaxLength(1)
+                        .HasColumnType("nvarchar(1)")
+                        .HasColumnName("gender");
+
+                    b.Property<string>("Race")
+                        .IsRequired()
+                        .HasMaxLength(1)
+                        .HasColumnType("nvarchar(1)")
+                        .HasColumnName("race");
+
+                    b.Property<string>("Role")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("role");
+
+                    b.Property<int>("SummaryId")
+                        .HasColumnType("int")
+                        .HasColumnName("summary_id");
+
+                    b.HasKey("FatalityId");
+
+                    b.HasIndex("SummaryId");
+
+                    b.ToTable("crash_fatalities", (string)null);
                 });
 
             modelBuilder.Entity("CrashReport.Models.CrashLocation", b =>
@@ -726,6 +775,34 @@ namespace CrashReport.Migrations
                         .HasColumnType("nvarchar(30)")
                         .HasColumnName("crash_type");
 
+                    b.Property<byte>("FatalAfrican")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("fatal_african");
+
+                    b.Property<byte>("FatalAge0to7")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("fatal_age_0_7");
+
+                    b.Property<byte>("FatalAge13to18")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("fatal_age_13_18");
+
+                    b.Property<byte>("FatalAge19to35")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("fatal_age_19_35");
+
+                    b.Property<byte>("FatalAge36Plus")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("fatal_age_36_plus");
+
+                    b.Property<byte>("FatalAge8to12")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("fatal_age_8_12");
+
+                    b.Property<byte>("FatalColoured")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("fatal_coloured");
+
                     b.Property<byte>("FatalCyclists")
                         .HasColumnType("tinyint")
                         .HasColumnName("fatal_cyclists");
@@ -738,9 +815,17 @@ namespace CrashReport.Migrations
                         .HasColumnType("tinyint")
                         .HasColumnName("fatal_female");
 
+                    b.Property<byte>("FatalIndian")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("fatal_indian");
+
                     b.Property<byte>("FatalMale")
                         .HasColumnType("tinyint")
                         .HasColumnName("fatal_male");
+
+                    b.Property<byte>("FatalOtherRace")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("fatal_other_race");
 
                     b.Property<byte>("FatalPassengers")
                         .HasColumnType("tinyint")
@@ -749,6 +834,14 @@ namespace CrashReport.Migrations
                     b.Property<byte>("FatalPedestrians")
                         .HasColumnType("tinyint")
                         .HasColumnName("fatal_pedestrians");
+
+                    b.Property<byte>("FatalWhite")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("fatal_white");
+
+                    b.Property<int?>("FatalitiesTotal")
+                        .HasColumnType("int")
+                        .HasColumnName("fatalities_total");
 
                     b.Property<DateTime>("ImportedAt")
                         .HasColumnType("datetime2")
@@ -772,6 +865,10 @@ namespace CrashReport.Migrations
                         .HasColumnType("tinyint")
                         .HasColumnName("serious_drivers");
 
+                    b.Property<int?>("SeriousInjuriesTotal")
+                        .HasColumnType("int")
+                        .HasColumnName("serious_injuries_total");
+
                     b.Property<byte>("SeriousPassengers")
                         .HasColumnType("tinyint")
                         .HasColumnName("serious_passengers");
@@ -787,6 +884,10 @@ namespace CrashReport.Migrations
                     b.Property<byte>("SlightDrivers")
                         .HasColumnType("tinyint")
                         .HasColumnName("slight_drivers");
+
+                    b.Property<int?>("SlightInjuriesTotal")
+                        .HasColumnType("int")
+                        .HasColumnName("slight_injuries_total");
 
                     b.Property<byte>("SlightPassengers")
                         .HasColumnType("tinyint")
@@ -818,11 +919,115 @@ namespace CrashReport.Migrations
 
                     b.HasKey("SummaryId");
 
-                    b.HasIndex("CrNo", "SourceFile")
+                    b.HasIndex("Station", "CasNo")
                         .IsUnique()
-                        .HasFilter("[source_file] IS NOT NULL");
+                        .HasFilter("[cas_no] IS NOT NULL");
 
-                    b.ToTable("crash_summaries");
+                    b.HasIndex("Station", "CrNo")
+                        .IsUnique();
+
+                    b.ToTable("crash_summaries", (string)null);
+                });
+
+            modelBuilder.Entity("CrashReport.Models.CrashSummaryInjury", b =>
+                {
+                    b.Property<int>("InjuryId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("injury_id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("InjuryId"));
+
+                    b.Property<byte?>("Age")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("age");
+
+                    b.Property<string>("AgeGroupCode")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)")
+                        .HasColumnName("age_group_code");
+
+                    b.Property<string>("Gender")
+                        .HasMaxLength(1)
+                        .HasColumnType("nvarchar(1)")
+                        .HasColumnName("gender");
+
+                    b.Property<string>("Race")
+                        .HasMaxLength(1)
+                        .HasColumnType("nvarchar(1)")
+                        .HasColumnName("race");
+
+                    b.Property<string>("Role")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("role");
+
+                    b.Property<string>("Severity")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)")
+                        .HasColumnName("severity");
+
+                    b.Property<int>("SummaryId")
+                        .HasColumnType("int")
+                        .HasColumnName("summary_id");
+
+                    b.Property<int?>("VehicleId")
+                        .HasColumnType("int")
+                        .HasColumnName("vehicle_id");
+
+                    b.HasKey("InjuryId");
+
+                    b.HasIndex("SummaryId");
+
+                    b.HasIndex("VehicleId");
+
+                    b.ToTable("crash_summary_injuries", (string)null);
+                });
+
+            modelBuilder.Entity("CrashReport.Models.CrashSummaryVehicle", b =>
+                {
+                    b.Property<int>("VehicleId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("vehicle_id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("VehicleId"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Registration")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("registration");
+
+                    b.Property<int>("SummaryId")
+                        .HasColumnType("int")
+                        .HasColumnName("summary_id");
+
+                    b.Property<byte>("VehicleNumber")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("vehicle_number");
+
+                    b.Property<string>("VehicleTypeCode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("vehicle_type_code");
+
+                    b.Property<string>("VehicleTypeName")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)")
+                        .HasColumnName("vehicle_type_name");
+
+                    b.HasKey("VehicleId");
+
+                    b.HasIndex("SummaryId");
+
+                    b.ToTable("crash_summary_vehicles", (string)null);
                 });
 
             modelBuilder.Entity("CrashReport.Models.CrashVehicle", b =>
@@ -1039,6 +1244,621 @@ namespace CrashReport.Migrations
                     b.ToTable("drivers_licences", (string)null);
                 });
 
+            modelBuilder.Entity("CrashReport.Models.Import.Models.ImportBatch", b =>
+                {
+                    b.Property<int>("ImportBatchId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("import_batch_id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ImportBatchId"));
+
+                    b.Property<string>("DetectedTemplate")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("detected_template");
+
+                    b.Property<string>("FailureReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)")
+                        .HasColumnName("failure_reason");
+
+                    b.Property<string>("FileSha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)")
+                        .HasColumnName("file_sha256");
+
+                    b.Property<DateTime?>("ImportedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("imported_at");
+
+                    b.Property<string>("ImportedByUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)")
+                        .HasColumnName("imported_by_user_id");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)")
+                        .HasColumnName("notes");
+
+                    b.Property<string>("OriginalFileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)")
+                        .HasColumnName("original_file_name");
+
+                    b.Property<byte>("ReportingMonth")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("reporting_month");
+
+                    b.Property<short>("ReportingYear")
+                        .HasColumnType("smallint")
+                        .HasColumnName("reporting_year");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("reviewed_at");
+
+                    b.Property<string>("ReviewedByUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)")
+                        .HasColumnName("reviewed_by_user_id");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion")
+                        .HasColumnName("row_version");
+
+                    b.Property<string>("SelectedRegion")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("selected_region");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("StoredFileReference")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("stored_file_reference");
+
+                    b.Property<decimal?>("TemplateDetectionConfidence")
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("template_detection_confidence");
+
+                    b.Property<DateTime>("UploadedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("uploaded_at");
+
+                    b.Property<string>("UploadedByUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)")
+                        .HasColumnName("uploaded_by_user_id");
+
+                    b.HasKey("ImportBatchId");
+
+                    b.ToTable("import_batches", (string)null);
+                });
+
+            modelBuilder.Entity("CrashReport.Models.Import.Models.ImportDataQualityIssue", b =>
+                {
+                    b.Property<long>("IssueId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("issue_id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("IssueId"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("DataOwnerResponse")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)")
+                        .HasColumnName("data_owner_response");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)")
+                        .HasColumnName("description");
+
+                    b.Property<string>("FieldName")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("field_name");
+
+                    b.Property<int>("ImportBatchId")
+                        .HasColumnType("int")
+                        .HasColumnName("import_batch_id");
+
+                    b.Property<bool>("IsBlocking")
+                        .HasColumnType("bit")
+                        .HasColumnName("is_blocking");
+
+                    b.Property<string>("IssueCode")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("issue_code");
+
+                    b.Property<string>("OriginalValue")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)")
+                        .HasColumnName("original_value");
+
+                    b.Property<string>("ReferralQuestion")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)")
+                        .HasColumnName("referral_question");
+
+                    b.Property<DateTime?>("ReferredAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("referred_at");
+
+                    b.Property<string>("ReferredByUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)")
+                        .HasColumnName("referred_by_user_id");
+
+                    b.Property<string>("ReferredTo")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("referred_to");
+
+                    b.Property<bool>("RequiresDataOwner")
+                        .HasColumnType("bit")
+                        .HasColumnName("requires_data_owner");
+
+                    b.Property<string>("ResolutionNotes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)")
+                        .HasColumnName("resolution_notes");
+
+                    b.Property<string>("ResolutionStatus")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasColumnName("resolution_status");
+
+                    b.Property<DateTime?>("ResolvedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("resolved_at");
+
+                    b.Property<string>("ResolvedByUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)")
+                        .HasColumnName("resolved_by_user_id");
+
+                    b.Property<DateTime?>("RespondedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("responded_at");
+
+                    b.Property<DateTime?>("ResponseDueAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("response_due_at");
+
+                    b.Property<string>("ResponseRecordedByUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)")
+                        .HasColumnName("response_recorded_by_user_id");
+
+                    b.Property<string>("Severity")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("severity");
+
+                    b.Property<long?>("StagingSummaryId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("staging_summary_id");
+
+                    b.Property<string>("SuggestedValue")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)")
+                        .HasColumnName("suggested_value");
+
+                    b.HasKey("IssueId");
+
+                    b.HasIndex("ImportBatchId");
+
+                    b.HasIndex("StagingSummaryId");
+
+                    b.ToTable("import_data_quality_issues", (string)null);
+                });
+
+            modelBuilder.Entity("CrashReport.Models.Import.Models.StagingCrashSummary", b =>
+                {
+                    b.Property<long>("StagingSummaryId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("staging_summary_id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("StagingSummaryId"));
+
+                    b.Property<string>("ArNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("ar_number");
+
+                    b.Property<string>("CalculatedDay")
+                        .HasMaxLength(15)
+                        .HasColumnType("nvarchar(15)")
+                        .HasColumnName("calculated_day");
+
+                    b.Property<string>("CasNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("cas_number");
+
+                    b.Property<DateOnly?>("CrashDate")
+                        .HasColumnType("date")
+                        .HasColumnName("crash_date");
+
+                    b.Property<TimeOnly?>("CrashTime")
+                        .HasColumnType("time")
+                        .HasColumnName("crash_time");
+
+                    b.Property<string>("CrashType")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasColumnName("crash_type");
+
+                    b.Property<string>("DuplicateStatus")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasColumnName("duplicate_status");
+
+                    b.Property<byte?>("FatalCyclists")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("fatal_cyclists");
+
+                    b.Property<byte?>("FatalDrivers")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("fatal_drivers");
+
+                    b.Property<byte?>("FatalFemale")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("fatal_female");
+
+                    b.Property<byte?>("FatalMale")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("fatal_male");
+
+                    b.Property<byte?>("FatalPassengers")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("fatal_passengers");
+
+                    b.Property<byte?>("FatalPedestrians")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("fatal_pedestrians");
+
+                    b.Property<int>("ImportBatchId")
+                        .HasColumnType("int")
+                        .HasColumnName("import_batch_id");
+
+                    b.Property<string>("ImportStatus")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("import_status");
+
+                    b.Property<DateTime?>("ImportedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("imported_at");
+
+                    b.Property<string>("Location")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)")
+                        .HasColumnName("location");
+
+                    b.Property<string>("OriginalArNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("original_ar_number");
+
+                    b.Property<string>("OriginalCasNumber")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)")
+                        .HasColumnName("original_cas_number");
+
+                    b.Property<string>("OriginalCrashType")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)")
+                        .HasColumnName("original_crash_type");
+
+                    b.Property<string>("OriginalDate")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("original_date");
+
+                    b.Property<string>("OriginalDay")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasColumnName("original_day");
+
+                    b.Property<string>("OriginalLocation")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("original_location");
+
+                    b.Property<string>("OriginalRoute")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("original_route");
+
+                    b.Property<string>("OriginalStation")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
+                        .HasColumnName("original_station");
+
+                    b.Property<string>("OriginalTime")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("original_time");
+
+                    b.Property<string>("OriginalVehicles")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("original_vehicles");
+
+                    b.Property<int?>("ProductionSummaryId")
+                        .HasColumnType("int")
+                        .HasColumnName("production_summary_id");
+
+                    b.Property<string>("RawRowJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("raw_row_json");
+
+                    b.Property<string>("ReviewNotes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)")
+                        .HasColumnName("review_notes");
+
+                    b.Property<string>("ReviewStatus")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasColumnName("review_status");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("reviewed_at");
+
+                    b.Property<string>("ReviewedByUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)")
+                        .HasColumnName("reviewed_by_user_id");
+
+                    b.Property<string>("Route")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("route");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion")
+                        .HasColumnName("row_version");
+
+                    b.Property<byte?>("SeriousCyclists")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("serious_cyclists");
+
+                    b.Property<byte?>("SeriousDrivers")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("serious_drivers");
+
+                    b.Property<byte?>("SeriousPassengers")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("serious_passengers");
+
+                    b.Property<byte?>("SeriousPedestrians")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("serious_pedestrians");
+
+                    b.Property<byte?>("SlightCyclists")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("slight_cyclists");
+
+                    b.Property<byte?>("SlightDrivers")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("slight_drivers");
+
+                    b.Property<byte?>("SlightPassengers")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("slight_passengers");
+
+                    b.Property<byte?>("SlightPedestrians")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("slight_pedestrians");
+
+                    b.Property<int>("SourceRowNumber")
+                        .HasColumnType("int")
+                        .HasColumnName("source_row_number");
+
+                    b.Property<string>("Station")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("station");
+
+                    b.Property<string>("ValidationStatus")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("validation_status");
+
+                    b.Property<byte?>("VehicleCount")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("vehicle_count");
+
+                    b.Property<string>("VehiclesString")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("vehicles_string");
+
+                    b.Property<string>("WorksheetName")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)")
+                        .HasColumnName("worksheet_name");
+
+                    b.HasKey("StagingSummaryId");
+
+                    b.HasIndex("ImportBatchId");
+
+                    b.HasIndex("ProductionSummaryId");
+
+                    b.ToTable("staging_crash_summaries", (string)null);
+                });
+
+            modelBuilder.Entity("CrashReport.Models.Import.Models.StagingImportDemographics", b =>
+                {
+                    b.Property<int>("StagingDemographicsId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("staging_demographics_id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("StagingDemographicsId"));
+
+                    b.Property<int?>("Age0to7")
+                        .HasColumnType("int")
+                        .HasColumnName("age_0_7");
+
+                    b.Property<int?>("Age13to18")
+                        .HasColumnType("int")
+                        .HasColumnName("age_13_18");
+
+                    b.Property<int?>("Age19to35")
+                        .HasColumnType("int")
+                        .HasColumnName("age_19_35");
+
+                    b.Property<int?>("Age36Plus")
+                        .HasColumnType("int")
+                        .HasColumnName("age_36_plus");
+
+                    b.Property<int?>("Age8to12")
+                        .HasColumnType("int")
+                        .HasColumnName("age_8_12");
+
+                    b.Property<int?>("CyclistFemale")
+                        .HasColumnType("int")
+                        .HasColumnName("cyclist_female");
+
+                    b.Property<int?>("CyclistMale")
+                        .HasColumnType("int")
+                        .HasColumnName("cyclist_male");
+
+                    b.Property<int?>("DriverFemale")
+                        .HasColumnType("int")
+                        .HasColumnName("driver_female");
+
+                    b.Property<int?>("DriverMale")
+                        .HasColumnType("int")
+                        .HasColumnName("driver_male");
+
+                    b.Property<int>("ImportBatchId")
+                        .HasColumnType("int")
+                        .HasColumnName("import_batch_id");
+
+                    b.Property<int?>("PassengerFemale")
+                        .HasColumnType("int")
+                        .HasColumnName("passenger_female");
+
+                    b.Property<int?>("PassengerMale")
+                        .HasColumnType("int")
+                        .HasColumnName("passenger_male");
+
+                    b.Property<int?>("PedestrianFemale")
+                        .HasColumnType("int")
+                        .HasColumnName("pedestrian_female");
+
+                    b.Property<int?>("PedestrianMale")
+                        .HasColumnType("int")
+                        .HasColumnName("pedestrian_male");
+
+                    b.Property<DateOnly>("PeriodFrom")
+                        .HasColumnType("date")
+                        .HasColumnName("period_from");
+
+                    b.Property<DateOnly>("PeriodTo")
+                        .HasColumnType("date")
+                        .HasColumnName("period_to");
+
+                    b.Property<int?>("ProductionDemographicsId")
+                        .HasColumnType("int")
+                        .HasColumnName("production_demographics_id");
+
+                    b.Property<string>("ProvinceCode")
+                        .HasMaxLength(5)
+                        .HasColumnType("nvarchar(5)")
+                        .HasColumnName("province_code");
+
+                    b.Property<int?>("RaceBlack")
+                        .HasColumnType("int")
+                        .HasColumnName("race_black");
+
+                    b.Property<int?>("RaceColoured")
+                        .HasColumnType("int")
+                        .HasColumnName("race_coloured");
+
+                    b.Property<int?>("RaceIndian")
+                        .HasColumnType("int")
+                        .HasColumnName("race_indian");
+
+                    b.Property<int?>("RaceOther")
+                        .HasColumnType("int")
+                        .HasColumnName("race_other");
+
+                    b.Property<int?>("RaceWhite")
+                        .HasColumnType("int")
+                        .HasColumnName("race_white");
+
+                    b.Property<string>("RawSectionJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("raw_section_json");
+
+                    b.Property<string>("Region")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("region");
+
+                    b.Property<string>("ValidationStatus")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("validation_status");
+
+                    b.Property<string>("WorksheetName")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)")
+                        .HasColumnName("worksheet_name");
+
+                    b.HasKey("StagingDemographicsId");
+
+                    b.HasIndex("ImportBatchId");
+
+                    b.HasIndex("ProductionDemographicsId");
+
+                    b.ToTable("staging_import_demographics", (string)null);
+                });
+
             modelBuilder.Entity("CrashReport.Models.LookupCrashType", b =>
                 {
                     b.Property<int>("CrashTypeId")
@@ -1070,6 +1890,39 @@ namespace CrashReport.Migrations
                     b.HasKey("CrashTypeId");
 
                     b.ToTable("lkp_crash_types", (string)null);
+                });
+
+            modelBuilder.Entity("CrashReport.Models.LookupDistrict", b =>
+                {
+                    b.Property<int>("DistrictId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("district_id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("DistrictId"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("DistrictName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("district_name");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("ProvinceCode")
+                        .HasMaxLength(5)
+                        .HasColumnType("nvarchar(5)")
+                        .HasColumnName("province_code");
+
+                    b.HasKey("DistrictId");
+
+                    b.ToTable("lkp_district", (string)null);
                 });
 
             modelBuilder.Entity("CrashReport.Models.LookupLocation", b =>
@@ -1166,6 +2019,11 @@ namespace CrashReport.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)")
                         .HasColumnName("description");
+
+                    b.Property<string>("FullName")
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)")
+                        .HasColumnName("full_name");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit")
@@ -1311,6 +2169,44 @@ namespace CrashReport.Migrations
                     b.HasIndex("CrashId");
 
                     b.ToTable("official_use", (string)null);
+                });
+
+            modelBuilder.Entity("CrashReport.Models.OptionListItem", b =>
+                {
+                    b.Property<int>("OptionId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("option_id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("OptionId"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("created_at");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("int")
+                        .HasColumnName("display_order");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("ListName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("list_name");
+
+                    b.Property<string>("OptionValue")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("option_value");
+
+                    b.HasKey("OptionId");
+
+                    b.ToTable("lkp_option_list", (string)null);
                 });
 
             modelBuilder.Entity("CrashReport.Models.PedestrianBicyclistDetail", b =>
@@ -1469,6 +2365,10 @@ namespace CrashReport.Migrations
                         .HasColumnType("nvarchar(100)")
                         .HasColumnName("district");
 
+                    b.Property<int?>("DistrictId")
+                        .HasColumnType("int")
+                        .HasColumnName("district_id");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit")
                         .HasColumnName("is_active");
@@ -1485,6 +2385,8 @@ namespace CrashReport.Migrations
                         .HasColumnName("station_name");
 
                     b.HasKey("StationId");
+
+                    b.HasIndex("DistrictId");
 
                     b.ToTable("lkp_saps_stations", (string)null);
                 });
@@ -1813,6 +2715,17 @@ namespace CrashReport.Migrations
                     b.Navigation("Crash");
                 });
 
+            modelBuilder.Entity("CrashReport.Models.CrashFatality", b =>
+                {
+                    b.HasOne("CrashReport.Models.CrashSummary", "Summary")
+                        .WithMany()
+                        .HasForeignKey("SummaryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Summary");
+                });
+
             modelBuilder.Entity("CrashReport.Models.CrashLocation", b =>
                 {
                     b.HasOne("CrashReport.Models.Crash", "Crash")
@@ -1859,6 +2772,35 @@ namespace CrashReport.Migrations
                         .HasConstraintName("fk_cs_crash");
 
                     b.Navigation("Crash");
+                });
+
+            modelBuilder.Entity("CrashReport.Models.CrashSummaryInjury", b =>
+                {
+                    b.HasOne("CrashReport.Models.CrashSummary", "CrashSummary")
+                        .WithMany()
+                        .HasForeignKey("SummaryId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("CrashReport.Models.CrashSummaryVehicle", "Vehicle")
+                        .WithMany("Injuries")
+                        .HasForeignKey("VehicleId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.Navigation("CrashSummary");
+
+                    b.Navigation("Vehicle");
+                });
+
+            modelBuilder.Entity("CrashReport.Models.CrashSummaryVehicle", b =>
+                {
+                    b.HasOne("CrashReport.Models.CrashSummary", "CrashSummary")
+                        .WithMany()
+                        .HasForeignKey("SummaryId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("CrashSummary");
                 });
 
             modelBuilder.Entity("CrashReport.Models.CrashVehicle", b =>
@@ -1920,6 +2862,57 @@ namespace CrashReport.Migrations
                     b.Navigation("Person");
                 });
 
+            modelBuilder.Entity("CrashReport.Models.Import.Models.ImportDataQualityIssue", b =>
+                {
+                    b.HasOne("CrashReport.Models.Import.Models.ImportBatch", "ImportBatch")
+                        .WithMany("Issues")
+                        .HasForeignKey("ImportBatchId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CrashReport.Models.Import.Models.StagingCrashSummary", "StagingSummary")
+                        .WithMany("Issues")
+                        .HasForeignKey("StagingSummaryId");
+
+                    b.Navigation("ImportBatch");
+
+                    b.Navigation("StagingSummary");
+                });
+
+            modelBuilder.Entity("CrashReport.Models.Import.Models.StagingCrashSummary", b =>
+                {
+                    b.HasOne("CrashReport.Models.Import.Models.ImportBatch", "ImportBatch")
+                        .WithMany("CrashRows")
+                        .HasForeignKey("ImportBatchId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CrashReport.Models.CrashSummary", "ProductionSummary")
+                        .WithMany()
+                        .HasForeignKey("ProductionSummaryId");
+
+                    b.Navigation("ImportBatch");
+
+                    b.Navigation("ProductionSummary");
+                });
+
+            modelBuilder.Entity("CrashReport.Models.Import.Models.StagingImportDemographics", b =>
+                {
+                    b.HasOne("CrashReport.Models.Import.Models.ImportBatch", "ImportBatch")
+                        .WithMany("Demographics")
+                        .HasForeignKey("ImportBatchId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CrashReport.Models.CrashDemographicRecord", "ProductionDemographics")
+                        .WithMany()
+                        .HasForeignKey("ProductionDemographicsId");
+
+                    b.Navigation("ImportBatch");
+
+                    b.Navigation("ProductionDemographics");
+                });
+
             modelBuilder.Entity("CrashReport.Models.LookupLocation", b =>
                 {
                     b.HasOne("CrashReport.Models.SapsStation", "Station")
@@ -1949,6 +2942,15 @@ namespace CrashReport.Migrations
                         .HasConstraintName("fk_pd_cp");
 
                     b.Navigation("CrashPerson");
+                });
+
+            modelBuilder.Entity("CrashReport.Models.SapsStation", b =>
+                {
+                    b.HasOne("CrashReport.Models.LookupDistrict", "DistrictLookup")
+                        .WithMany("Stations")
+                        .HasForeignKey("DistrictId");
+
+                    b.Navigation("DistrictLookup");
                 });
 
             modelBuilder.Entity("CrashReport.Models.VehicleDamage", b =>
@@ -2052,11 +3054,35 @@ namespace CrashReport.Migrations
                     b.Navigation("PedestrianBicyclistDetails");
                 });
 
+            modelBuilder.Entity("CrashReport.Models.CrashSummaryVehicle", b =>
+                {
+                    b.Navigation("Injuries");
+                });
+
             modelBuilder.Entity("CrashReport.Models.CrashVehicle", b =>
                 {
                     b.Navigation("CrashPeople");
 
                     b.Navigation("VehicleDamages");
+                });
+
+            modelBuilder.Entity("CrashReport.Models.Import.Models.ImportBatch", b =>
+                {
+                    b.Navigation("CrashRows");
+
+                    b.Navigation("Demographics");
+
+                    b.Navigation("Issues");
+                });
+
+            modelBuilder.Entity("CrashReport.Models.Import.Models.StagingCrashSummary", b =>
+                {
+                    b.Navigation("Issues");
+                });
+
+            modelBuilder.Entity("CrashReport.Models.LookupDistrict", b =>
+                {
+                    b.Navigation("Stations");
                 });
 
             modelBuilder.Entity("CrashReport.Models.Person", b =>

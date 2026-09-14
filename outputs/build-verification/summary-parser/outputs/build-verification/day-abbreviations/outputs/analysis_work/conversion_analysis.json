@@ -1,0 +1,369 @@
+{
+  "row_count": 229,
+  "mapped_cell_count": 4809,
+  "normalized_mismatch_count": 5,
+  "mismatches": [
+    {
+      "row": 18,
+      "source_cell": "E18",
+      "target_cell": "F18",
+      "source": 0.9583333333333334,
+      "target": "0.958333333"
+    },
+    {
+      "row": 51,
+      "source_cell": "B51",
+      "target_cell": "B51",
+      "source": 59,
+      "target": "59A"
+    },
+    {
+      "row": 78,
+      "source_cell": "E78",
+      "target_cell": "F78",
+      "source": 0.49652777777777773,
+      "target": "0.496527778"
+    },
+    {
+      "row": 84,
+      "source_cell": "B84",
+      "target_cell": "B84",
+      "source": 1,
+      "target": "1A"
+    },
+    {
+      "row": 194,
+      "source_cell": "C194",
+      "target_cell": "D194",
+      "source": "13/ 03",
+      "target": "13/03"
+    }
+  ],
+  "raw_type_changes": [
+    {
+      "source_col": "B",
+      "target_col": "B",
+      "from": "int",
+      "to": "str",
+      "count": 187
+    },
+    {
+      "source_col": "I",
+      "target_col": "J",
+      "from": "int",
+      "to": "str",
+      "count": 9
+    },
+    {
+      "source_col": "M",
+      "target_col": "Q",
+      "from": "int",
+      "to": "str",
+      "count": 35
+    },
+    {
+      "source_col": "Q",
+      "target_col": "U",
+      "from": "int",
+      "to": "str",
+      "count": 86
+    },
+    {
+      "source_col": "N",
+      "target_col": "R",
+      "from": "int",
+      "to": "str",
+      "count": 24
+    },
+    {
+      "source_col": "E",
+      "target_col": "F",
+      "from": "float",
+      "to": "str",
+      "count": 2
+    },
+    {
+      "source_col": "R",
+      "target_col": "V",
+      "from": "int",
+      "to": "str",
+      "count": 53
+    },
+    {
+      "source_col": "S",
+      "target_col": "W",
+      "from": "int",
+      "to": "str",
+      "count": 41
+    },
+    {
+      "source_col": "K",
+      "target_col": "L",
+      "from": "int",
+      "to": "str",
+      "count": 11
+    },
+    {
+      "source_col": "J",
+      "target_col": "K",
+      "from": "int",
+      "to": "str",
+      "count": 2
+    },
+    {
+      "source_col": "F",
+      "target_col": "G",
+      "from": "int",
+      "to": "str",
+      "count": 11
+    },
+    {
+      "source_col": "O",
+      "target_col": "S",
+      "from": "int",
+      "to": "str",
+      "count": 25
+    }
+  ],
+  "whitespace_cleaned": [
+    {
+      "source_col": "A",
+      "target_col": "A",
+      "count": 40
+    },
+    {
+      "source_col": "U",
+      "target_col": "Y",
+      "count": 61
+    },
+    {
+      "source_col": "G",
+      "target_col": "H",
+      "count": 35
+    },
+    {
+      "source_col": "H",
+      "target_col": "I",
+      "count": 38
+    },
+    {
+      "source_col": "F",
+      "target_col": "G",
+      "count": 14
+    }
+  ],
+  "exact_duplicate_groups": [
+    [
+      10,
+      11
+    ],
+    [
+      232,
+      234
+    ]
+  ],
+  "business_key_duplicate_groups": [
+    [
+      10,
+      11
+    ],
+    [
+      232,
+      234
+    ]
+  ],
+  "stations_in_data": {
+    "MASHISHING": 21,
+    "HAZYVIEW": 6,
+    "NGODWANA": 5,
+    "MASHISHIHG": 1,
+    "NELSPRUIT": 42,
+    "KOMATIPOORT": 6,
+    "MALALANE": 4,
+    "SCHOEMANSDAL": 9,
+    "WHITE RIVER": 11,
+    "CALCUTTA": 19,
+    "KANYAMAZANE": 12,
+    "KABOKWENI": 9,
+    "KAAPMUIDEN": 1,
+    "SABIE": 5,
+    "BARBERTON": 8,
+    "MASOYI": 10,
+    "MBUZINI": 3,
+    "TONGA": 11,
+    "ACORNHOEK": 4,
+    "BUSHBUCKRIDGE": 8,
+    "PIENAAR": 8,
+    "MATSULU": 12,
+    "MHALA": 6,
+    "KAMHLUSHWA": 2,
+    "MAARTENSHOOP": 1,
+    "PILGRIMS REST": 1,
+    "DIENTJIE": 2,
+    "GRASKOP": 2
+  },
+  "stations_outside_reference": {
+    "MASHISHIHG": 1,
+    "CALCUTTA": 19,
+    "ACORNHOEK": 4,
+    "BUSHBUCKRIDGE": 8,
+    "MHALA": 6,
+    "MAARTENSHOOP": 1,
+    "DIENTJIE": 2
+  },
+  "unused_reference_stations": [
+    "DAANTJIE",
+    "LOWS CREEK",
+    "MBOMBELA TRAF",
+    "MZINTI"
+  ],
+  "column_missing_counts": {
+    "A:SAPS": 0,
+    "B:AR NO": 0,
+    "C:CASE NO.": 229,
+    "D:DATE": 0,
+    "E:DAY": 0,
+    "F:TIME": 0,
+    "G:ROUTE": 0,
+    "H:LOCATION": 0,
+    "I:TYPE": 0,
+    "J:D": 220,
+    "K:P": 227,
+    "L:PD": 218,
+    "M:C": 229,
+    "N:M": 229,
+    "O:F": 229,
+    "P:AGE": 229,
+    "Q:D": 194,
+    "R:P": 205,
+    "S:PD": 204,
+    "T:C": 229,
+    "U:D": 143,
+    "V:P": 176,
+    "W:PD": 188,
+    "X:C": 229,
+    "Y:INVOLVED": 0,
+    "Z:COST CENTER": 229,
+    "AA:REGION": 0,
+    "AB:YEAR": 0,
+    "AC:MONTH": 0
+  },
+  "date_values": {
+    "24/03": 3,
+    "27/03": 8,
+    "05/03": 2,
+    "16/03": 8,
+    "29/03": 8,
+    "10/03": 6,
+    "08/03": 6,
+    "15/03": 9,
+    "21/03": 18,
+    "12/03": 10,
+    "14/03": 10,
+    "09/03": 6,
+    "11/03": 5,
+    "04/03": 8,
+    "20/03": 11,
+    "26/03": 7,
+    "01/03": 12,
+    "28/03": 10,
+    "07/03": 10,
+    "23/03": 7,
+    "13/03": 13,
+    "25/03": 3,
+    "19/03": 8,
+    "22/03": 9,
+    "06/03": 5,
+    "18/03": 7,
+    "31/03": 3,
+    "02/03": 5,
+    "03/03": 7,
+    "30/03": 3,
+    "13/ 03": 1,
+    "17/03": 1
+  },
+  "day_values": {
+    "TU": 21,
+    "FR": 38,
+    "TH": 26,
+    "M": 29,
+    "SU": 44,
+    "SA": 48,
+    "W": 23
+  },
+  "accident_types": {
+    "FIXED OBJECT": 6,
+    "LOST CONTROL": 54,
+    "HEAD REAR": 26,
+    "HEAD ON": 10,
+    "SIDE SWIPE": 43,
+    "SIDESWIPE": 1,
+    "FELL OFF VEH": 1,
+    "OVERTURNED": 6,
+    "OVRTURNED": 1,
+    "PEDESTRAIN": 1,
+    "PEDESTRIAN": 77,
+    "U-TURN": 1,
+    "ANIMAL": 1,
+    "PARKING": 1
+  },
+  "routes": {
+    "D210": 1,
+    "R40": 30,
+    "N4": 23,
+    "R577": 3,
+    "R540": 3,
+    "R538": 7,
+    "MUN": 64,
+    "R37": 8,
+    "D4383": 2,
+    "D2296": 10,
+    "D2689": 4,
+    "R571": 5,
+    "D3973": 2,
+    "D812": 3,
+    "D3977": 2,
+    "D2119": 1,
+    "R569": 1,
+    "40": 3,
+    "R38": 2,
+    "D2945": 3,
+    "D2950": 2,
+    "D3930": 3,
+    "D3969": 2,
+    "D797": 2,
+    "R581/1": 4,
+    "D236": 1,
+    "D2943": 3,
+    "D4390": 1,
+    "538": 4,
+    "570": 4,
+    "D1411": 2,
+    "D4386": 1,
+    "P258/1": 5,
+    "R570": 1,
+    "R536": 4,
+    "D3932": 1,
+    "D4394": 1,
+    "D212": 1,
+    "D4385": 1,
+    "R532": 3,
+    "R533": 1,
+    "D4387": 1,
+    "D3974": 1,
+    "D799": 1,
+    "D2270": 1,
+    "D1723": 1
+  },
+  "constant_metadata": {
+    "region_values": {
+      "EHLANZENI": 229
+    },
+    "year_values": {
+      "2026": 229
+    },
+    "month_values": {
+      "MAR": 229
+    }
+  }
+}

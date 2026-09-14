@@ -1,0 +1,36 @@
+﻿@model CrashReport.ViewModels.ReportsHubIndexViewModel
+@{ ViewData["Title"] = "Reports"; }
+<link rel="stylesheet" href="~/css/reports-hub.css" asp-append-version="true" />
+
+<div class="rh-page-heading"><h1>Reports</h1><p>Select, configure, preview, and download a Word report.</p></div>
+<div class="rh-workspace">
+    <section class="rh-surface rh-selector">
+        <h2>Report type</h2><p>Available reports are based on your privileges.</p>
+        @if (Model.CanStandby) { <button type="button" class="rh-choice" data-report="Standby"><span class="rh-icon">S</span><span><strong>Standby report</strong><small>Weekly operational comparison and fatal crash detail</small></span></button> }
+        @if (Model.CanMonthly) { <button type="button" class="rh-choice" data-report="Monthly"><span class="rh-icon">M</span><span><strong>Monthly memorandum</strong><small>Monthly comparison with formal memo fields</small></span></button> }
+        @if (Model.CanQuarterly) { <button type="button" class="rh-choice" data-report="Quarterly"><span class="rh-icon">Q</span><span><strong>Quarterly report</strong><small>Selected quarter compared with the prior year</small></span></button> }
+        @if (Model.CanSixMonth) { <button type="button" class="rh-choice" data-report="SixMonth"><span class="rh-icon">6M</span><span><strong>Six-month report</strong><small>January to June compared with the prior year</small></span></button> }
+        @if (Model.CanAnnual) { <button type="button" class="rh-choice" data-report="Annual"><span class="rh-icon">A</span><span><strong>Annual report</strong><small>Full calendar year compared with the prior year</small></span></button> }
+        @if (Model.CanFiveYear) { <button type="button" class="rh-choice" data-report="FiveYear"><span class="rh-icon">5Y</span><span><strong>Five-year analysis</strong><small>One month across five consecutive years</small></span></button> }
+    </section>
+    <div>
+        <section class="rh-surface">
+            <div class="rh-form-heading"><div><h2 id="rhTitle"></h2><p id="rhDescription"></p></div><span class="rh-tag" id="rhTag"></span></div>
+            <div class="rh-field-grid" id="rhFields"></div>
+            <details id="rhDocumentDetails"><summary>Document header details</summary><div class="rh-field-grid rh-document-grid">
+                <label>Report date<input id="rhReportDate" value="@DateTime.Today.ToString("dd MMMM yyyy").ToUpper()" /></label>
+                <label>Reference number<input id="rhRefNumber" value="16/9/4" /></label>
+                <label>Enquiries — name<input id="rhEnquiryName" value="M C Mdhluli" /></label>
+                <label>Enquiries — telephone<input id="rhEnquiryTel" value="082 802 6966" /></label>
+                <label>To — name<input id="rhToName" value="MR P NGOMANE (MPL)" /></label>
+                <label>To — title<input id="rhToTitle" value="MEMBER OF THE EXECUTIVE COUNCIL" /></label>
+                <label>From — name<input id="rhFromName" value="MR W MTHOMBOTHI" /></label>
+                <label>From — title<input id="rhFromTitle" value="HEAD OF DEPARTMENT" /></label>
+            </div></details>
+            <div id="rhError" class="rh-error" role="alert" hidden></div>
+            <div class="rh-actions"><span>Downloads as a Word document</span><div><button type="button" class="rh-button" id="rhPreview">Preview</button><button type="button" class="rh-button primary" id="rhDownload">Download Word report</button></div></div>
+        </section>
+        <section class="rh-preview"><div class="rh-preview-heading"><h2>Preview</h2><span class="rh-tag" id="rhPreviewPeriod"></span></div><div class="rh-preview-body" id="rhPreviewBody" aria-live="polite"></div></section>
+    </div>
+</div>
+@section Scripts { <script src="~/js/reports-hub.js" asp-append-version="true"></script> }
