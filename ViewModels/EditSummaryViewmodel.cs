@@ -1,5 +1,5 @@
 ﻿using CrashReport.Models;
-using CrashReport.Controllers;
+using CrashReport.Models.Dtos;
 
 namespace CrashReport.ViewModels;
 

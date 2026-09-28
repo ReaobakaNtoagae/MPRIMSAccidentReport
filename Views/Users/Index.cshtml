@@ -3,18 +3,20 @@
 }
 
 <style>
-    /* ── Card shell ───────────────────────────────────────────── */
+    /* ── Card shell — same border/shadow tokens as Index.cshtml's/
+             Insights.cshtml's .panel, so this card matches those instead
+             of reading as a slightly different component. ─────────────── */
     .um-card {
         background: #fff;
         border-radius: 10px;
-        border: 1px solid #e5e7eb;
-        box-shadow: 0 1px 4px rgba(0,0,0,.06);
+        border: 1px solid #c8e6c9;
+        box-shadow: 0 2px 8px rgba(0,0,0,.06);
         overflow: hidden;
     }
 
     .um-card-head {
         padding: 14px 20px;
-        border-bottom: 1px solid #f0f4f0;
+        border-bottom: 2px solid #e8f5e9;
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -125,43 +127,73 @@
             background: #2e7d32;
         }
 
-    /* ── Grid overrides ───────────────────────────────────────── */
-    .dx-datagrid-rowsview .dx-row > td {
-        vertical-align: middle !important;
-        padding-top: 10px !important;
-        padding-bottom: 10px !important;
+    /* ── Grid — scoped to #usersGrid so this doesn't leak into other
+             DevExtreme grids elsewhere in the app. The header row itself
+             (background/color/uppercase) is already handled globally in
+             _Layout.cshtml (.dx-datagrid .dx-row.dx-header-row > td) —
+             that rule was rendering invisible text because it referenced
+             an undefined --g-800 token, fixed there. Everything below is
+             this page's own polish on top of that fix. ────────────────── */
+    #usersGrid .dx-datagrid {
+        font-size: 12.5px;
     }
-   
-    .dx-datagrid.dx-datagrid-borders {
+
+    #usersGrid .dx-datagrid-borders {
         border: none !important;
     }
 
-    /* Footer pager padding */
-    .dx-datagrid-pager {
-        padding: 10px 20px !important;
+    /* Header cells — reinforce sizing/spacing beyond what the global rule
+             sets, and give the header row a real bottom border so it reads
+             as a distinct band rather than blending into the data rows. */
+    #usersGrid .dx-datagrid-headers {
+        border-bottom: 2px solid #c8e6c9 !important;
+    }
+
+        #usersGrid .dx-datagrid .dx-row.dx-header-row > td {
+            padding: 12px 16px !important;
+            font-size: .68rem !important;
+            letter-spacing: .7px !important;
+        }
+
+    /* Data rows — more breathing room, subtle green-tinted alternation
+             and hover instead of DevExtreme's default gray/blue, so the
+             grid reads as part of this app rather than a generic widget. */
+    #usersGrid .dx-datagrid-rowsview .dx-row > td {
+        vertical-align: middle !important;
+        padding: 11px 16px !important;
+        border-bottom: 1px solid #f0f4f0 !important;
+        font-size: .82rem;
+    }
+
+    #usersGrid .dx-datagrid-rowsview .dx-row.dx-data-row.dx-row-alt > td {
+        background: #f7fbf7 !important;
+    }
+
+    #usersGrid .dx-datagrid-rowsview .dx-row.dx-data-row.dx-state-hover:not(.dx-row-removed) > td {
+        background: #eef7ef !important;
+    }
+
+    /* Filter row — align its look with the header band it sits under. */
+    #usersGrid .dx-datagrid-filter-row .dx-editor-cell {
+        padding: 6px 12px !important;
+    }
+
+    #usersGrid .dx-datagrid-filter-row td {
+        background: #fbfdfb !important;
+        border-bottom: 1px solid #e8f5e9 !important;
+    }
+
+    /* Footer pager */
+    #usersGrid .dx-datagrid-pager {
+        padding: 12px 20px !important;
         border-top: 1px solid #f0f4f0 !important;
     }
 
     /* Empty state */
-    .dx-datagrid-nodata {
+    #usersGrid .dx-datagrid-nodata {
         font-size: .85rem !important;
         color: #9ca3af !important;
-    }
-
-    #usersGrid .dx-datagrid {
-    font-size: 12px;
-    }
-
-    #usersGrid .dx-datagrid-headers {
-    font-size: 11px;
-    font-weight: 600;
-    }
-
-   
-    .dx-datagrid-rowsview .dx-row > td {
-    vertical-align: middle !important;
-    padding-top: 7px !important;
-    padding-bottom: 7px !important;
+        padding: 32px 0 !important;
     }
 </style>
 

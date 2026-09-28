@@ -9,8 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CrashReport.Controllers;
 
-// Every action requires the Excel-import privilege. Being signed in alone does
-// not mean a user should be allowed to move data toward the production registry.
+
 [Authorize(Policy = Privileges.Import.Excel)]
 public sealed class ImportController : Controller
 {
@@ -46,8 +45,7 @@ public sealed class ImportController : Controller
     [HttpGet]
     public async Task<IActionResult> Verifications(CancellationToken cancellationToken)
     {
-        // This queue is intentionally independent of one workbook, allowing staff to
-        // follow up on referrals even after an otherwise safe batch has been imported.
+        
         var issues = await _context.ImportDataQualityIssues.AsNoTracking()
             .Include(issue => issue.ImportBatch)
             .Include(issue => issue.StagingSummary)
@@ -84,13 +82,11 @@ public sealed class ImportController : Controller
             var userId = CurrentUserId();
             await using var content = file.OpenReadStream();
 
-            // Intake validates and stores the workbook without changing production data.
             var intake = await _intakeService.IntakeAsync(new ImportWorkbookIntakeCommand(
                 content, file.FileName, file.Length, province, reportingMonth,
                 reportingYear, userId, notes), cancellationToken);
 
-            // Processing detects the template, cleans rows and writes quality findings
-            // to staging. Running it for an already-staged batch is safe and idempotent.
+            
             await _processingService.ProcessAsync(intake.ImportBatchId, cancellationToken);
 
             TempData["ImportSuccess"] = intake.AlreadyExists
@@ -234,7 +230,7 @@ public sealed class ImportController : Controller
     {
         try
         {
-            // This is the only action that crosses the staging-to-production boundary.
+            
             var result = await _commitService.CommitAsync(
                 batchId, CurrentUserId(), cancellationToken);
             TempData["ImportSuccess"] =

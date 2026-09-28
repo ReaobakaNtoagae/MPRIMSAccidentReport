@@ -6,7 +6,11 @@ using System.Security.Claims;
 
 namespace CrashReport.Controllers;
 
-[AllowAnonymous]
+// No longer class-level [AllowAnonymous] — ChangePassword below needs to require
+// login (it's gated by the global AuthorizeFilter like everything else now), and
+// [AllowAnonymous] anywhere in a controller's scope overrides any [Authorize] in
+// that same scope regardless of where each is placed, so it has to come off the
+// class and go on the individual actions that actually need it instead.
 public class AccountController : Controller
 {
     private readonly SignInManager<ApplicationUser> _signIn;
@@ -20,8 +24,9 @@ public class AccountController : Controller
         _users = users;
     }
 
-   
+
     [HttpGet]
+    [AllowAnonymous]
     public IActionResult Login(string? returnUrl = null)
     {
         if (_signIn.IsSignedIn(User))
@@ -32,6 +37,7 @@ public class AccountController : Controller
     }
 
     [HttpPost]
+    [AllowAnonymous]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Login(
         [FromForm] string email,
@@ -94,6 +100,7 @@ public class AccountController : Controller
     }
 
     [HttpPost]
+    [AllowAnonymous]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Logout()
     {
@@ -101,7 +108,59 @@ public class AccountController : Controller
         return RedirectToAction(nameof(Login));
     }
 
-   
+
     [HttpGet]
+    [AllowAnonymous]
     public IActionResult AccessDenied() => View();
+
+    // No [AllowAnonymous] here on purpose — this one needs the global
+    // AuthorizeFilter to require a signed-in user, since it operates on
+    // "the currently logged-in account's own password."
+    [HttpGet]
+    public IActionResult ChangePassword()
+    {
+        return View();
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ChangePassword(
+        [FromForm] string currentPassword,
+        [FromForm] string newPassword,
+        [FromForm] string confirmPassword)
+    {
+        if (string.IsNullOrWhiteSpace(currentPassword) || string.IsNullOrWhiteSpace(newPassword))
+        {
+            TempData["ChangePasswordError"] = "All fields are required.";
+            return View();
+        }
+
+        if (newPassword != confirmPassword)
+        {
+            TempData["ChangePasswordError"] = "New password and confirmation don't match.";
+            return View();
+        }
+
+        var user = await _users.GetUserAsync(User);
+        if (user == null)
+            return RedirectToAction(nameof(Login));
+
+        var result = await _users.ChangePasswordAsync(user, currentPassword, newPassword);
+        if (!result.Succeeded)
+        {
+            TempData["ChangePasswordError"] = string.Join(" ", result.Errors.Select(e => e.Description));
+            return View();
+        }
+
+        user.MustChangePassword = false;
+        await _users.UpdateAsync(user);
+
+        // ChangePasswordAsync rotates the security stamp, which — depending on
+        // SecurityStampValidationInterval — can otherwise sign this session out
+        // on its very next request. Refresh now so the user who just changed
+        // their password isn't immediately bounced back to the login page.
+        await _signIn.RefreshSignInAsync(user);
+
+        return RedirectToAction("Index", "Home");
+    }
 }

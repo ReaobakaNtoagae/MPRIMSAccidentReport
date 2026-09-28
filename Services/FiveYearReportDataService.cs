@@ -13,14 +13,6 @@ public class FiveYearReportDataService : MonthlyMemoDataService
     public FiveYearReportDataService(AppDbContext context, IStationDistrictLookup stationDistrict)
         : base(context, stationDistrict) { }
 
-    private static readonly Dictionary<string, string> RegionDisplayNames = new()
-    {
-        ["EhlanzeniSouth"] = "EHLANZENI",
-        ["EhlanzeniNorth"] = "BOHLABELA",
-        ["GertSibande"] = "GERT SIBANDE",
-        ["Nkangala"] = "NKANGALA",
-    };
-
 
 
     private static readonly string[] CrashTypeList =
@@ -81,15 +73,25 @@ public class FiveYearReportDataService : MonthlyMemoDataService
             rowsByYear[y] = await LoadAsync(from, to);
         }
 
+        // Districts are discovered from whatever the 5 years of data actually contain
+        // (each row's District is already resolved in LoadAsync via IStationDistrictLookup),
+        // rather than a hardcoded list — same approach as MonthlyMemoDataService.BuildCoreAsync.
+        var districtNames = rowsByYear.Values.SelectMany(rows => rows)
+            .Select(r => r.District)
+            .Where(d => !string.IsNullOrWhiteSpace(d) && !string.Equals(d, "Unknown", StringComparison.OrdinalIgnoreCase))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(d => d, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
         // ── Section 1: Regional status summaries ──
         vm.RegionSummaries.Add(BuildRegionSummary("PROVINCIAL", years, rowsByYear, null));
-        foreach (var (key, _, stations) in Districts)
-            vm.RegionSummaries.Add(BuildRegionSummary(RegionDisplayNames[key], years, rowsByYear, stations));
+        foreach (var name in districtNames)
+            vm.RegionSummaries.Add(BuildRegionSummary(name, years, rowsByYear, name));
 
         // ── Section 2: Problematic routes — Provincial + each region ──
         vm.ProvincialRoutes = BuildRegionRouteData("PROVINCIAL", years, rowsByYear, null);
-        foreach (var (key, _, stations) in Districts)
-            vm.RegionRoutes.Add(BuildRegionRouteData(RegionDisplayNames[key], years, rowsByYear, stations));
+        foreach (var name in districtNames)
+            vm.RegionRoutes.Add(BuildRegionRouteData(name, years, rowsByYear, name));
 
         // ── Section 3: Crash types & vehicle categories ──
         vm.CrashTypes = BuildCrashTypeRanking(years, rowsByYear);
@@ -112,7 +114,7 @@ public class FiveYearReportDataService : MonthlyMemoDataService
 
     // ── Section 1 helper ──────────────────────────────────────────
     private static RegionSummary BuildRegionSummary(
-        string displayName, int[] years, Dictionary<int, List<Row>> rowsByYear, HashSet<string>? stations)
+        string displayName, int[] years, Dictionary<int, List<Row>> rowsByYear, string? districtName)
     {
         var crashes = new int[years.Length];
         var fatal = new int[years.Length];
@@ -122,7 +124,7 @@ public class FiveYearReportDataService : MonthlyMemoDataService
         for (int i = 0; i < years.Length; i++)
         {
             var rows = rowsByYear[years[i]];
-            if (stations != null) rows = rows.Where(r => stations.Contains(r.Station)).ToList();
+            if (districtName != null) rows = rows.Where(r => string.Equals(r.District, districtName, StringComparison.OrdinalIgnoreCase)).ToList();
 
             crashes[i] = rows.Count;
             fatal[i] = rows.Sum(r => r.Fatalities);
@@ -145,7 +147,7 @@ public class FiveYearReportDataService : MonthlyMemoDataService
 
     // ── Section 2 helper ──────────────────────────────────────────
     private static RegionRouteData BuildRegionRouteData(
-        string displayName, int[] years, Dictionary<int, List<Row>> rowsByYear, HashSet<string>? stations)
+        string displayName, int[] years, Dictionary<int, List<Row>> rowsByYear, string? districtName)
     {
         var yearRows = new List<Row>[years.Length];
         var routeSet = new HashSet<string>();
@@ -153,7 +155,7 @@ public class FiveYearReportDataService : MonthlyMemoDataService
         for (int i = 0; i < years.Length; i++)
         {
             var rows = rowsByYear[years[i]];
-            if (stations != null) rows = rows.Where(r => stations.Contains(r.Station)).ToList();
+            if (districtName != null) rows = rows.Where(r => string.Equals(r.District, districtName, StringComparison.OrdinalIgnoreCase)).ToList();
             yearRows[i] = rows;
             foreach (var r in rows.Where(r => !string.IsNullOrEmpty(r.Route)))
                 routeSet.Add(r.Route);

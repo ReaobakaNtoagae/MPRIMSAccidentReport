@@ -6,6 +6,8 @@
 
         public int Year { get; set; }
 
+        public string? ProvinceCode { get; set; }
+
         public string ReportDate { get; set; } = string.Empty;
         public string RefNumber { get; set; } = "16/9/4";
         public string EnquiryName { get; set; } = "M C Mdhluli";

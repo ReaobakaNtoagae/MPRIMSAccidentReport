@@ -8,6 +8,10 @@
     <link rel="stylesheet" href="https://cdn3.devexpress.com/jslib/23.2.6/css/dx.light.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Views/Home/Index.cshtml and Views/Home/Insights.cshtml use "ti ti-*" (Tabler Icons)
+         classes with no stylesheet loaded anywhere in the app — they were rendering as blank.
+         Pinned to a fixed version rather than @@latest for stability. -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@@tabler/icons-webfont@2.47.0/dist/tabler-icons.min.css" />
 
     <style>
         *, *::before, *::after {
@@ -20,6 +24,15 @@
             --sidebar-w: 260px;
             --sidebar-w-col: 48px;
             --transition: 220ms cubic-bezier(.4,0,.2,1);
+            /* --g-800 is referenced by the DevExtreme grid-header override
+               below but was never defined here — color: var(--g-800) was
+               invalid at computed-value time, so header text fell back to
+               whatever it inherited instead of a real dark green, against
+               a light-green header background. That's why grid column
+               titles have been unreadable/invisible across the app.
+               Filled in with the next step down the existing Material
+               green ramp (g-700/600/500 are Material Green 700/600/500). */
+            --g-800: #1b5e20;
             --g-700: #2e7d32;
             --g-600: #388e3c;
             --g-500: #43a047;

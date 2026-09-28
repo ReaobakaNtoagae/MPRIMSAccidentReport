@@ -1,16 +1,64 @@
-﻿@model CrashReport.ViewModels.InsightsViewModel
+@model CrashReport.ViewModels.InsightsViewModel
 @{
     ViewData["Title"] = "Insights";
     var roleLabel = ViewBag.RoleLabel as string ?? "";
     var mode = ViewBag.DashboardMode as string ?? "analytics";
+
+    // District load is only meaningful for an unscoped, province-wide view —
+    // Regional Staff are already scoped to one district (see HomeController.
+    // Insights), so that panel would just be a single bar. Mirrors the same
+    // mode gate Index.cshtml uses for its own mode-specific sections.
+    var showDistrictPanel = mode == "analytics" && Model.Districts.Count > 0;
+
+    var sevTotal = Model.Severity.Total;
+    var fatalPct = sevTotal > 0 ? (int)Math.Round(100.0 * Model.Severity.Fatal / sevTotal) : 0;
+    var seriousPct = sevTotal > 0 ? (int)Math.Round(100.0 * Model.Severity.Serious / sevTotal) : 0;
+    var fatalEnd = fatalPct;
+    var seriousEnd = fatalPct + seriousPct;
+    var maxDistrict = Model.Districts.Count > 0 ? Model.Districts.Max(d => d.CrashesCurr) : 1;
+    if (maxDistrict == 0) { maxDistrict = 1; }
 }
 
 <style>
+    /* ── Panel — this page referenced .panel/.panel-head/.panel-body
+             already, but nothing in the app ever defined them (they only
+             existed, coincidentally, inside Index.cshtml's own <style>
+             block, which doesn't reach this page). Insights has been
+             rendering as unstyled divs — no card, no border, no shadow —
+             since the page shipped. Defined here, matching the same
+             values Index.cshtml uses, so the two pages actually look like
+             one app. ─────────────────────────────────────────────────── */
+    .panel {
+        background: #fff;
+        border-radius: 10px;
+        border: 1px solid #c8e6c9;
+        box-shadow: 0 2px 8px rgba(0,0,0,.06);
+        overflow: hidden;
+        margin-bottom: 20px;
+    }
+
+    .panel-head {
+        padding: 14px 20px;
+        border-bottom: 2px solid #e8f5e9;
+        font-size: .78rem;
+        text-transform: uppercase;
+        letter-spacing: .7px;
+        color: #2e7d32;
+        font-weight: 700;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .panel-body {
+        padding: 16px 20px;
+    }
+
     .ins-header {
         display: flex;
         align-items: center;
         gap: 8px;
-        margin-bottom: 4px;
+        margin-bottom: 2px;
     }
 
     .ins-header i {
@@ -24,10 +72,58 @@
         color: #1a1a1a;
     }
 
-    .ins-sub {
-        font-size: .78rem;
+    .ins-header-sub {
+        font-size: .74rem;
         color: #999;
+        margin: 0 0 16px 26px;
+    }
+
+    /* ── Info banner — same purpose as the prototype's blue callout:
+             this page is read-only analysis, not a to-do list. Uses the
+             app's existing info-blue tokens (see .review-note on the
+             Dashboard) rather than the prototype's own palette. ──────── */
+    .ins-banner {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        background: #e6f1fb;
+        border: 1px solid #b5d4f4;
+        border-radius: 8px;
+        padding: 12px 16px;
+        font-size: .8rem;
+        color: #0c447c;
+        margin-bottom: 16px;
+    }
+
+    .ins-banner i {
+        font-size: 16px;
+        margin-top: 1px;
+        flex-shrink: 0;
+    }
+
+    .ins-sub {
+        font-size: .8rem;
+        color: #555;
         margin-bottom: 20px;
+    }
+
+    .ins-sub b {
+        color: #1a1a1a;
+    }
+
+    .ins-grid-top {
+        display: grid;
+        gap: 16px;
+        margin-bottom: 20px;
+    }
+
+    .ins-section-label {
+        font-size: .68rem;
+        text-transform: uppercase;
+        letter-spacing: .8px;
+        color: #888;
+        font-weight: 700;
+        margin: 4px 0 10px;
     }
 
     .ins-grid {
@@ -74,20 +170,162 @@
         line-height: 1.6;
         padding: 8px 2px;
     }
+
+    /* ── Severity donut — plain conic-gradient, percentages computed
+             server-side from real Fatal/Serious/Slight counts (no client
+             charting library involved). ─────────────────────────────── */
+    .sev-donut-row {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+    }
+
+    .sev-donut {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        position: relative;
+    }
+
+    .sev-donut-hole {
+        position: absolute;
+        inset: 18px;
+        background: #fff;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+    }
+
+    .sev-donut-hole .n {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #1a1a1a;
+        line-height: 1;
+    }
+
+    .sev-donut-hole .lbl {
+        font-size: .62rem;
+        color: #999;
+        text-transform: uppercase;
+        letter-spacing: .5px;
+        margin-top: 2px;
+    }
+
+    .sev-legend {
+        display: flex;
+        flex-direction: column;
+        gap: 9px;
+        flex-grow: 1;
+    }
+
+    .sev-legend-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: .78rem;
+    }
+
+    .sev-legend-row .sw {
+        width: 9px;
+        height: 9px;
+        border-radius: 2px;
+        display: inline-block;
+        margin-right: 7px;
+    }
+
+    .sev-legend-row .name {
+        display: flex;
+        align-items: center;
+        color: #333;
+    }
+
+    .sev-legend-row .stat {
+        color: #777;
+    }
 </style>
 
 <div class="ins-header">
     <i class="ti ti-trending-up" aria-hidden="true"></i>
     <span class="title">Insights</span>
 </div>
+<div class="ins-header-sub">Analysis, not a to-do list</div>
+
+<div class="ins-banner">
+    <i class="ti ti-info-circle" aria-hidden="true"></i>
+    <span>Nothing here needs acting on today. Every panel states what decision it's meant to inform, same as the dashboard — just with room to go a level deeper.</span>
+</div>
+
 <div class="ins-sub">
-    @Model.PeriodLabel vs. @Model.PriorPeriodLabel
+    <b>@Model.PeriodLabel</b> vs. @Model.PriorPeriodLabel
     @if (!string.IsNullOrEmpty(Model.ScopeLabel))
     {
-        <text> &middot; scoped to @Model.ScopeLabel</text>
+        <text> &middot; scoped to <b>@Model.ScopeLabel</b></text>
     }
-    &mdash; analysis only, nothing here needs acting on today.
 </div>
+
+<div class="ins-grid-top" style="grid-template-columns:@(showDistrictPanel ? "1.3fr 1fr" : "1fr");">
+
+    @if (showDistrictPanel)
+    {
+        <div class="panel" style="margin-bottom:0;">
+            <div class="panel-head">Crash load by district</div>
+            <div class="panel-body">
+                <div class="ins-informs"><i class="ti ti-target" aria-hidden="true"></i> Informs: where to route enforcement or engineering resources next &mdash; raw count, not rate, because it drives staffing and patrol allocation directly.</div>
+                @foreach (var d in Model.Districts)
+                {
+                    var pct = (int)Math.Round(100.0 * d.CrashesCurr / maxDistrict);
+                    <div class="ins-row-label">
+                        <span class="name">@d.District</span>
+                        <span class="stat">@d.CrashesCurr</span>
+                    </div>
+                    <div class="ins-bar-track"><div class="ins-bar-fill" style="width:@(pct)%;background:#2e7d32;"></div></div>
+                }
+            </div>
+        </div>
+    }
+
+    <div class="panel" style="margin-bottom:0;">
+        <div class="panel-head">Severity mix</div>
+        <div class="panel-body">
+            <div class="ins-informs"><i class="ti ti-target" aria-hidden="true"></i> Informs: how dangerous the average crash is, independent of volume &mdash; fewer crashes can still mean a worse mix.</div>
+            @if (sevTotal == 0)
+            {
+                <div class="ins-empty-note">No casualty data for this period yet.</div>
+            }
+            else
+            {
+                <div class="sev-donut-row">
+                    <div class="sev-donut" style="background: conic-gradient(#b71c1c 0% @(fatalEnd)%, #e65100 @(fatalEnd)% @(seriousEnd)%, #0277bd @(seriousEnd)% 100%);">
+                        <div class="sev-donut-hole">
+                            <span class="n">@sevTotal</span>
+                            <span class="lbl">total</span>
+                        </div>
+                    </div>
+                    <div class="sev-legend">
+                        <div class="sev-legend-row">
+                            <span class="name"><span class="sw" style="background:#b71c1c;"></span>Fatal</span>
+                            <span class="stat">@Model.Severity.Fatal &middot; @fatalPct%</span>
+                        </div>
+                        <div class="sev-legend-row">
+                            <span class="name"><span class="sw" style="background:#e65100;"></span>Serious</span>
+                            <span class="stat">@Model.Severity.Serious &middot; @seriousPct%</span>
+                        </div>
+                        <div class="sev-legend-row">
+                            <span class="name"><span class="sw" style="background:#0277bd;"></span>Slight</span>
+                            <span class="stat">@Model.Severity.Slight &middot; @(100 - fatalPct - seriousPct)%</span>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+</div>
+
+<div class="ins-section-label">Where and when it's happening</div>
 
 <div class="ins-grid">
 
@@ -96,6 +334,10 @@
         <div class="panel-body">
             <div class="ins-informs"><i class="ti ti-target" aria-hidden="true"></i> Informs: which intervention type to prioritise &mdash; engineering, enforcement, or education.</div>
             @{ var shownTypes = Model.CrashTypes.Take(5).ToList(); }
+            @if (shownTypes.Count == 0)
+            {
+                <div class="ins-empty-note">No crash-type data for this period yet.</div>
+            }
             @foreach (var t in shownTypes)
             {
                 var pct = t.CrashesCurr > 0 ? (int)Math.Round(100.0 * t.FatalCurr / t.CrashesCurr) : 0;
@@ -128,6 +370,10 @@
         <div class="panel-body">
             <div class="ins-informs"><i class="ti ti-target" aria-hidden="true"></i> Informs: where to focus infrastructure or enforcement &mdash; ranked by fatality rate, not raw count, so a short dangerous road isn't hidden behind a long busy one.</div>
             @{ var rankedRoutes = Model.Routes.Select(r => new { r, Rate = r.CrashesCurr > 0 ? 100.0 * r.FatalCurr / r.CrashesCurr : 0 }).OrderByDescending(x => x.Rate).ToList(); }
+            @if (rankedRoutes.Count == 0)
+            {
+                <div class="ins-empty-note">No route data for this period yet.</div>
+            }
             @foreach (var x in rankedRoutes.Take(5))
             {
                 <div class="ins-row-label">
@@ -157,6 +403,10 @@
         <div class="panel-head">Time of day</div>
         <div class="panel-body">
             <div class="ins-informs"><i class="ti ti-target" aria-hidden="true"></i> Informs: when to schedule patrols and visibility campaigns.</div>
+            @if (Model.TimeSlots.Count == 0)
+            {
+                <div class="ins-empty-note">No time-of-day data for this period yet.</div>
+            }
             @foreach (var t in Model.TimeSlots)
             {
                 var pct = t.CrashesCurr > 0 ? (int)Math.Round(100.0 * t.FatalCurr / t.CrashesCurr) : 0;
@@ -174,6 +424,10 @@
         <div class="panel-body">
             <div class="ins-informs"><i class="ti ti-target" aria-hidden="true"></i> Informs: where staffing or resourcing may need to shift.</div>
             @{ var shownStations = Model.Stations.Take(5).ToList(); }
+            @if (shownStations.Count == 0)
+            {
+                <div class="ins-empty-note">No station data for this period yet.</div>
+            }
             @foreach (var s in shownStations)
             {
                 var pct = s.CrashesCurr > 0 ? (int)Math.Round(100.0 * s.FatalCurr / s.CrashesCurr) : 0;

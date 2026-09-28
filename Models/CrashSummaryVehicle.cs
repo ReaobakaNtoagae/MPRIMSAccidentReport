@@ -24,6 +24,10 @@ public class CrashSummaryVehicle
     [MaxLength(60)]
     public string VehicleTypeName { get; set; } = string.Empty;
 
+    [Column("make")]
+    [MaxLength(100)]
+    public string? Make { get; set; }
+
     [Column("registration")]
     [MaxLength(20)]
     public string? Registration { get; set; }

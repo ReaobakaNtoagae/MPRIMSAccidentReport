@@ -164,3 +164,29 @@ public class LookupVehicleType
     [Column("created_at")]
     public DateTime CreatedAt { get; set; } = DateTime.Now;
 }
+
+// Cost centres already exist in the operational database. Mapping the table here
+// lets Quick Capture use a proper lookup and store the selected key on the record.
+[Table("lkp_cost_centres")]
+public class LookupCostCentre
+{
+    [Key]
+    [Column("cost_centre_id")]
+    public int CostCentreId { get; set; }
+
+    [Required, MaxLength(250)]
+    [Column("cost_centre_name")]
+    public string CostCentreName { get; set; } = string.Empty;
+
+    [Column("station_id")]
+    public int? StationId { get; set; }
+
+    [Column("district_id")]
+    public int? DistrictId { get; set; }
+
+    [Column("province_code")]
+    public int? ProvinceCode { get; set; }
+
+    public SapsStation? Station { get; set; }
+    public LookupDistrict? District { get; set; }
+}

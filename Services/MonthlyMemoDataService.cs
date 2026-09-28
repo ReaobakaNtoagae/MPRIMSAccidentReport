@@ -12,49 +12,51 @@ public class MonthlyMemoDataService
     protected readonly AppDbContext _context;
     private readonly IStationDistrictLookup _stationDistrict;
 
-    protected static readonly (string key, string name, HashSet<string> stations)[] Districts =
-    [
-        ("EhlanzeniSouth", "EHLANZENI SOUTH", new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            "TONGA","WHITE RIVER","NELSPRUIT","MASOYI","MATSULU","NGODWANA",
-            "BARBERTON","KABOKWENI","KANYAMAZANE","KANAYAMAZANE","KOMATIPOORT",
-            "MALALANE","SCHOEMANSDAL","KAMHLUSHWA"
-        }),
-        ("EhlanzeniNorth", "EHLANZENI NORTH", new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            "ACORNHOEK","BUSHBUCKRIDGE","MHALA","GRASKOP","SABIE","HAZYVIEW","KLASERIE"
-        }),
-        ("GertSibande", "GERT SIBANDE", new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            "ERMELO","SECUNDA","STANDERTON","BETHAL","BALFOUR","VOLKSRUST",
-            "PIET RETIEF","WAKKERSTROOM","MORGENZON","AMSTERDAM"
-        }),
-        ("Nkangala", "NKANGALA", new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            "WITBANK","MIDDELBURG","DELMAS","OGIES","KRIEL","BELFAST",
-            "CAROLINA","LEANDRA","KWAMHLANGA","BRONKHORSTSPRUIT"
-        })
-    ];
     public MonthlyMemoDataService(AppDbContext context, IStationDistrictLookup stationDistrict){
         _context = context;
         _stationDistrict = stationDistrict;
     }
 
-
     public async Task<MonthlyMemoViewModel> BuildAsync(MemoReportRequest req)
     {
-        var from = req.DateFrom;
-        var to = req.DateTo;
-        var pFrom = req.CompareFrom;
-        var pTo = req.CompareTo;
+        var monthName = req.DateFrom.Month == req.DateTo.Month
+            ? req.DateFrom.ToString("MMMM").ToUpper()
+            : req.DateFrom.ToString("MMM").ToUpper() + "–" + req.DateTo.ToString("MMM").ToUpper();
+
+        return await BuildCoreAsync(
+            req.DateFrom, req.DateTo, req.CompareFrom, req.CompareTo,
+            monthYear: FormatPeriodLabel(req.DateFrom, req.DateTo),
+            monthName: monthName,
+            province: req.ProvinceCode ?? "MP",
+            reportDate: req.ReportDate, refNumber: req.RefNumber,
+            enquiryName: req.EnquiryName, enquiryTel: req.EnquiryTel,
+            toName: req.ToName, toTitle: req.ToTitle,
+            fromName: req.FromName, fromTitle: req.FromTitle);
+    }
+
+    /// <summary>
+    /// Shared orchestration behind every memo-style report — Monthly, Quarterly, and (via
+    /// ReportsHubController's Jan–Jun/Jan–Dec date windows into MonthlyMemoDataService.BuildAsync)
+    /// Six-Month and Annual. This used to be duplicated between this class's BuildAsync and
+    /// QuarterlyReportDataService's own BuildAsync, and the two copies had already drifted:
+    /// Quarterly never attached age/gender demographics; Monthly never populated
+    /// vm.DaysOfWeek["Provincial"] or DistrictMemoStats.Key (so the "Days of the Week" section
+    /// rendered for Quarterly but not Monthly/Six-Month/Annual); and Monthly's
+    /// from.Month==to.Month guard on the 5-year history meant Six-Month/Annual silently got no
+    /// Figure 2 at all. One method now gives all four report kinds the same behaviour.
+    /// </summary>
+    protected async Task<MonthlyMemoViewModel> BuildCoreAsync(
+        DateOnly from, DateOnly to, DateOnly pFrom, DateOnly pTo,
+        string monthYear, string monthName, string province,
+        string reportDate, string refNumber, string enquiryName, string enquiryTel,
+        string toName, string toTitle, string fromName, string fromTitle)
+    {
         var days = (to.DayNumber - from.DayNumber) + 1;
 
         var vm = new MonthlyMemoViewModel
         {
-            MonthYear = FormatPeriodLabel(from, to),
-            MonthName = from.Month == to.Month
-                               ? from.ToString("MMMM").ToUpper()
-                               : from.ToString("MMM").ToUpper() + "–" + to.ToString("MMM").ToUpper(),
+            MonthYear = monthYear,
+            MonthName = monthName,
             PeriodFrom = FormatDate(from),
             PeriodTo = FormatDate(to),
             PriorFrom = FormatDate(pFrom),
@@ -62,16 +64,16 @@ public class MonthlyMemoDataService
             CurrentYear = from.Year,
             PriorYear = pFrom.Year,
             DaysInPeriod = days,
-            ReportDate = string.IsNullOrEmpty(req.ReportDate)
+            ReportDate = string.IsNullOrEmpty(reportDate)
                                ? DateTime.Today.ToString("dd MMMM yyyy").ToUpper()
-                               : req.ReportDate.ToUpper(),
-            RefNumber = req.RefNumber,
-            EnquiryName = req.EnquiryName,
-            EnquiryTel = req.EnquiryTel,
-            ToName = req.ToName,
-            ToTitle = req.ToTitle,
-            FromName = req.FromName,
-            FromTitle = req.FromTitle
+                               : reportDate.ToUpper(),
+            RefNumber = refNumber,
+            EnquiryName = enquiryName,
+            EnquiryTel = enquiryTel,
+            ToName = toName,
+            ToTitle = toTitle,
+            FromName = fromName,
+            FromTitle = fromTitle
         };
 
         // ── Load data for current and prior periods ──────────────
@@ -82,80 +84,46 @@ public class MonthlyMemoDataService
         var currentAgg = Agg(currentRows);
         var priorAgg = Agg(priorRows);
 
-        // ── Fetch demographics from the dedicated table ─────────
-        var province = req.ProvinceCode ?? "MP";
+        // ── Fetch demographics from the dedicated table (previously Monthly-only —
+        // Quarterly's separate copy of this method never called this, so Quarterly reports
+        // never showed the AGE GROUP AND GENDER section) ─────────
         var currentDemo = await GetDemographicsAsync(from, to, province);
         var priorDemo = await GetDemographicsAsync(pFrom, pTo, province);
-
-        // ── Attach age/gender breakdowns ───────────────────────
         currentAgg.FatalAgeGroups = BuildAgeGroupsFromDemographics(currentDemo);
         currentAgg.FatalGender = BuildGenderFromDemographics(currentDemo);
-
-        // Also for prior period (though the sample only shows current year,
-        // having it available allows easy future extension)
         priorAgg.FatalAgeGroups = BuildAgeGroupsFromDemographics(priorDemo);
         priorAgg.FatalGender = BuildGenderFromDemographics(priorDemo);
 
         vm.Provincial.Current = currentAgg;
         vm.Provincial.Prior = priorAgg;
 
-        // Inside BuildAsync, after loading current and prior rows:
-        var districtMap = await _stationDistrict.GetAllAsync();
-        string ResolveDistrict(string station) =>
-            districtMap.TryGetValue(StationDistrictLookup.Normalize(station), out var d) ? d : "Unknown";
-
-        // Then, when building districts, group by the resolved district name, not by the hardcoded sets.
-        var districtGroups = currentRows
-            .Concat(priorRows)
-            .Select(r => new { r, District = ResolveDistrict(r.Station) })
-            .Where(x => x.District != "Unknown")
-            .GroupBy(x => x.District)
-            .Select(g => new DistrictMemoStats
+        // ── Districts — discovered from whatever the data actually contains. LoadAsync
+        // already resolves each row's District via IStationDistrictLookup, so grouping on
+        // r.District (rather than re-querying the lookup here) needs no extra DB round trip.
+        // Quarterly used to iterate a hardcoded Ehlanzeni/Bohlabela/GertSibande/Nkangala array
+        // instead — the same class of hardcoded-district-list problem fixed elsewhere this
+        // session, just missed in this one spot. Key is set to the district name itself, which
+        // is all the per-district DaysOfWeek lookup below (and MonthlyMemoDocService's) needs.
+        var districtGroups = currentRows.Concat(priorRows)
+            .Select(r => r.District)
+            .Where(d => !string.IsNullOrWhiteSpace(d) && !string.Equals(d, "Unknown", StringComparison.OrdinalIgnoreCase))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(d => d, StringComparer.OrdinalIgnoreCase)
+            .Select(name =>
             {
-                Name = g.Key,
-                Current = Agg(g.Where(x => currentRows.Contains(x.r)).Select(x => x.r).ToList()),
-                Prior = Agg(g.Where(x => priorRows.Contains(x.r)).Select(x => x.r).ToList()),
-                Routes = BuildRoutes(
-                    g.Where(x => currentRows.Contains(x.r)).Select(x => x.r).ToList(),
-                    g.Where(x => priorRows.Contains(x.r)).Select(x => x.r).ToList()
-                )
+                var dC = currentRows.Where(r => string.Equals(r.District, name, StringComparison.OrdinalIgnoreCase)).ToList();
+                var dP = priorRows.Where(r => string.Equals(r.District, name, StringComparison.OrdinalIgnoreCase)).ToList();
+                return new DistrictMemoStats
+                {
+                    Key = name,
+                    Name = name,
+                    Current = Agg(dC),
+                    Prior = Agg(dP),
+                    Routes = BuildRoutes(dC, dP)
+                };
             })
             .ToList();
-
-        // Assign to vm.Districts (you may need to preserve the Key for days-of-week lookup later)
         vm.Districts = districtGroups;
-
-        // ── 5-year history ──────────────────────────────────────
-        if (from.Month == to.Month)
-        {
-            for (int y = from.Year - 4; y <= from.Year; y++)
-            {
-                var yF = new DateOnly(y, from.Month, 1);
-                var yT = yF.AddMonths(1).AddDays(-1);
-                var yRows = await LoadAsync(yF, yT);
-                vm.FiveYearHistory.Add(new ViewModels.YearHistory
-                {
-                    Year = y,
-                    Crashes = yRows.Count,
-                    Fatalities = yRows.Sum(r => r.Fatalities)
-                });
-            }
-        }
-
-        // ── Districts ───────────────────────────────────────────
-        foreach (var (key, name, stations) in Districts)
-        {
-            var dC = currentRows.Where(r => stations.Contains(r.Station)).ToList();
-            var dP = priorRows.Where(r => stations.Contains(r.Station)).ToList();
-            vm.Districts.Add(new DistrictMemoStats
-            {
-                Key = key,
-                Name = name,
-                Current = Agg(dC),
-                Prior = Agg(dP),
-                Routes = BuildRoutes(dC, dP)
-            });
-        }
 
         // ── Provincial routes ──────────────────────────────────
         vm.ProvincialRoutes = BuildRoutes(currentRows, priorRows)
@@ -167,17 +135,32 @@ public class MonthlyMemoDataService
         vm.VehicleCategories = BuildVehicleCats(currentRows, priorRows);
         vm.TimeSlots = BuildTimeSlots(currentRows, priorRows);
 
+        // ── Days of the week — provincial row plus one per district. Quarterly used to set
+        // both; Monthly used to set neither, which is why this section rendered only for
+        // Quarterly reports before.
+        vm.DaysOfWeek["Provincial"] = BuildDays(currentRows, priorRows);
         foreach (var dist in districtGroups)
         {
-            var dC = currentRows.Where(r => ResolveDistrict(r.Station) == dist.Name).ToList();
-            var dP = priorRows.Where(r => ResolveDistrict(r.Station) == dist.Name).ToList();
-            vm.DaysOfWeek[dist.Name] = BuildDays(dC, dP);
+            var dC = currentRows.Where(r => string.Equals(r.District, dist.Name, StringComparison.OrdinalIgnoreCase)).ToList();
+            var dP = priorRows.Where(r => string.Equals(r.District, dist.Name, StringComparison.OrdinalIgnoreCase)).ToList();
+            vm.DaysOfWeek[dist.Key] = BuildDays(dC, dP);
         }
-        foreach (var (key, name, stations) in Districts)
+
+        // ── 5-year history — the same-length window shifted back 1 to 4 years. This replaces
+        // two separate implementations (Monthly's from.Month==to.Month-gated month loop, which
+        // silently produced nothing for Six-Month/Annual's Jan–Jun/Jan–Dec ranges; Quarterly's
+        // own GetQuarterRange-based loop) with one formula that's correct for any period length.
+        for (var yearsBack = 4; yearsBack >= 0; yearsBack--)
         {
-            var dC = currentRows.Where(r => stations.Contains(r.Station)).ToList();
-            var dP = priorRows.Where(r => stations.Contains(r.Station)).ToList();
-            vm.DaysOfWeek[key] = BuildDays(dC, dP);
+            var yFrom = from.AddYears(-yearsBack);
+            var yTo = to.AddYears(-yearsBack);
+            var yRows = await LoadAsync(yFrom, yTo);
+            vm.FiveYearHistory.Add(new CrashReport.ViewModels.YearHistory
+            {
+                Year = yFrom.Year,
+                Crashes = yRows.Count,
+                Fatalities = yRows.Sum(r => r.Fatalities)
+            });
         }
 
         return vm;
@@ -583,6 +566,41 @@ public class MonthlyMemoDataService
     }
 
 
+    // ── District load — how many crashes each district accounted for in the
+    // current period. Grouped straight off Row.District, which LoadAsync
+    // already resolves per-station via IStationDistrictLookup, so this needs
+    // no new lookups of its own. Only meaningful for an unscoped (province-
+    // wide) view -- a single-district scope would just be one bar -- so the
+    // view only renders this when DashboardMode is "analytics".
+    protected static List<DistrictLoadStats> BuildDistrictLoad(List<Row> curr)
+    {
+        return curr
+            .Where(r => !string.IsNullOrEmpty(r.District) && r.District != "Unknown")
+            .GroupBy(r => r.District)
+            .Select(g => new DistrictLoadStats
+            {
+                District = g.Key,
+                CrashesCurr = g.Count(),
+                FatalCurr = g.Sum(x => x.Fatalities)
+            })
+            .OrderByDescending(d => d.CrashesCurr)
+            .ToList();
+    }
+
+    // ── Severity mix — how the current period's casualties split across
+    // fatal/serious/slight, independent of crash volume. Row already carries
+    // per-crash Fatalities/Serious/Slight counts (same fields MonthlyMemo
+    // uses), so this is a straight sum, not a new query.
+    protected static SeverityMixStats BuildSeverityMix(List<Row> curr)
+    {
+        return new SeverityMixStats
+        {
+            Fatal = curr.Sum(r => r.Fatalities),
+            Serious = curr.Sum(r => r.Serious),
+            Slight = curr.Sum(r => r.Slight)
+        };
+    }
+
     public async Task<InsightsViewModel> BuildInsightsAsync(
         DateOnly from, DateOnly to, string? scopeDistrict = null, string? scopeStation = null)
     {
@@ -611,7 +629,9 @@ public class MonthlyMemoDataService
             CrashTypes = BuildCrashTypes(currentRows, priorRows),
             Routes = BuildRoutes(currentRows, priorRows).Take(10).ToList(),
             TimeSlots = BuildTimeSlots(currentRows, priorRows),
-            Stations = BuildStations(currentRows, priorRows).Take(10).ToList()
+            Stations = BuildStations(currentRows, priorRows).Take(10).ToList(),
+            Districts = BuildDistrictLoad(currentRows),
+            Severity = BuildSeverityMix(currentRows)
         };
     }
 

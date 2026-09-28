@@ -3,6 +3,7 @@ using CrashReport.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
+namespace CrashReport.Controllers;
 
 public class ContributoryFactorsController : Controller
 {

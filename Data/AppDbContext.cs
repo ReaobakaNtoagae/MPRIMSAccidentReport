@@ -42,6 +42,16 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<LookupRoute> LookupRoutes { get; set; }
     public DbSet<LookupCrashType> LookupCrashTypes { get; set; }
     public DbSet<LookupVehicleType> LookupVehicleTypes { get; set; }
+    // LookupCostCentre (Models/Lookupmodels.cs) was already a fully-mapped entity
+    // (its own [Table("lkp_cost_centres")] attribute, its own comment explaining
+    // why it exists) referenced directly as _context.LookupCostCentres by four
+    // existing call sites (LookupController.CostCentres, CreateSummaryController.
+    // CreateSummary, CrashesController.EditSummary, and now the new Quick Capture
+    // API controllers) -- but this DbSet property itself was missing, which would
+    // fail to compile every one of those call sites. Found while building the new
+    // API controllers, not introduced by them; fixed here since it blocks the
+    // whole app, not something worth working around per-caller.
+    public DbSet<LookupCostCentre> LookupCostCentres { get; set; }
 
     public DbSet<OptionListItem> OptionListItems { get; set; }
 
@@ -420,17 +430,6 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
                 .HasForeignKey(s => s.CrashId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("fk_cs_crash");
-        });
-
-        modelBuilder.Entity<CrashSummary>(entity =>
-        {
-            // AR sequences repeat across stations, so station is part of the real identity.
-            entity.HasIndex(summary => new { summary.Station, summary.CrNo }).IsUnique();
-
-            // CAS is optional. When present, the complete CAS may occur only once per station.
-            entity.HasIndex(summary => new { summary.Station, summary.CasNo })
-                .IsUnique()
-                .HasFilter("[cas_no] IS NOT NULL");
         });
 
         modelBuilder.Entity<CrashSummaryVehicle>()

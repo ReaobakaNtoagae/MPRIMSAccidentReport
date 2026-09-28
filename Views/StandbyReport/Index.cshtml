@@ -5,6 +5,19 @@
 
 <style>
 
+    /* These were referenced below via var(--green-*) but never defined anywhere,
+       which made them invalid at computed-value time (rendering as transparent/unstyled).
+       Mapped onto the app's existing green theme scale from _Layout.cshtml (--g-700/600/100)
+       and the literal border green (#c8e6c9) already used consistently on other admin pages
+       (e.g. Roles/Index.cshtml), rather than introducing new colors. */
+    .sr-page {
+        --green-dark: var(--g-700);
+        --green-mid: var(--g-600);
+        --green-accent: var(--g-500);
+        --green-light: var(--g-100);
+        --green-border: #c8e6c9;
+    }
+
     .sr-page {
         max-width: 620px;
         padding-bottom: 40px;

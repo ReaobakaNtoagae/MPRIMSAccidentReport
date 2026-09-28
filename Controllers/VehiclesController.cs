@@ -3,6 +3,8 @@ using CrashReport.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
+namespace CrashReport.Controllers;
+
 public class VehiclesController : Controller
 {
     private readonly AppDbContext _context;

@@ -87,7 +87,7 @@ public class StandbyReportWordService
                 $"PROVINCE HAD {totalPed} FATAL PEDESTRIAN{(totalPed != 1 ? "S" : "")}"));
             var parts = new List<string>();
             if (vm.CurrentEhlanzeni.FatalPedestrians > 0) parts.Add($"{vm.CurrentEhlanzeni.FatalPedestrians} (EHLANZENI)");
-            if (vm.CurrentBohlabelo.FatalPedestrians > 0) parts.Add($"{vm.CurrentBohlabelo.FatalPedestrians} (BOHLABELO)");
+            if (vm.CurrentBohlabelo.FatalPedestrians > 0) parts.Add($"{vm.CurrentBohlabelo.FatalPedestrians} (BOHLABELA)");
             if (vm.CurrentGertSibande.FatalPedestrians > 0) parts.Add($"{vm.CurrentGertSibande.FatalPedestrians} (GERT SIBANDE)");
             if (vm.CurrentNkangala.FatalPedestrians > 0) parts.Add($"{vm.CurrentNkangala.FatalPedestrians} (NKANGALA)");
             body.Append(StyledPara(PT9, false, JustificationValues.Left, 80, string.Join("    ", parts)));
@@ -114,7 +114,7 @@ public class StandbyReportWordService
         var fatalDistricts = new[]
         {
             ("EHLANZENI", vm.CurrentEhlanzeni),
-            ("BOHLABELO", vm.CurrentBohlabelo),
+            ("BOHLABELA", vm.CurrentBohlabelo),
             ("GERT SIBANDE", vm.CurrentGertSibande),
             ("NKANGALA", vm.CurrentNkangala),
         }.Where(d => d.Item2.FatalDetails.Any()).ToList();
@@ -158,7 +158,7 @@ public class StandbyReportWordService
         Func<DistrictStats, int>[] getters,
         bool isTimeBand)
     {
-        var districtNames = new[] { "PROVINCE", "EHLANZENI", "BOHLABELO", "GERT SIBANDE", "NKANGALA" };
+        var districtNames = new[] { "PROVINCE", "EHLANZENI", "BOHLABELA", "GERT SIBANDE", "NKANGALA" };
         string firstColLabel = isTimeBand ? "PREVALENT TIME" : "";
 
         int[] colWidths;
@@ -332,7 +332,7 @@ public class StandbyReportWordService
     {
         int[] widths = { LBL_W, DIST_W, DIST_W, DIST_W, DIST_W, DIST_W };
         var t = NewTable(widths);
-        t.Append(SimpleHdrRow(widths, new[] { "", "PROVINCE", "EHLANZENI", "BOHLABELO", "GERT SIBANDE", "NKANGALA" }));
+        t.Append(SimpleHdrRow(widths, new[] { "", "PROVINCE", "EHLANZENI", "BOHLABELA", "GERT SIBANDE", "NKANGALA" }));
         foreach (var (label, fn, i) in new (string, Func<DistrictStats, int>, int)[]
         {
             ("CRASHES",    d => d.Crashes,    0),
@@ -353,7 +353,7 @@ public class StandbyReportWordService
         t.Append(SimpleHdrRow(widths, new[]
         {
             "PREVALENT TIME",
-            $"PROVINCE {cy}", $"EHLANZENI {cy}", $"BOHLABELO {cy}", $"GERT {cy}", $"NKANGALA {cy}"
+            $"PROVINCE {cy}", $"EHLANZENI {cy}", $"BOHLABELA {cy}", $"GERT {cy}", $"NKANGALA {cy}"
         }));
         foreach (var (label, fn, i) in new (string, Func<DistrictStats, int>, int)[]
         {

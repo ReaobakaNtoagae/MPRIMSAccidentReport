@@ -12,6 +12,13 @@ public class CrashSummary
     [Column("summary_id")]
     public int SummaryId { get; set; }
 
+    // Nullable in the database so historical/imported rows remain valid. The
+    // Quick Capture controllers require it for every new or edited quick record.
+    [Column("cost_centre_id")]
+    public int? CostCentreId { get; set; }
+
+    public LookupCostCentre? CostCentre { get; set; }
+
     [Column("cr_no")]
     [MaxLength(50)]
     public string CrNo { get; set; } = string.Empty;
@@ -91,6 +98,8 @@ public class CrashSummary
     // Null keeps historical role-based reports working; zero is an explicit no-injuries total.
     [Column("serious_injuries_total"), Range(0, 10000)] public int? SeriousInjuriesTotal { get; set; }
     [Column("slight_injuries_total"), Range(0, 10000)] public int? SlightInjuriesTotal { get; set; }
+    // Reference-only count: no road-user or demographic child rows are created.
+    [Column("no_injuries_total"), Range(0, 10000)] public int NoInjuriesTotal { get; set; }
     [NotMapped] public int Serious => SeriousInjuriesTotal ?? (SeriousDrivers + SeriousPassengers + SeriousPedestrians + SeriousCyclists);
     [NotMapped] public int Slight => SlightInjuriesTotal ?? (SlightDrivers + SlightPassengers + SlightPedestrians + SlightCyclists);
 }

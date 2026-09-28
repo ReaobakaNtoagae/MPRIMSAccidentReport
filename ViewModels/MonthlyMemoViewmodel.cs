@@ -92,6 +92,21 @@ public class StationStats
     public int FatalCurr { get; set; }
 }
 
+public class DistrictLoadStats
+{
+    public string District { get; set; } = string.Empty;
+    public int CrashesCurr { get; set; }
+    public int FatalCurr { get; set; }
+}
+
+public class SeverityMixStats
+{
+    public int Fatal { get; set; }
+    public int Serious { get; set; }
+    public int Slight { get; set; }
+    public int Total => Fatal + Serious + Slight;
+}
+
 public class InsightsViewModel
 {
     public string PeriodLabel { get; set; } = string.Empty;
@@ -101,6 +116,8 @@ public class InsightsViewModel
     public List<RouteStats> Routes { get; set; } = new();
     public List<TimeSlotStats> TimeSlots { get; set; } = new();
     public List<StationStats> Stations { get; set; } = new();
+    public List<DistrictLoadStats> Districts { get; set; } = new();
+    public SeverityMixStats Severity { get; set; } = new();
 }
 
 public class YearHistory

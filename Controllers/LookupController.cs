@@ -1,5 +1,6 @@
 ﻿using CrashReport.Data;
 using CrashReport.Models;
+using CrashReport.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using static CrashReport.Models.FixedEnum;
@@ -12,7 +13,12 @@ namespace CrashReport.Controllers;
 public class LookupController : ControllerBase
 {
     private readonly AppDbContext _context;
-    public LookupController(AppDbContext context) => _context = context;
+    private readonly ILookupAdminService _lookupAdmin;
+    public LookupController(AppDbContext context, ILookupAdminService lookupAdmin)
+    {
+        _context = context;
+        _lookupAdmin = lookupAdmin;
+    }
 
 
     [HttpGet("districts")]
@@ -25,6 +31,25 @@ public class LookupController : ControllerBase
             .ToListAsync();
 
         return Ok(names);
+    }
+
+    [HttpGet("costcentres")]
+    public async Task<IActionResult> CostCentres()
+    {
+        // Keep this lookup independent from District and SAPS Station for now.
+        var items = await _context.LookupCostCentres
+            .AsNoTracking()
+            .OrderBy(costCentre => costCentre.CostCentreName)
+            .Select(costCentre => new
+            {
+                id = costCentre.CostCentreId,
+                text = costCentre.CostCentreName,
+                stationId = costCentre.StationId,
+                districtId = costCentre.DistrictId
+            })
+            .ToListAsync();
+
+        return Ok(items);
     }
 
 
@@ -151,15 +176,13 @@ public class LookupController : ControllerBase
     {
         var query = _context.LookupCrashTypes.Where(c => c.IsActive);
         if (!string.IsNullOrEmpty(q))
-            query = query.Where(c => c.CrashTypeCode.Contains(q) ||
-                                     (c.Description != null && c.Description.Contains(q)));
+            query = query.Where(c => c.CrashTypeCode.Contains(q));
 
         var items = await query
             .OrderBy(c => c.CrashTypeCode)
             .Select(c => new {
                 id = c.CrashTypeId,
-                text = c.CrashTypeCode,
-                description = c.Description
+                text = c.CrashTypeCode
             })
             .ToListAsync();
         return Ok(items);
@@ -233,38 +256,13 @@ public class LookupController : ControllerBase
     [HttpDelete("{table}/{id}")]
     public async Task<IActionResult> Deactivate(string table, int id)
     {
-        switch (table.ToLower())
+        var outcome = await _lookupAdmin.DeactivateAsync(table, id);
+        return outcome switch
         {
-            case "stations":
-                var s = await _context.SapsStations.FindAsync(id);
-                if (s == null) return NotFound();
-                s.IsActive = false;
-                break;
-            case "locations":
-                var l = await _context.LookupLocations.FindAsync(id);
-                if (l == null) return NotFound();
-                l.IsActive = false;
-                break;
-            case "routes":
-                var r = await _context.LookupRoutes.FindAsync(id);
-                if (r == null) return NotFound();
-                r.IsActive = false;
-                break;
-            case "crashtypes":
-                var ct = await _context.LookupCrashTypes.FindAsync(id);
-                if (ct == null) return NotFound();
-                ct.IsActive = false;
-                break;
-            case "vehicletypes":
-                var vt = await _context.LookupVehicleTypes.FindAsync(id);
-                if (vt == null) return NotFound();
-                vt.IsActive = false;
-                break;
-            default:
-                return BadRequest("Unknown table.");
-        }
-        await _context.SaveChangesAsync();
-        return Ok();
+            LookupDeactivateOutcome.Deactivated => Ok(),
+            LookupDeactivateOutcome.NotFound => NotFound(),
+            _ => BadRequest("Unknown table.")
+        };
     }
 
     [HttpGet("formoptions")]

@@ -1,4 +1,4 @@
-﻿@{
+@{
     ViewData["Title"] = "Dashboard";
     var mode = ViewBag.DashboardMode as string ?? "none";
     var roleLabel = ViewBag.RoleLabel as string ?? "";
@@ -15,6 +15,13 @@
     bool canQuarterly = ViewBag.CanQuarterly;
     bool canAnyReport = ViewBag.CanAnyReport;
     bool canAdminister = ViewBag.CanAdminister;
+
+    // Insights is worth a look for any role operating above a single
+    // station — i.e. everything except the capture roles (SAPS Officer,
+    // Cost Centre Administrator) and the no-privilege fallback. Mirrors
+    // _Layout's canSeeInsights gate, expressed in terms of DashboardMode
+    // since that's what this view already has on hand.
+    var showInsightsCallout = mode == "analytics" || mode == "review";
 }
 
 @if (TempData["SuccessMessage"] != null)
@@ -36,7 +43,7 @@
 
     .kpi-card {
         border-radius: 12px;
-        padding: 14px 16px;
+        padding: 16px 18px;
         background: #f8faf8;
         border-left: 3px solid transparent;
     }
@@ -45,7 +52,7 @@
             display: flex;
             align-items: center;
             gap: 6px;
-            margin-bottom: 6px;
+            margin-bottom: 8px;
         }
 
             .kpi-card .kpi-head i {
@@ -53,7 +60,7 @@
             }
 
         .kpi-card .num {
-            font-size: 1.5rem;
+            font-size: 1.65rem;
             font-weight: 700;
             line-height: 1;
         }
@@ -66,7 +73,7 @@
         .kpi-card .sub {
             font-size: .7rem;
             color: #999;
-            margin-top: 6px;
+            margin-top: 7px;
         }
 
     .qa-section {
@@ -102,20 +109,6 @@
                 width: auto;
             }
 
-    .panel-row-actions {
-        display: grid;
-        grid-template-columns: 1fr 1.6fr;
-        gap: 16px;
-        margin-bottom: 20px;
-    }
-
-    .panel-row {
-        display: grid;
-        grid-template-columns: 1.4fr 1fr;
-        gap: 16px;
-        margin-bottom: 20px;
-    }
-
     .panel {
         background: #fff;
         border-radius: 10px;
@@ -141,6 +134,22 @@
     .panel-body {
         padding: 16px 20px;
     }
+
+    /* ── "Why it's here" captions — used on Quick actions and Recent
+             activity, deliberately NOT on the KPI cards, which are
+             assumed self-explanatory at a glance. ───────────────────── */
+    .why-note {
+        font-size: .72rem;
+        color: #777;
+        line-height: 1.5;
+        padding: 0 20px 14px;
+        margin-top: -4px;
+    }
+
+        .why-note b {
+            color: #2e7d32;
+            font-weight: 700;
+        }
 
     /* ── Recent activity — compact table, not stacked rows ─────────── */
     .activity-table {
@@ -324,6 +333,63 @@
         color: #0c447c;
         margin-bottom: 20px;
     }
+
+    /* ── Open Insights — replaces the district/severity charts that used
+             to live inline here. The dashboard stays a fast glance-and-act
+             page; anything that needs a second look lives one click away
+             on the Insights page instead of crowding this one. ─────────── */
+    .insights-callout {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 16px 20px;
+        margin-bottom: 20px;
+        text-decoration: none;
+        color: inherit;
+    }
+
+        .insights-callout:hover {
+            border-color: #a5d6a7;
+        }
+
+        .insights-callout .ic-left {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .insights-callout .ic-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            background: #e8f5e9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            color: #2e7d32;
+            font-size: 17px;
+        }
+
+        .insights-callout .ic-title {
+            font-size: .88rem;
+            font-weight: 700;
+            color: #1a1a1a;
+        }
+
+        .insights-callout .ic-desc {
+            font-size: .74rem;
+            color: #888;
+            margin-top: 2px;
+        }
+
+        .insights-callout .ic-cta {
+            font-size: .78rem;
+            font-weight: 700;
+            color: #2e7d32;
+            white-space: nowrap;
+        }
 </style>
 
 <!-- Scope banner — every role's actual data scope, now genuinely
@@ -373,25 +439,22 @@
     </div>
 </div>
 
+@if (showInsightsCallout)
+{
+    <a class="panel insights-callout" asp-controller="Home" asp-action="Insights">
+        <div class="ic-left">
+            <div class="ic-icon"><i class="ti ti-chart-histogram" aria-hidden="true"></i></div>
+            <div>
+                <div class="ic-title">Want the full breakdown?</div>
+                <div class="ic-desc">By district, by route, by crash type, by time of day — ranked and explained in Insights.</div>
+            </div>
+        </div>
+        <span class="ic-cta">Open Insights →</span>
+    </a>
+}
+
 @if (mode == "analytics")
 {
-    <!-- Charts sit directly under the KPI cards now, before quick actions
-         or recent activity — the most important glance-value content
-         comes first. -->
-    <div class="panel-row">
-        <div class="panel" style="margin-bottom:0;">
-            <div class="panel-head">Crashes by district</div>
-            <div class="panel-body">
-                <div style="position:relative; height:220px;"><canvas id="districtChart"></canvas></div>
-            </div>
-        </div>
-        <div class="panel" style="margin-bottom:0;">
-            <div class="panel-head">Severity breakdown</div>
-            <div class="panel-body">
-                <div style="position:relative; height:220px;"><canvas id="severityChart"></canvas></div>
-            </div>
-        </div>
-    </div>
     <div class="qa-section-label">Quick actions</div>
     <div class="action-grid" id="quickActionsAll"></div>
 
@@ -403,6 +466,7 @@
                 <a href="/Crashes" class="view-all-link">View all crash reports →</a>
             }
         </div>
+        <div class="why-note"><b>Why it's here — </b>the newest records across every district, in submission order — the first thing worth a glance each morning.</div>
         <div class="panel-body" id="recentActivityBody">
             <div style="color:#999; font-size:.8rem;">Loading…</div>
         </div>
@@ -456,6 +520,7 @@
                     <a href="/Crashes" class="view-all-link">View all crash reports →</a>
                 }
             </div>
+            <div class="why-note"><b>Why it's here — </b>only what was filed at your station — records elsewhere never reach this list, by design.</div>
             <div class="panel-body" id="recentActivityBody">
                 <div style="color:#999; font-size:.8rem;">Loading…</div>
             </div>
@@ -492,6 +557,7 @@
                     <a href="/Crashes" class="view-all-link">Open Crash Reports →</a>
                 }
             </div>
+            <div class="why-note"><b>Why it's here — </b>recently filed records awaiting a regional look before they count toward the province total.</div>
             <div class="panel-body" id="recentActivityBody">
                 <div style="color:#999; font-size:.8rem;">Loading…</div>
             </div>
@@ -515,7 +581,6 @@
 </form>
 
 @section Scripts {
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
     <script>
         $(function () {
 
@@ -598,41 +663,12 @@
         }
         addActionCards("#quickActionsAll", allButtons);
 
+        // Recent activity is the only thing this fetch is for now — the
+        // district/severity breakdowns that used to be built from this
+        // same response moved to the Insights page, which pulls them
+        // from InsightsViewModel instead of recomputing them client-side.
         $.getJSON("/Crashes/Grid", { pageSize: 5000, sortBy: "Date", sortDesc: true }).done(function (result) {
         var rows = result.rows || [];
-
-        var byDistrict = {};
-        var bySeverity = { Fatal: 0, Serious: 0, Minor: 0 };
-        rows.forEach(function (r) {
-        var d = r.District || "Unknown";
-        byDistrict[d] = (byDistrict[d] || 0) + 1;
-        if (r.Fatalities > 0) bySeverity.Fatal++;
-        else if (r.Serious > 0) bySeverity.Serious++;
-        else bySeverity.Minor++;
-        });
-
-        var districtLabels = Object.keys(byDistrict);
-        var districtValues = districtLabels.map(function (d) { return byDistrict[d]; });
-
-        new Chart(document.getElementById('districtChart'), {
-        type: 'bar',
-        data: { labels: districtLabels, datasets: [{ data: districtValues, backgroundColor: '#2a78d6', borderRadius: 4, maxBarThickness: 32 }] },
-        options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: { y: { beginAtZero: true, grid: { color: '#e1e0d9' } }, x: { grid: { display: false } } }
-        }
-        });
-
-        new Chart(document.getElementById('severityChart'), {
-        type: 'doughnut',
-        data: {
-        labels: ['Fatal', 'Serious', 'Minor'],
-        datasets: [{ data: [bySeverity.Fatal, bySeverity.Serious, bySeverity.Minor], backgroundColor: ['#b71c1c', '#e65100', '#2a78d6'] }]
-        },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } } }
-        });
-
         renderRecentActivity(rows.slice(0, 8), false);
         }).fail(function () {
         $("#recentActivityBody").html('<div style="color:#b71c1c; font-size:.8rem;">Could not load recent activity.</div>');

@@ -8,11 +8,12 @@
     .qc-panel{margin-bottom:20px;padding:28px;background:#fff;border:1px solid #d9e6dd;border-radius:16px}.qc-heading{display:flex;align-items:center;gap:10px;margin:0 0 20px;font-size:1.05rem}
     .qc-step{display:inline-grid;place-items:center;width:25px;height:25px;border-radius:50%;background:#e8f5e9;color:#24823b;font-size:.78rem}.qc-field{margin-bottom:18px}.qc-field:last-child{margin-bottom:0}
     .qc-field label{display:block;margin-bottom:7px;color:#496455;font-size:.82rem}.qc-page .dx-texteditor{border-radius:9px;border-color:#cfddd3}.qc-page .dx-texteditor.dx-state-focused{border-color:#4a9560;box-shadow:0 0 0 2px #e8f4eb}
-    .qc-page .dx-state-readonly{background:#f5f8f6}.qc-total{margin-bottom:14px;padding:16px 18px;border-left:3px solid #bb3b31;border-radius:11px;background:#f3f7f4}.qc-total.serious{border-color:#a86b08}.qc-total.slight{margin-bottom:0;border-color:#37944b}
-    .qc-total label{display:block;margin-bottom:10px;font-size:.85rem;font-weight:600}.qc-detail-panel[hidden]{display:none}.qc-detail-title{margin:0;font-size:1rem}.qc-detail-subtitle{margin:5px 0 20px;color:#718077;font-size:.8rem}
-    .qc-person{padding:20px 0;border-top:1px solid #e5ede7}.qc-person:first-of-type{padding-top:0;border-top:0}.qc-person-title{margin:0 0 15px;font-size:.85rem}.qc-vehicle-entry{display:grid;grid-template-columns:minmax(0,1fr) 105px 48px;gap:12px;align-items:end;margin-bottom:20px}.qc-vehicle-entry .qc-field{margin:0}.qc-vehicle-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 0;border-top:1px solid #e5ede7}.qc-vehicle-name{font-size:.86rem;font-weight:600}.qc-vehicle-qty{color:#718077;font-size:.82rem}.qc-empty{margin:0;color:#829087;font-size:.82rem}
+    .qc-page .dx-state-readonly{background:#f5f8f6}.qc-injury-group{margin-bottom:14px;border-left:3px solid #bb3b31;border-radius:11px;background:#f3f7f4;overflow:hidden}.qc-injury-group.serious{border-color:#a86b08}.qc-injury-group.slight{border-color:#37944b}.qc-injury-group.none{border-color:#6b7c72}.qc-total{padding:16px 18px}
+    .qc-total label{display:block;margin-bottom:10px;font-size:.85rem;font-weight:600}.qc-detail-panel{padding:2px 18px 18px;border-top:1px solid #dce7df}.qc-detail-panel[hidden]{display:none}.qc-detail-title{margin:16px 0 0;font-size:1rem}.qc-detail-subtitle{margin:5px 0 20px;color:#718077;font-size:.8rem}
+    .qc-person{padding:20px 0;border-top:1px solid #dce7df}.qc-person:first-of-type{padding-top:0;border-top:0}.qc-person-title{margin:0 0 15px;font-size:.85rem}.qc-vehicle-row{position:relative;margin-bottom:14px;padding:18px;background:#f5f8f6;border:1px solid #dce7df;border-radius:12px}.qc-vehicle-grid{display:grid;grid-template-columns:1.2fr 1fr 1fr 42px;gap:12px;align-items:end}.qc-vehicle-grid .qc-field{margin:0}.qc-empty{margin:0 0 16px;color:#829087;font-size:.82rem}
+    .qc-fatal-gender-hint{margin:0 0 16px;padding:10px 12px;background:#fff6e5;border:1px solid #f0dca0;border-radius:8px;color:#7a5c00;font-size:.8rem;line-height:1.4}
     .qc-actions{display:flex;justify-content:space-between;gap:12px;padding:6px 0 30px}.qc-page .dx-button{border-radius:9px}.qc-page .dx-button-default{background:var(--g-600,#2f8f43);border-color:var(--g-600,#2f8f43)}
-    @@media(max-width:700px){.qc-panel{padding:21px 18px}.qc-page h1{font-size:1.55rem}.qc-vehicle-entry{grid-template-columns:minmax(0,1fr) 85px 44px}}
+    @@media(max-width:700px){.qc-panel{padding:21px 18px}.qc-page h1{font-size:1.55rem}.qc-vehicle-grid{grid-template-columns:1fr}.qc-vehicle-grid .dx-button{width:100%}}
 </style>
 <main class="qc-page">
     <h1>@ViewData["Title"]</h1><p class="qc-intro">Capture the incident in the same order as the consolidated spreadsheet.</p>
@@ -20,6 +21,7 @@
     <section class="qc-panel">
         <h2 class="qc-heading"><span class="qc-step">1</span>Incident</h2>
         <div class="qc-field"><label>District</label><div id="qcDistrict"></div></div>
+        <div class="qc-field"><label>Cost centre *</label><div id="qcCostCentre"></div></div>
         <div class="qc-field"><label>SAPS station *</label><div id="qcStation"></div></div>
         <div class="qc-field"><label>AR No *</label><div id="qcNumber"></div></div>
         <div class="qc-field"><label>CAS</label><div id="qcCasNo"></div></div>
@@ -32,26 +34,35 @@
     </section>
     <section class="qc-panel">
         <h2 class="qc-heading"><span class="qc-step">2</span>Nature of injuries</h2>
-        <div class="qc-total"><label>Fatalities</label><div id="qcFatal"></div></div>
-        <div class="qc-total serious"><label>Serious injuries</label><div id="qcSerious"></div></div>
-        <div class="qc-total slight"><label>Slight injuries</label><div id="qcSlight"></div></div>
+        @foreach (var severity in new[] { "Fatal", "Serious", "Slight" })
+        {
+            var cssClass = severity == "Fatal" ? "" : severity.ToLowerInvariant();
+            var label = severity == "Fatal" ? "Fatalities" : severity + " injuries";
+            <div class="qc-injury-group @cssClass">
+                @* Parenthesized Razor interpolation is required here. Without it,
+                   Razor emits three duplicate id="qc" elements and DevExtreme
+                   cannot find qcFatal, qcSerious or qcSlight. *@
+                <div class="qc-total"><label>@label</label><div id="qc@(severity)"></div></div>
+                <div class="qc-detail-panel" id="qc@(severity)Section" hidden>
+                    <h3 class="qc-detail-title">@(severity == "Fatal" ? "Fatality" : severity + " injury") details <span id="qc@(severity)Count"></span></h3>
+                    <p class="qc-detail-subtitle">@(severity == "Fatal" ? "Record the road user and any available demographic information." : "Record who was affected.")</p>
+                    @if (severity == "Fatal")
+                    {
+                        @* Populated client-side only when this record's aggregate fatal gender
+                           counts (captured at import, for records with no per-person breakdown)
+                           don't already agree with what's entered below. See qcFatalGenderHint. *@
+                        <p class="qc-fatal-gender-hint" id="qcFatalGenderHint" hidden></p>
+                    }
+                    <div id="qc@(severity)People"></div>
+                </div>
+            </div>
+        }
+        <div class="qc-injury-group none"><div class="qc-total"><label>No injuries</label><div id="qcNoInjury"></div></div></div>
     </section>
-    @foreach (var severity in new[] { "Fatal", "Serious", "Slight" })
-    {
-        <section class="qc-panel qc-detail-panel" id="qc@(severity)Section" hidden>
-            <h2 class="qc-detail-title">@(severity == "Fatal" ? "Fatality" : severity + " injury") details <span id="qc@(severity)Count"></span></h2>
-            <p class="qc-detail-subtitle">@(severity == "Fatal" ? "Record the road user and available demographic information." : "Record who was affected.")</p>
-            <div id="qc@(severity)People"></div>
-        </section>
-    }
     <section class="qc-panel">
         <h2 class="qc-heading"><span class="qc-step">3</span>Vehicles involved</h2>
-        <div class="qc-vehicle-entry">
-            <div class="qc-field"><label>Vehicle type</label><div id="qcVehicleType"></div></div>
-            <div class="qc-field"><label>Qty</label><div id="qcVehicleQty"></div></div>
-            <div id="qcAddVehicle"></div>
-        </div>
         <p class="qc-empty" id="qcVehicleEmpty">No vehicles added yet.</p><div id="qcVehicles"></div>
+        <div id="qcAddVehicle"></div>
     </section>
     <div class="qc-actions"><div id="qcCancel"></div><div id="qcSave"></div></div>
 </main>
@@ -63,8 +74,8 @@ $(function(){
     var isEdit=@(isEdit ? "true" : "false"), data=initial?.data||{}, people=(initial?.people||[]).map(function(x){return $.extend({},x);});
     // The database stores sequence-MM-yyyy, but the client requested sequence-only input.
     if(isEdit && initial?.arSequence) data.CrNo=initial.arSequence;
-    // Vehicle groups match the spreadsheet: one type plus a quantity, not registrations.
-    var vehicleGroups=[],vehicleTypes=[],selectedVehicleType=null,vehicleQuantity=1,countEditors={},saveButton;
+    // Vehicles are instance-based because each one has its own type, make and registration.
+    var vehicles=(initial?.vehicles||[]).map(function(v){return $.extend({},v);}),vehicleTypes=[],countEditors={},saveButton;
     function text(id,key,extra){$(id).dxTextBox($.extend({value:data[key],showClearButton:true,inputAttr:{'aria-label':key},onValueChanged:function(e){data[key]=e.value;}},extra||{}));}
     function lookup(id,key,url){
         // CustomStore.byKey preserves an older saved selection that is no longer active in a lookup.
@@ -72,6 +83,10 @@ $(function(){
         $(id).dxSelectBox({dataSource:store,displayExpr:'text',valueExpr:'text',value:saved,searchEnabled:true,showClearButton:true,inputAttr:{'aria-label':key},onValueChanged:function(e){data[key]=e.value;}});
     }
     lookup('#qcStation','Station','/api/lookup/stations');text('#qcNumber','CrNo',{placeholder:'e.g. 42'});text('#qcCasNo','CasNo',{placeholder:'e.g. 123/09/2026'});lookup('#qcRoute','Route','/api/lookup/routes');text('#qcLocation','Location',{placeholder:'Street / road name, nearest landmark'});lookup('#qcCrashType','CrashType','/api/lookup/crashtypes');
+    // Cost Centre is required but intentionally does not filter District or Station yet.
+    // Load it explicitly so a failed request produces a visible message instead of an empty widget.
+    var costCentreEditor=$('#qcCostCentre').dxSelectBox({items:[],displayExpr:'text',valueExpr:'id',value:data.CostCentreId||null,searchEnabled:true,showClearButton:true,placeholder:'Select cost centre',inputAttr:{'aria-label':'Cost centre'},onValueChanged:function(e){data.CostCentreId=e.value;}}).dxSelectBox('instance');
+    var costCentreLoad=$.getJSON('/api/lookup/costcentres').done(function(items){costCentreEditor.option({items:items||[],value:data.CostCentreId||null});}).fail(function(){DevExpress.ui.notify('Cost centres could not load. Refresh before saving.','error',5000);});
     var savedDistrict=initial?.district||null;
     var district=$('#qcDistrict').dxSelectBox({value:savedDistrict,items:savedDistrict?[savedDistrict]:[],searchEnabled:true,showClearButton:true,inputAttr:{'aria-label':'District'},onValueChanged:function(e){
         // Do not replace the station data source during initial edit-form hydration.
@@ -94,41 +109,49 @@ $(function(){
     function resize(s,n){var old=forSeverity(s);if(n===old.length)return;function apply(){var keep=old.slice(0,n);while(keep.length<n)keep.push({Severity:s,Role:null,Gender:null,Race:null,AgeGroupCode:null});people=people.filter(function(p){return p.Severity!==s;}).concat(keep);draw(s);}if(n<old.length&&old.slice(n).some(detailed))DevExpress.ui.dialog.confirm('Remove the last '+(old.length-n)+' '+s.toLowerCase()+' entries?','Change injury count').done(function(ok){if(ok)apply();else countEditors[s].option('value',old.length);});else apply();}
     function counter(id,s){countEditors[s]=$(id).dxNumberBox({min:0,max:255,value:forSeverity(s).length,format:'#0',step:1,showSpinButtons:true,inputAttr:{'aria-label':s+' count'},onValueChanged:function(e){resize(s,Math.max(0,Math.min(255,Math.floor(Number(e.value)||0))));}}).dxNumberBox('instance');}
     counter('#qcFatal','Fatal');counter('#qcSerious','Serious');counter('#qcSlight','Slight');
+    $('#qcNoInjury').dxNumberBox({min:0,max:10000,value:Number(data.NoInjuriesTotal||0),format:'#0',step:1,showSpinButtons:true,inputAttr:{'aria-label':'No injuries count'},onValueChanged:function(e){data.NoInjuriesTotal=Math.max(0,Math.floor(Number(e.value)||0));}});
     function opts(a){return a.map(function(v){return{text:v,value:v};});}
-    function select(parent,p,key,label,items){var f=$('<div class="qc-field">').appendTo(parent);$('<label>').text(label).appendTo(f);$('<div>').appendTo(f).dxSelectBox({items:items,displayExpr:'text',valueExpr:'value',value:p[key],placeholder:'Select...',showClearButton:true,inputAttr:{'aria-label':label},onValueChanged:function(e){p[key]=e.value;if(key==='AgeGroupCode')p.Age=null;if(key==='Role'&&(e.value==='Pedestrian'||e.value==='Cyclist'))p.VehicleNumber=null;}});}
-    function draw(s){var list=forSeverity(s),section='#qc'+s+'Section',container='#qc'+s+'People';$(container).empty();$(section).prop('hidden',!list.length);$('#qc'+s+'Count').text('· '+list.length);list.forEach(function(p,i){if(!p.AgeGroupCode&&p.Age!=null)p.AgeGroupCode=p.Age<=7?'0-7':p.Age<=12?'8-12':p.Age<=18?'13-18':p.Age<=35?'19-35':'36+';var card=$('<div class="qc-person">').appendTo(container);$('<h3 class="qc-person-title">').text('Person '+(i+1)).appendTo(card);select(card,p,'Role','Road user *',opts(['Driver','Passenger','Pedestrian','Cyclist']));if(s==='Fatal'){select(card,p,'Gender','Gender',[{text:'Male',value:'M'},{text:'Female',value:'F'}]);select(card,p,'AgeGroupCode','Age group',opts(['0-7','8-12','13-18','19-35','36+']));select(card,p,'Race','Population group',[{text:'Black',value:'B'},{text:'Coloured',value:'C'},{text:'Indian',value:'I'},{text:'White',value:'W'},{text:'Other',value:'O'}]);}});}
+    function select(parent,p,key,label,items){var f=$('<div class="qc-field">').appendTo(parent);$('<label>').text(label).appendTo(f);$('<div>').appendTo(f).dxSelectBox({items:items,displayExpr:'text',valueExpr:'value',value:p[key],placeholder:'Select...',showClearButton:true,inputAttr:{'aria-label':label},onValueChanged:function(e){p[key]=e.value;if(key==='AgeGroupCode')p.Age=null;if(key==='Role'&&(e.value==='Pedestrian'||e.value==='Cyclist'))p.VehicleNumber=null;if(key==='Gender')refreshFatalGenderHint();}});}
+    // Imports only ever carried aggregate fatal gender counts (crash_summaries.FatalMale/
+    // FatalFemale), never a per-person breakdown, so a freshly-imported record's Fatal
+    // entries below start with Gender blank. This surfaces that original aggregate as a
+    // reference while it's being filled in, and hides itself once the per-person entries
+    // below already add up to it (or once there's nothing on record to compare against).
+    function refreshFatalGenderHint(){
+        var maleTotal=Number(data.FatalMale||0),femaleTotal=Number(data.FatalFemale||0);
+        if(!maleTotal&&!femaleTotal){$('#qcFatalGenderHint').prop('hidden',true);return;}
+        var fatals=forSeverity('Fatal'),maleSet=fatals.filter(function(p){return p.Gender==='M';}).length,femaleSet=fatals.filter(function(p){return p.Gender==='F';}).length;
+        if(maleSet===maleTotal&&femaleSet===femaleTotal){$('#qcFatalGenderHint').prop('hidden',true);return;}
+        $('#qcFatalGenderHint').text('Register recorded '+maleTotal+' male, '+femaleTotal+' female among the fatalities (currently assigned below: '+maleSet+' male, '+femaleSet+' female) — assign each person’s gender.').prop('hidden',false);
+    }
+    function draw(s){var list=forSeverity(s),section='#qc'+s+'Section',container='#qc'+s+'People';$(container).empty();$(section).prop('hidden',!list.length);$('#qc'+s+'Count').text('· '+list.length);list.forEach(function(p,i){if(!p.AgeGroupCode&&p.Age!=null)p.AgeGroupCode=p.Age<=7?'0-7':p.Age<=12?'8-12':p.Age<=18?'13-18':p.Age<=35?'19-35':'36+';var card=$('<div class="qc-person">').appendTo(container);$('<h3 class="qc-person-title">').text('Person '+(i+1)).appendTo(card);select(card,p,'Role','Road user *',opts(['Driver','Passenger','Pedestrian','Cyclist']));if(s==='Fatal'){select(card,p,'Gender','Gender',[{text:'Male',value:'M'},{text:'Female',value:'F'}]);select(card,p,'AgeGroupCode','Age group',opts(['0-7','8-12','13-18','19-35','36+']));select(card,p,'Race','Population group',[{text:'Black',value:'B'},{text:'Coloured',value:'C'},{text:'Indian',value:'I'},{text:'White',value:'W'},{text:'Other',value:'O'}]);}});if(s==='Fatal')refreshFatalGenderHint();}
     ['Fatal','Serious','Slight'].forEach(draw);
-    var vehicleTypeEditor=$('#qcVehicleType').dxSelectBox({items:[],displayExpr:'text',valueExpr:'value',placeholder:'Select vehicle type',searchEnabled:true,showClearButton:true,onValueChanged:function(e){selectedVehicleType=e.value;}}).dxSelectBox('instance');
-    var vehicleQtyEditor=$('#qcVehicleQty').dxNumberBox({min:1,max:255,value:1,format:'#0',step:1,showSpinButtons:true,onValueChanged:function(e){vehicleQuantity=Math.max(1,Math.floor(Number(e.value)||1));}}).dxNumberBox('instance');
     var vehicleLoad=$.getJSON('/api/lookup/vehicletypes').done(function(items){
         vehicleTypes=items||[];
-        // Group existing per-vehicle database rows so Edit uses the same compact UI as Create.
-        (initial?.vehicles||[]).forEach(function(v){
+        // Retain an older saved type even if it is no longer active in Lookup Data.
+        vehicles.forEach(function(v){
             if(v.VehicleTypeCode&&!vehicleTypes.some(function(x){return x.value===v.VehicleTypeCode;}))vehicleTypes.push({value:v.VehicleTypeCode,text:v.VehicleTypeName||v.VehicleTypeCode});
-            var group=vehicleGroups.find(function(x){return x.VehicleTypeCode===v.VehicleTypeCode;});
-            if(group)group.Quantity++;else vehicleGroups.push({VehicleTypeCode:v.VehicleTypeCode,VehicleTypeName:v.VehicleTypeName||v.VehicleTypeCode,Quantity:1});
         });
-        vehicleTypeEditor.option('items',vehicleTypes);drawVehicles();
+        drawVehicles();
     }).fail(function(){DevExpress.ui.notify('Vehicle types could not load. Refresh before saving.','error',4000);});
     function drawVehicles(){
-        $('#qcVehicles').empty();$('#qcVehicleEmpty').prop('hidden',vehicleGroups.length>0);
-        vehicleGroups.forEach(function(group){var row=$('<div class="qc-vehicle-row">').appendTo('#qcVehicles');var label=$('<div>').appendTo(row);$('<div class="qc-vehicle-name">').text(group.VehicleTypeName).appendTo(label);$('<div class="qc-vehicle-qty">').text('Quantity: '+group.Quantity).appendTo(label);$('<div>').appendTo(row).dxButton({icon:'trash',hint:'Remove vehicle type',stylingMode:'text',onClick:function(){vehicleGroups.splice(vehicleGroups.indexOf(group),1);drawVehicles();}});});
+        $('#qcVehicles').empty();$('#qcVehicleEmpty').prop('hidden',vehicles.length>0);
+        vehicles.forEach(function(vehicle,index){
+            vehicle.VehicleNumber=index+1;
+            var row=$('<div class="qc-vehicle-row">').appendTo('#qcVehicles'),grid=$('<div class="qc-vehicle-grid">').appendTo(row);
+            var typeField=$('<div class="qc-field">').appendTo(grid);$('<label>').text('Vehicle type *').appendTo(typeField);$('<div>').appendTo(typeField).dxSelectBox({items:vehicleTypes,displayExpr:'text',valueExpr:'value',value:vehicle.VehicleTypeCode||null,placeholder:'Select vehicle type',searchEnabled:true,showClearButton:true,onValueChanged:function(e){vehicle.VehicleTypeCode=e.value;var item=vehicleTypes.find(function(x){return x.value===e.value;});vehicle.VehicleTypeName=item?item.text:e.value;}});
+            var makeField=$('<div class="qc-field">').appendTo(grid);$('<label>').text('Make').appendTo(makeField);$('<div>').appendTo(makeField).dxTextBox({value:vehicle.Make||'',showClearButton:true,placeholder:'e.g. Toyota',onValueChanged:function(e){vehicle.Make=e.value;}});
+            var regField=$('<div class="qc-field">').appendTo(grid);$('<label>').text('Registration').appendTo(regField);$('<div>').appendTo(regField).dxTextBox({value:vehicle.Registration||'',showClearButton:true,placeholder:'Registration',onValueChanged:function(e){vehicle.Registration=e.value;}});
+            $('<div>').appendTo(grid).dxButton({icon:'trash',hint:'Remove vehicle',stylingMode:'text',onClick:function(){vehicles.splice(index,1);drawVehicles();}});
+        });
     }
-    $('#qcAddVehicle').dxButton({icon:'plus',hint:'Add vehicle type',type:'default',onClick:function(){
-        if(!selectedVehicleType){DevExpress.ui.notify('Select a vehicle type first.','warning',3000);return;}
-        var item=vehicleTypes.find(function(x){return x.value===selectedVehicleType;}),group=vehicleGroups.find(function(x){return x.VehicleTypeCode===selectedVehicleType;});
-        if(group)group.Quantity=Math.min(255,group.Quantity+vehicleQuantity);else vehicleGroups.push({VehicleTypeCode:selectedVehicleType,VehicleTypeName:item?item.text:selectedVehicleType,Quantity:vehicleQuantity});
-        selectedVehicleType=null;vehicleQuantity=1;vehicleTypeEditor.option('value',null);vehicleQtyEditor.option('value',1);drawVehicles();
-    }});drawVehicles();
+    $('#qcAddVehicle').dxButton({icon:'plus',text:'Add vehicle',stylingMode:'outlined',onClick:function(){if(vehicles.length>=255){DevExpress.ui.notify('A quick record supports up to 255 vehicles.','warning',3000);return;}vehicles.push({VehicleNumber:vehicles.length+1,VehicleTypeCode:null,VehicleTypeName:null,Make:null,Registration:null});drawVehicles();}});drawVehicles();
     $('#qcCancel').dxButton({text:'Cancel',stylingMode:'outlined',onClick:function(){DevExpress.ui.dialog.confirm('Discard this unsaved record?','Cancel capture').done(function(ok){if(ok)window.location.href='/Crashes';});}});
     saveButton=$('#qcSave').dxButton({text:isEdit?'Save changes':'Save record',type:'default',icon:'save',onClick:function(){
-        if(vehicleLoad.state()!=='resolved'){DevExpress.ui.notify('Wait for vehicle data to load, or refresh if loading failed.','warning',4000);return;}if(!data.CrNo||!data.CrNo.trim()||!data.Station||!data.CrashDate){DevExpress.ui.notify('Enter an AR number, SAPS station and date.','warning',4000);return;}if(data.CrashTime&&!/^([01]\d|2[0-3]):[0-5]\d$/.test(data.CrashTime)){DevExpress.ui.notify('Enter time as HH:mm, for example 11:55.','warning',4000);return;}if(people.some(function(p){return p.Severity!=='Fatal'&&!p.Role;})){DevExpress.ui.notify('Select the road user for every serious and slight injury.','warning',4000);return;}
-        var totalVehicles=vehicleGroups.reduce(function(total,g){return total+g.Quantity;},0);if(totalVehicles>255){DevExpress.ui.notify('A quick record supports up to 255 vehicles.','warning',4000);return;}
-        // The database stores one row per vehicle. Expand each UI quantity just before submission.
-        var vehicles=[],vehicleNumber=1;vehicleGroups.forEach(function(group){for(var i=0;i<group.Quantity;i++)vehicles.push({VehicleNumber:vehicleNumber++,VehicleTypeCode:group.VehicleTypeCode,VehicleTypeName:group.VehicleTypeName,Registration:null});});
+        if(costCentreLoad.state()!=='resolved'){DevExpress.ui.notify('Wait for cost centre data to load, or refresh if loading failed.','warning',4000);return;}if(vehicleLoad.state()!=='resolved'){DevExpress.ui.notify('Wait for vehicle data to load, or refresh if loading failed.','warning',4000);return;}if(!data.CostCentreId){DevExpress.ui.notify('Select a cost centre.','warning',4000);return;}if(!data.CrNo||!data.CrNo.trim()||!data.Station||!data.CrashDate){DevExpress.ui.notify('Enter an AR number, SAPS station and date.','warning',4000);return;}if(data.CrashTime&&!/^([01]\d|2[0-3]):[0-5]\d$/.test(data.CrashTime)){DevExpress.ui.notify('Enter time as HH:mm, for example 11:55.','warning',4000);return;}if(people.some(function(p){return p.Severity!=='Fatal'&&!p.Role;})){DevExpress.ui.notify('Select the road user for every serious and slight injury.','warning',4000);return;}if(vehicles.some(function(v){return !v.VehicleTypeCode;})){DevExpress.ui.notify('Select a type for every vehicle.','warning',4000);return;}
         // Quick Capture does not ask which vehicle a person occupied, so do not submit a stale hidden link.
         people.forEach(function(person){person.VehicleNumber=null;});
-        data.FatalCount=forSeverity('Fatal').length;data.FatalitiesTotal=forSeverity('Fatal').length;data.SeriousInjuriesTotal=forSeverity('Serious').length;data.SlightInjuriesTotal=forSeverity('Slight').length;saveButton.option('disabled',true);
+        vehicles.forEach(function(vehicle,index){vehicle.VehicleNumber=index+1;vehicle.Make=vehicle.Make?vehicle.Make.trim():null;vehicle.Registration=vehicle.Registration?vehicle.Registration.trim():null;});data.FatalCount=forSeverity('Fatal').length;data.FatalitiesTotal=forSeverity('Fatal').length;data.SeriousInjuriesTotal=forSeverity('Serious').length;data.SlightInjuriesTotal=forSeverity('Slight').length;data.NoInjuriesTotal=Math.max(0,Math.floor(Number(data.NoInjuriesTotal)||0));saveButton.option('disabled',true);
         // The marker tells EditSummary that injuriesJson contains every severity, not fatalities only.
         var payload=$.extend({},data,{RoleBasedInjuryEditor:true,vehiclesJson:JSON.stringify(vehicles),injuriesJson:JSON.stringify(people),__RequestVerificationToken:$('.qc-page input[name="__RequestVerificationToken"]').val()});
         $.post(isEdit?'/Crashes/EditSummary':'/CreateSummary/CreateSummary',payload).done(function(r){if(r.success)window.location.href='/Crashes';else DevExpress.ui.notify(r.message||'Unable to save.','error',5000);}).fail(function(xhr){DevExpress.ui.notify(xhr.responseJSON?.message||'Unable to save. Your entries are still here.','error',5000);}).always(function(){saveButton.option('disabled',false);});

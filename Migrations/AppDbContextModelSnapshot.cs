@@ -61,6 +61,9 @@ namespace CrashReport.Migrations
                     b.Property<DateTimeOffset?>("LockoutEnd")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<bool>("MustChangePassword")
+                        .HasColumnType("bit");
+
                     b.Property<string>("NormalizedEmail")
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
@@ -422,7 +425,7 @@ namespace CrashReport.Migrations
 
                     b.HasKey("DemoId");
 
-                    b.ToTable("crash_demographics", (string)null);
+                    b.ToTable("crash_demographics");
                 });
 
             modelBuilder.Entity("CrashReport.Models.CrashFatality", b =>
@@ -467,7 +470,7 @@ namespace CrashReport.Migrations
 
                     b.HasIndex("SummaryId");
 
-                    b.ToTable("crash_fatalities", (string)null);
+                    b.ToTable("crash_fatalities");
                 });
 
             modelBuilder.Entity("CrashReport.Models.CrashLocation", b =>
@@ -756,6 +759,10 @@ namespace CrashReport.Migrations
                         .HasColumnType("nvarchar(50)")
                         .HasColumnName("cas_no");
 
+                    b.Property<int?>("CostCentreId")
+                        .HasColumnType("int")
+                        .HasColumnName("cost_centre_id");
+
                     b.Property<string>("CrNo")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -852,6 +859,10 @@ namespace CrashReport.Migrations
                         .HasColumnType("nvarchar(150)")
                         .HasColumnName("location");
 
+                    b.Property<int>("NoInjuriesTotal")
+                        .HasColumnType("int")
+                        .HasColumnName("no_injuries_total");
+
                     b.Property<string>("Route")
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)")
@@ -919,6 +930,8 @@ namespace CrashReport.Migrations
 
                     b.HasKey("SummaryId");
 
+                    b.HasIndex("CostCentreId");
+
                     b.HasIndex("Station", "CasNo")
                         .IsUnique()
                         .HasFilter("[cas_no] IS NOT NULL");
@@ -926,7 +939,7 @@ namespace CrashReport.Migrations
                     b.HasIndex("Station", "CrNo")
                         .IsUnique();
 
-                    b.ToTable("crash_summaries", (string)null);
+                    b.ToTable("crash_summaries");
                 });
 
             modelBuilder.Entity("CrashReport.Models.CrashSummaryInjury", b =>
@@ -982,7 +995,7 @@ namespace CrashReport.Migrations
 
                     b.HasIndex("VehicleId");
 
-                    b.ToTable("crash_summary_injuries", (string)null);
+                    b.ToTable("crash_summary_injuries");
                 });
 
             modelBuilder.Entity("CrashReport.Models.CrashSummaryVehicle", b =>
@@ -997,6 +1010,11 @@ namespace CrashReport.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2")
                         .HasColumnName("created_at");
+
+                    b.Property<string>("Make")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("make");
 
                     b.Property<string>("Registration")
                         .HasMaxLength(20)
@@ -1027,7 +1045,7 @@ namespace CrashReport.Migrations
 
                     b.HasIndex("SummaryId");
 
-                    b.ToTable("crash_summary_vehicles", (string)null);
+                    b.ToTable("crash_summary_vehicles");
                 });
 
             modelBuilder.Entity("CrashReport.Models.CrashVehicle", b =>
@@ -1347,7 +1365,7 @@ namespace CrashReport.Migrations
 
                     b.HasKey("ImportBatchId");
 
-                    b.ToTable("import_batches", (string)null);
+                    b.ToTable("import_batches");
                 });
 
             modelBuilder.Entity("CrashReport.Models.Import.Models.ImportDataQualityIssue", b =>
@@ -1475,7 +1493,7 @@ namespace CrashReport.Migrations
 
                     b.HasIndex("StagingSummaryId");
 
-                    b.ToTable("import_data_quality_issues", (string)null);
+                    b.ToTable("import_data_quality_issues");
                 });
 
             modelBuilder.Entity("CrashReport.Models.Import.Models.StagingCrashSummary", b =>
@@ -1723,7 +1741,7 @@ namespace CrashReport.Migrations
 
                     b.HasIndex("ProductionSummaryId");
 
-                    b.ToTable("staging_crash_summaries", (string)null);
+                    b.ToTable("staging_crash_summaries");
                 });
 
             modelBuilder.Entity("CrashReport.Models.Import.Models.StagingImportDemographics", b =>
@@ -1856,7 +1874,43 @@ namespace CrashReport.Migrations
 
                     b.HasIndex("ProductionDemographicsId");
 
-                    b.ToTable("staging_import_demographics", (string)null);
+                    b.ToTable("staging_import_demographics");
+                });
+
+            modelBuilder.Entity("CrashReport.Models.LookupCostCentre", b =>
+                {
+                    b.Property<int>("CostCentreId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("cost_centre_id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CostCentreId"));
+
+                    b.Property<string>("CostCentreName")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
+                        .HasColumnName("cost_centre_name");
+
+                    b.Property<int?>("DistrictId")
+                        .HasColumnType("int")
+                        .HasColumnName("district_id");
+
+                    b.Property<int?>("ProvinceCode")
+                        .HasColumnType("int")
+                        .HasColumnName("province_code");
+
+                    b.Property<int?>("StationId")
+                        .HasColumnType("int")
+                        .HasColumnName("station_id");
+
+                    b.HasKey("CostCentreId");
+
+                    b.HasIndex("DistrictId");
+
+                    b.HasIndex("StationId");
+
+                    b.ToTable("lkp_cost_centres", (string)null);
                 });
 
             modelBuilder.Entity("CrashReport.Models.LookupCrashType", b =>
@@ -1922,7 +1976,7 @@ namespace CrashReport.Migrations
 
                     b.HasKey("DistrictId");
 
-                    b.ToTable("lkp_district", (string)null);
+                    b.ToTable("lkp_district");
                 });
 
             modelBuilder.Entity("CrashReport.Models.LookupLocation", b =>
@@ -2206,7 +2260,7 @@ namespace CrashReport.Migrations
 
                     b.HasKey("OptionId");
 
-                    b.ToTable("lkp_option_list", (string)null);
+                    b.ToTable("lkp_option_list");
                 });
 
             modelBuilder.Entity("CrashReport.Models.PedestrianBicyclistDetail", b =>
@@ -2774,6 +2828,17 @@ namespace CrashReport.Migrations
                     b.Navigation("Crash");
                 });
 
+            modelBuilder.Entity("CrashReport.Models.CrashSummary", b =>
+                {
+                    b.HasOne("CrashReport.Models.LookupCostCentre", "CostCentre")
+                        .WithMany()
+                        .HasForeignKey("CostCentreId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .HasConstraintName("fk_crash_summary_cost_centre");
+
+                    b.Navigation("CostCentre");
+                });
+
             modelBuilder.Entity("CrashReport.Models.CrashSummaryInjury", b =>
                 {
                     b.HasOne("CrashReport.Models.CrashSummary", "CrashSummary")
@@ -2911,6 +2976,25 @@ namespace CrashReport.Migrations
                     b.Navigation("ImportBatch");
 
                     b.Navigation("ProductionDemographics");
+                });
+
+            modelBuilder.Entity("CrashReport.Models.LookupCostCentre", b =>
+                {
+                    b.HasOne("CrashReport.Models.LookupDistrict", "District")
+                        .WithMany()
+                        .HasForeignKey("DistrictId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .HasConstraintName("fk_lkp_district");
+
+                    b.HasOne("CrashReport.Models.SapsStation", "Station")
+                        .WithMany()
+                        .HasForeignKey("StationId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .HasConstraintName("fk_lkp_saps_stations");
+
+                    b.Navigation("District");
+
+                    b.Navigation("Station");
                 });
 
             modelBuilder.Entity("CrashReport.Models.LookupLocation", b =>

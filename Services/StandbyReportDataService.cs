@@ -7,37 +7,12 @@ namespace CrashReport.Services;
 public class StandbyReportDataService
 {
     private readonly AppDbContext _context;
+    private readonly IStationDistrictLookup _stationDistrict;
 
-    private static readonly Dictionary<string, HashSet<string>> DistrictStations =
-        new(StringComparer.OrdinalIgnoreCase)
-        {
-            ["EHLANZENI"] = new(StringComparer.OrdinalIgnoreCase)
-            {
-                "TONGA","WHITE RIVER","NELSPRUIT","MASOYI","MATSULU","NGODWANA",
-                "MHALA","CALCUTTA","MASHISHING","BARBERTON","KABOKWENI",
-                "KANYAMAZANE","KANAYAMAZANE","HAZYVIEW","SABIE","GRASKOP",
-                "ACORNHOEK","KOMATIPOORT","MALALANE","SCHOEMANSDAL",
-                "BUSHBUCKRIDGE","KAMHLUSHWA"
-            },
-            ["BOHLABELO"] = new(StringComparer.OrdinalIgnoreCase)
-            {
-                "ACORNHOEK","BUSHBUCKRIDGE","MHALA","GRASKOP","SABIE","KLASERIE"
-            },
-            ["GERT SIBANDE"] = new(StringComparer.OrdinalIgnoreCase)
-            {
-                "ERMELO","SECUNDA","STANDERTON","BETHAL","BALFOUR","VOLKSRUST",
-                "PIET RETIEF","WAKKERSTROOM","MORGENZON","AMSTERDAM"
-            },
-            ["NKANGALA"] = new(StringComparer.OrdinalIgnoreCase)
-            {
-                "WITBANK","MIDDELBURG","DELMAS","OGIES","KRIEL","BELFAST",
-                "CAROLINA","LEANDRA","KWAMHLANGA","BRONKHORSTSPRUIT"
-            }
-        };
-
-    public StandbyReportDataService(AppDbContext context)
+    public StandbyReportDataService(AppDbContext context, IStationDistrictLookup stationDistrict)
     {
         _context = context;
+        _stationDistrict = stationDistrict;
     }
 
     public async Task<StandbyReportViewModel> BuildAsync(
@@ -55,7 +30,7 @@ public class StandbyReportDataService
         var current = await LoadPeriodAsync(from, to);
         vm.CurrentProvince = SumAll(current);
         vm.CurrentEhlanzeni = FilterByDistrict(current, "EHLANZENI");
-        vm.CurrentBohlabelo = FilterByDistrict(current, "BOHLABELO");
+        vm.CurrentBohlabelo = FilterByDistrict(current, "BOHLABELA");
         vm.CurrentGertSibande = FilterByDistrict(current, "GERT SIBANDE");
         vm.CurrentNkangala = FilterByDistrict(current, "NKANGALA");
 
@@ -65,7 +40,7 @@ public class StandbyReportDataService
             var prior = await LoadPeriodAsync(priorFrom.Value, priorTo.Value);
             vm.PriorProvince = SumAll(prior);
             vm.PriorEhlanzeni = FilterByDistrict(prior, "EHLANZENI");
-            vm.PriorBohlabelo = FilterByDistrict(prior, "BOHLABELO");
+            vm.PriorBohlabelo = FilterByDistrict(prior, "BOHLABELA");
             vm.PriorGertSibande = FilterByDistrict(prior, "GERT SIBANDE");
             vm.PriorNkangala = FilterByDistrict(prior, "NKANGALA");
         }
@@ -94,7 +69,17 @@ public class StandbyReportDataService
     {
         var result = new List<CrashRow>();
 
-      
+        // Station -> district comes from the live Lookup Admin data (SapsStations /
+        // LookupDistricts) instead of a fixed in-code roster. The old roster only
+        // covered a few dozen stations, so anything captured or imported since —
+        // or spelled slightly differently — fell through to "Unknown District" even
+        // though the station has a real district on file.
+        var districtMap = await _stationDistrict.GetAllAsync();
+        string ResolveDistrict(string station) =>
+            districtMap.TryGetValue(StationDistrictLookup.Normalize(station), out var d)
+                ? d.ToUpperInvariant()
+                : "UNKNOWN";
+
         var crashes = await _context.Crashes
             .Include(c => c.CrashConditions)
             .Include(c => c.CrashLocations)
@@ -105,7 +90,7 @@ public class StandbyReportDataService
         var formRows = crashes.Select(c =>
         {
             var station = ExtractStation(c.CrNo);
-            var district = GetDistrict(station);
+            var district = ResolveDistrict(station);
             var people = c.CrashPeople.ToList();
             var loc = c.CrashLocations.FirstOrDefault();
 
@@ -146,7 +131,7 @@ public class StandbyReportDataService
                 var station = string.IsNullOrEmpty(s.Station)
                     ? ExtractStation(s.CrNo)
                     : s.Station;
-                var district = GetDistrict(station);
+                var district = ResolveDistrict(station);
 
                 return new CrashRow
                 {
@@ -238,7 +223,7 @@ public class StandbyReportDataService
             To = subTo,
             Province = SumAll(periodData),
             Ehlanzeni = FilterByDistrict(periodData, "EHLANZENI"),
-            Bohlabelo = FilterByDistrict(periodData, "BOHLABELO"),
+            Bohlabelo = FilterByDistrict(periodData, "BOHLABELA"),
             GertSibande = FilterByDistrict(periodData, "GERT SIBANDE"),
             Nkangala = FilterByDistrict(periodData, "NKANGALA")
         };
@@ -354,15 +339,6 @@ public class StandbyReportDataService
     {
         if (string.IsNullOrEmpty(crNo)) return string.Empty;
         return crNo.Contains('-') ? crNo.Split('-')[0].Trim() : crNo.Trim();
-    }
-
-    private static string GetDistrict(string station)
-    {
-        if (string.IsNullOrEmpty(station)) return "UNKNOWN";
-        foreach (var kvp in DistrictStations)
-            if (kvp.Value.Contains(station))
-                return kvp.Key;
-        return "UNKNOWN";
     }
 
     private static bool IsInTimeSlot(TimeOnly? time, int startH, int endH)

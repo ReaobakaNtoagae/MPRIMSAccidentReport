@@ -78,7 +78,7 @@ function weekStatsTable(vm) {
     const districts = [
         { label: 'PROVINCE', cur: vm.CurrentProvince, pri: vm.PriorProvince },
         { label: 'EHLANZENI', cur: vm.CurrentEhlanzeni, pri: vm.PriorEhlanzeni },
-        { label: 'BOHLABELO', cur: vm.CurrentBohlabelo, pri: vm.PriorBohlabelo },
+        { label: 'BOHLABELA', cur: vm.CurrentBohlabelo, pri: vm.PriorBohlabelo },
         { label: 'GERT SIBANDE', cur: vm.CurrentGertSibande, pri: vm.PriorGertSibande },
         { label: 'NKANGALA', cur: vm.CurrentNkangala, pri: vm.PriorNkangala }
     ];
@@ -159,7 +159,7 @@ function fatalTimeTable(vm) {
     const districts = [
         { label: 'PROVINCE', cur: vm.CurrentProvince, pri: vm.PriorProvince },
         { label: 'EHLANZENI', cur: vm.CurrentEhlanzeni, pri: vm.PriorEhlanzeni },
-        { label: 'BOHLABELO', cur: vm.CurrentBohlabelo, pri: vm.PriorBohlabelo },
+        { label: 'BOHLABELA', cur: vm.CurrentBohlabelo, pri: vm.PriorBohlabelo },
         { label: 'GERT SIBANDE', cur: vm.CurrentGertSibande, pri: vm.PriorGertSibande },
         { label: 'NKANGALA', cur: vm.CurrentNkangala, pri: vm.PriorNkangala }
     ];
@@ -237,7 +237,7 @@ function buildFatalSummary(vm) {
         if (vm.CurrentEhlanzeni?.FatalPedestrians > 0)
             pedDetails.push(`${vm.CurrentEhlanzeni.FatalPedestrians} (EHLANZENI)`);
         if (vm.CurrentBohlabelo?.FatalPedestrians > 0)
-            pedDetails.push(`${vm.CurrentBohlabelo.FatalPedestrians} (BOHLABELO)`);
+            pedDetails.push(`${vm.CurrentBohlabelo.FatalPedestrians} (BOHLABELA)`);
         if (vm.CurrentGertSibande?.FatalPedestrians > 0)
             pedDetails.push(`${vm.CurrentGertSibande.FatalPedestrians} (GERT SIBANDE)`);
         if (vm.CurrentNkangala?.FatalPedestrians > 0)
@@ -302,7 +302,7 @@ function subPeriodTable(sp) {
     const districts = [
         { label: 'PROVINCE', d: sp.Province },
         { label: 'EHLANZENI', d: sp.Ehlanzeni },
-        { label: 'BOHLABELO', d: sp.Bohlabelo },
+        { label: 'BOHLABELA', d: sp.Bohlabelo },
         { label: 'GERT SIBANDE', d: sp.GertSibande },
         { label: 'NKANGALA', d: sp.Nkangala }
     ];
@@ -355,7 +355,7 @@ function subPeriodTimeTable(sp) {
     const districts = [
         { label: 'PROVINCE', d: sp?.Province },
         { label: 'EHLANZENI', d: sp?.Ehlanzeni },
-        { label: 'BOHLABELO', d: sp?.Bohlabelo },
+        { label: 'BOHLABELA', d: sp?.Bohlabelo },
         { label: 'GERT SIBANDE', d: sp?.GertSibande },
         { label: 'NKANGALA', d: sp?.Nkangala }
     ];
