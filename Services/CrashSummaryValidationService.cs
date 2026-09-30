@@ -37,7 +37,7 @@ public class CrashSummaryValidationService : ICrashSummaryValidationService
 
     public string? ValidateInjuries(List<InjuryEntryInput> injuries, List<VehicleEntryInput> vehicles, List<byte> vehicleNumbers)
     {
-        // Bound person/vehicle counts before they're cast to byte columns downstream.
+        
         if (injuries.Count > 255 || vehicles.Count > 255)
             return "A quick record supports up to 255 people and vehicles.";
 
@@ -49,15 +49,12 @@ public class CrashSummaryValidationService : ICrashSummaryValidationService
             if (!ValidSeverities.Contains(inj.Severity))
                 return $"Each casualty needs a valid severity (Fatal, Serious, or Slight) — got '{inj.Severity}'.";
 
-            // Fatality details may be unknown until the post-mortem. Serious and
-            // slight injuries still require the road-user classification requested.
+            
             if (inj.Severity != "Fatal" && !ValidRoles.Contains(inj.Role))
                 return $"Each casualty needs a valid role (Driver, Passenger, Pedestrian, or Cyclist) — got '{inj.Role}'.";
             if (inj.Role is not null && !ValidRoles.Contains(inj.Role))
                 return "Select a valid road user when fatality details are supplied.";
 
-            // Demographics are optional — a mass-casualty day still works even if
-            // nobody has time to fill these in. Only validate what WAS provided.
             if (inj.Age.HasValue && (inj.Age.Value < 0 || inj.Age.Value > 120))
                 return $"Age {inj.Age} is out of range (0–120).";
 
@@ -67,12 +64,10 @@ public class CrashSummaryValidationService : ICrashSummaryValidationService
             if (!string.IsNullOrEmpty(inj.Race) && !ValidRaces.Contains(inj.Race))
                 return "Race must be B, C, I, W, or O if provided.";
 
-            // Driver/Passenger must reference a real submitted vehicle;
-            // Pedestrian/Cyclist must NOT (no vehicle to link to).
+           
             if (inj.Role == "Driver" || inj.Role == "Passenger")
             {
-                // A supplied link must still point at a submitted vehicle; a fatality's
-                // occupied vehicle may legitimately be unknown, so this stays optional.
+                
                 if (inj.VehicleNumber.HasValue && !vehicleNumbers.Contains(inj.VehicleNumber.Value))
                     return $"A {inj.Role.ToLower()} casualty must reference one of the vehicles entered above.";
             }
@@ -123,11 +118,7 @@ public class CrashSummaryValidationService : ICrashSummaryValidationService
         summary.SlightPedestrians = (byte)Count("Slight", "Pedestrian");
         summary.SlightCyclists = (byte)Count("Slight", "Cyclist");
 
-        // Fatal-only demographic rollups (age bucket / gender / race) stay on
-        // crash_summaries for fast reporting — Serious/Slight demographics live
-        // only in crash_summary_injuries. Rebuilt from scratch, not incremented —
-        // this must be safe to call again on an existing summary (Edit), where the
-        // previous totals would otherwise double-count.
+      
         summary.FatalMale = 0; summary.FatalFemale = 0;
         summary.FatalAge0to7 = 0; summary.FatalAge8to12 = 0; summary.FatalAge13to18 = 0;
         summary.FatalAge19to35 = 0; summary.FatalAge36Plus = 0;

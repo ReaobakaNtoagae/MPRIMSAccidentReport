@@ -6,6 +6,11 @@
 
         public int Year { get; set; }
 
+        // false = calendar quarters (Jan-Mar/Apr-Jun/Jul-Sep/Oct-Dec, Year = the
+        // calendar year); true = fiscal quarters (year starts 1 April, Year = the
+        // fiscal year's starting calendar year). See QuarterlyReportDataService.
+        public bool IsFiscalYear { get; set; }
+
         public string? ProvinceCode { get; set; }
 
         public string ReportDate { get; set; } = string.Empty;

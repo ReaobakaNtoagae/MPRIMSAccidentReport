@@ -26,7 +26,7 @@ public class StandbyReportDataService
             DayRange = GetDayRange(from, to)
         };
 
-        // Load merged data (crashes + summaries)
+        
         var current = await LoadPeriodAsync(from, to);
         vm.CurrentProvince = SumAll(current);
         vm.CurrentEhlanzeni = FilterByDistrict(current, "EHLANZENI");
@@ -34,7 +34,7 @@ public class StandbyReportDataService
         vm.CurrentGertSibande = FilterByDistrict(current, "GERT SIBANDE");
         vm.CurrentNkangala = FilterByDistrict(current, "NKANGALA");
 
-        // Prior period (if provided)
+        
         if (priorFrom.HasValue && priorTo.HasValue)
         {
             var prior = await LoadPeriodAsync(priorFrom.Value, priorTo.Value);
@@ -45,13 +45,13 @@ public class StandbyReportDataService
             vm.PriorNkangala = FilterByDistrict(prior, "NKANGALA");
         }
 
-        // Problematic routes
+        
         vm.ProblematicRoutes = await BuildProblematicRoutesAsync(from, to);
 
-        // Sub-period
+        
         vm.SubPeriod = await BuildSubPeriodAsync(from, to);
 
-        // Demographics
+       
         if (vm.SubPeriod != null)
         {
             vm.Victims = await BuildDemographicsAsync(vm.SubPeriod.From, vm.SubPeriod.To);
@@ -69,11 +69,7 @@ public class StandbyReportDataService
     {
         var result = new List<CrashRow>();
 
-        // Station -> district comes from the live Lookup Admin data (SapsStations /
-        // LookupDistricts) instead of a fixed in-code roster. The old roster only
-        // covered a few dozen stations, so anything captured or imported since —
-        // or spelled slightly differently — fell through to "Unknown District" even
-        // though the station has a real district on file.
+        
         var districtMap = await _stationDistrict.GetAllAsync();
         string ResolveDistrict(string station) =>
             districtMap.TryGetValue(StationDistrictLookup.Normalize(station), out var d)
@@ -329,7 +325,7 @@ public class StandbyReportDataService
             MalePedestrian = people.Count(p => IsMale(p) && IsRole(p, "Pedestrian")),
             FemalePedestrian = people.Count(p => IsFemale(p) && IsRole(p, "Pedestrian")),
 
-            // Cyclist (only available from detailed data)
+           
             MaleCyclist = people.Count(p => IsMale(p) && IsRole(p, "Bicyclist")),
             FemaleCyclist = people.Count(p => IsFemale(p) && IsRole(p, "Bicyclist"))
         };

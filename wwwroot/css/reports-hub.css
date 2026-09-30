@@ -9,7 +9,7 @@
 
     .rh-page-heading p, .rh-selector p, .rh-form-heading p {
         font-size: .72rem;
-        color: #718078;
+        color: #717780;
         margin: 0
     }
 
@@ -21,7 +21,7 @@
 
 .rh-surface, .rh-preview {
     background: #fff;
-    border: 1px solid #d9e3da;
+    border: 1px solid #d9dde3;
     border-radius: 10px
 }
 
@@ -40,7 +40,7 @@
 
 .rh-choice {
     width: 100%;
-    border: 1px solid #d9e3da;
+    border: 1px solid #d9dde3;
     background: transparent;
     color: inherit;
     border-radius: 8px;
@@ -54,20 +54,20 @@
 }
 
     .rh-choice:hover {
-        border-color: #64a174
+        border-color: #6495a1
     }
 
     .rh-choice.selected {
-        background: #e5f2e7;
-        border-color: #76ad82
+        background: #e6eaf1;
+        border-color: #76a2ad
     }
 
 .rh-icon {
     width: 29px;
     height: 29px;
     border-radius: 7px;
-    background: #ddecdf;
-    color: #17652f;
+    background: #dde3ec;
+    color: #183664;
     display: grid;
     place-items: center;
     font-size: .7rem;
@@ -84,7 +84,7 @@
 
 .rh-choice small {
     font-size: .62rem;
-    color: #718078;
+    color: #717780;
     line-height: 1.35;
     margin-top: 2px
 }
@@ -98,14 +98,14 @@
 
 .rh-form-heading {
     padding-bottom: 11px;
-    border-bottom: 1px solid #e8eee9;
+    border-bottom: 1px solid #e8eaee;
     margin-bottom: 12px
 }
 
 .rh-tag {
     border-radius: 999px;
-    background: #e7f2e9;
-    color: #28703b;
+    background: #e7ebf2;
+    color: #284570;
     padding: 3px 7px;
     font-size: .6rem;
     white-space: nowrap
@@ -119,16 +119,16 @@
 
     .rh-field-grid label {
         font-size: .62rem;
-        color: #718078
+        color: #717780
     }
 
     .rh-field-grid input, .rh-field-grid select {
         display: block;
         width: 100%;
-        border: 1px solid #cbd7cd;
+        border: 1px solid #cbd0d7;
         border-radius: 7px;
         background: #fff;
-        color: #172219;
+        color: #171b22;
         padding: 8px 9px;
         font: inherit;
         font-size: .7rem;
@@ -137,14 +137,14 @@
 
 #rhDocumentDetails {
     margin-top: 12px;
-    border-top: 1px solid #e8eee9;
+    border-top: 1px solid #e8eaee;
     padding-top: 10px
 }
 
     #rhDocumentDetails summary {
         font-size: .68rem;
         font-weight: 600;
-        color: #285f37;
+        color: #283e5f;
         cursor: pointer
     }
 
@@ -157,17 +157,17 @@
     justify-content: space-between;
     align-items: center;
     gap: 9px;
-    border-top: 1px solid #e8eee9;
+    border-top: 1px solid #e8eaee;
     margin-top: 13px;
     padding-top: 12px;
     font-size: .62rem;
-    color: #718078
+    color: #717780
 }
 
 .rh-button {
-    border: 1px solid #c6d3c8;
+    border: 1px solid #c6cbd3;
     background: #fff;
-    color: #194226;
+    color: #192942;
     border-radius: 7px;
     padding: 8px 11px;
     font-size: .68rem;
@@ -176,9 +176,9 @@
 }
 
     .rh-button.primary {
-        background: #17652f;
+        background: #183664;
         color: #fff;
-        border-color: #17652f
+        border-color: #183664
     }
 
     .rh-button:disabled {
@@ -201,7 +201,7 @@
 
 .rh-preview-heading {
     padding: 11px 14px;
-    border-bottom: 1px solid #e8eee9
+    border-bottom: 1px solid #e8eaee
 }
 
 .rh-preview-body {
@@ -211,7 +211,7 @@
 .rh-empty {
     text-align: center;
     padding: 28px;
-    color: #718078;
+    color: #717780;
     font-size: .72rem
 }
 
@@ -223,14 +223,14 @@
 }
 
 .rh-metric {
-    background: #f7faf7;
+    background: #f7f8fa;
     border-radius: 7px;
     padding: 10px
 }
 
     .rh-metric small {
         display: block;
-        color: #718078;
+        color: #717780;
         font-size: .58rem
     }
 
@@ -261,15 +261,15 @@
 
     .rh-table th {
         text-align: left;
-        color: #718078;
+        color: #717780;
         font-weight: 400;
         padding: 6px 5px;
-        border-bottom: 1px solid #dfe7e0
+        border-bottom: 1px solid #dfe2e7
     }
 
     .rh-table td {
         padding: 7px 5px;
-        border-bottom: 1px solid #e9eee9
+        border-bottom: 1px solid #e9ebee
     }
 
 @media(max-width:800px) {

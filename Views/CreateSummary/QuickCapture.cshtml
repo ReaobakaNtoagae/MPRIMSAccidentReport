@@ -4,15 +4,15 @@
 }
 @* HTML provides layout only; all interactive controls remain DevExtreme widgets. *@
 <style>
-    .qc-page{max-width:760px;margin:0 auto;color:#173f2c}.qc-page h1{margin:0;font-size:1.8rem}.qc-intro{margin:6px 0 26px;color:#66776c}
-    .qc-panel{margin-bottom:20px;padding:28px;background:#fff;border:1px solid #d9e6dd;border-radius:16px}.qc-heading{display:flex;align-items:center;gap:10px;margin:0 0 20px;font-size:1.05rem}
-    .qc-step{display:inline-grid;place-items:center;width:25px;height:25px;border-radius:50%;background:#e8f5e9;color:#24823b;font-size:.78rem}.qc-field{margin-bottom:18px}.qc-field:last-child{margin-bottom:0}
-    .qc-field label{display:block;margin-bottom:7px;color:#496455;font-size:.82rem}.qc-page .dx-texteditor{border-radius:9px;border-color:#cfddd3}.qc-page .dx-texteditor.dx-state-focused{border-color:#4a9560;box-shadow:0 0 0 2px #e8f4eb}
-    .qc-page .dx-state-readonly{background:#f5f8f6}.qc-injury-group{margin-bottom:14px;border-left:3px solid #bb3b31;border-radius:11px;background:#f3f7f4;overflow:hidden}.qc-injury-group.serious{border-color:#a86b08}.qc-injury-group.slight{border-color:#37944b}.qc-injury-group.none{border-color:#6b7c72}.qc-total{padding:16px 18px}
-    .qc-total label{display:block;margin-bottom:10px;font-size:.85rem;font-weight:600}.qc-detail-panel{padding:2px 18px 18px;border-top:1px solid #dce7df}.qc-detail-panel[hidden]{display:none}.qc-detail-title{margin:16px 0 0;font-size:1rem}.qc-detail-subtitle{margin:5px 0 20px;color:#718077;font-size:.8rem}
-    .qc-person{padding:20px 0;border-top:1px solid #dce7df}.qc-person:first-of-type{padding-top:0;border-top:0}.qc-person-title{margin:0 0 15px;font-size:.85rem}.qc-vehicle-row{position:relative;margin-bottom:14px;padding:18px;background:#f5f8f6;border:1px solid #dce7df;border-radius:12px}.qc-vehicle-grid{display:grid;grid-template-columns:1.2fr 1fr 1fr 42px;gap:12px;align-items:end}.qc-vehicle-grid .qc-field{margin:0}.qc-empty{margin:0 0 16px;color:#829087;font-size:.82rem}
+    .qc-page{max-width:760px;margin:0 auto;color:#17273f}.qc-page h1{margin:0;font-size:1.8rem}.qc-intro{margin:6px 0 26px;color:#666d77}
+    .qc-panel{margin-bottom:20px;padding:28px;background:#fff;border:1px solid #d9dee6;border-radius:16px}.qc-heading{display:flex;align-items:center;gap:10px;margin:0 0 20px;font-size:1.05rem}
+    .qc-step{display:inline-grid;place-items:center;width:25px;height:25px;border-radius:50%;background:#eaeef3;color:#244a82;font-size:.78rem}.qc-field{margin-bottom:18px}.qc-field:last-child{margin-bottom:0}
+    .qc-field label{display:block;margin-bottom:7px;color:#495464;font-size:.82rem}.qc-page .dx-texteditor{border-radius:9px;border-color:#cfd5dd}.qc-page .dx-texteditor.dx-state-focused{border-color:#4a6895;box-shadow:0 0 0 2px #e9edf3}
+    .qc-page .dx-state-readonly{background:#f5f6f8}.qc-injury-group{margin-bottom:14px;border-left:3px solid #bb3b31;border-radius:11px;background:#f3f5f7;overflow:hidden}.qc-injury-group.serious{border-color:#a86b08}.qc-injury-group.slight{border-color:#375c94}.qc-injury-group.none{border-color:#6b727c}.qc-total{padding:16px 18px}
+    .qc-total label{display:block;margin-bottom:10px;font-size:.85rem;font-weight:600}.qc-detail-panel{padding:2px 18px 18px;border-top:1px solid #dce0e7}.qc-detail-panel[hidden]{display:none}.qc-detail-title{margin:16px 0 0;font-size:1rem}.qc-detail-subtitle{margin:5px 0 20px;color:#717780;font-size:.8rem}
+    .qc-person{padding:20px 0;border-top:1px solid #dce0e7}.qc-person:first-of-type{padding-top:0;border-top:0}.qc-person-title{margin:0 0 15px;font-size:.85rem}.qc-vehicle-row{position:relative;margin-bottom:14px;padding:18px;background:#f5f6f8;border:1px solid #dce0e7;border-radius:12px}.qc-vehicle-grid{display:grid;grid-template-columns:1.2fr 1fr 1fr 42px;gap:12px;align-items:end}.qc-vehicle-grid .qc-field{margin:0}.qc-empty{margin:0 0 16px;color:#828890;font-size:.82rem}
     .qc-fatal-gender-hint{margin:0 0 16px;padding:10px 12px;background:#fff6e5;border:1px solid #f0dca0;border-radius:8px;color:#7a5c00;font-size:.8rem;line-height:1.4}
-    .qc-actions{display:flex;justify-content:space-between;gap:12px;padding:6px 0 30px}.qc-page .dx-button{border-radius:9px}.qc-page .dx-button-default{background:var(--g-600,#2f8f43);border-color:var(--g-600,#2f8f43)}
+    .qc-actions{display:flex;justify-content:space-between;gap:12px;padding:6px 0 30px}.qc-page .dx-button{border-radius:9px}.qc-page .dx-button-default{background:var(--g-600,#2f558f);border-color:var(--g-600,#2f558f)}
     @@media(max-width:700px){.qc-panel{padding:21px 18px}.qc-page h1{font-size:1.55rem}.qc-vehicle-grid{grid-template-columns:1fr}.qc-vehicle-grid .dx-button{width:100%}}
 </style>
 <main class="qc-page">
@@ -39,18 +39,14 @@
             var cssClass = severity == "Fatal" ? "" : severity.ToLowerInvariant();
             var label = severity == "Fatal" ? "Fatalities" : severity + " injuries";
             <div class="qc-injury-group @cssClass">
-                @* Parenthesized Razor interpolation is required here. Without it,
-                   Razor emits three duplicate id="qc" elements and DevExtreme
-                   cannot find qcFatal, qcSerious or qcSlight. *@
+               
                 <div class="qc-total"><label>@label</label><div id="qc@(severity)"></div></div>
                 <div class="qc-detail-panel" id="qc@(severity)Section" hidden>
                     <h3 class="qc-detail-title">@(severity == "Fatal" ? "Fatality" : severity + " injury") details <span id="qc@(severity)Count"></span></h3>
                     <p class="qc-detail-subtitle">@(severity == "Fatal" ? "Record the road user and any available demographic information." : "Record who was affected.")</p>
                     @if (severity == "Fatal")
                     {
-                        @* Populated client-side only when this record's aggregate fatal gender
-                           counts (captured at import, for records with no per-person breakdown)
-                           don't already agree with what's entered below. See qcFatalGenderHint. *@
+                        
                         <p class="qc-fatal-gender-hint" id="qcFatalGenderHint" hidden></p>
                     }
                     <div id="qc@(severity)People"></div>
@@ -69,27 +65,26 @@
 @section Scripts {
 <script>
 $(function(){
-    // The controller supplies these values on edit; create starts with an empty object.
+    
     var initial=@Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewData["QuickCaptureInitial"]));
     var isEdit=@(isEdit ? "true" : "false"), data=initial?.data||{}, people=(initial?.people||[]).map(function(x){return $.extend({},x);});
-    // The database stores sequence-MM-yyyy, but the client requested sequence-only input.
+   
     if(isEdit && initial?.arSequence) data.CrNo=initial.arSequence;
-    // Vehicles are instance-based because each one has its own type, make and registration.
+    
     var vehicles=(initial?.vehicles||[]).map(function(v){return $.extend({},v);}),vehicleTypes=[],countEditors={},saveButton;
     function text(id,key,extra){$(id).dxTextBox($.extend({value:data[key],showClearButton:true,inputAttr:{'aria-label':key},onValueChanged:function(e){data[key]=e.value;}},extra||{}));}
     function lookup(id,key,url){
-        // CustomStore.byKey preserves an older saved selection that is no longer active in a lookup.
+        
         var saved=data[key],store=new DevExpress.data.CustomStore({key:'text',loadMode:'raw',load:function(){return $.getJSON(url).then(function(items){items=items||[];if(saved&&!items.some(function(x){return x.text===saved;}))items.push({text:saved});return items;});},byKey:function(value){return $.Deferred().resolve({text:value}).promise();}});
         $(id).dxSelectBox({dataSource:store,displayExpr:'text',valueExpr:'text',value:saved,searchEnabled:true,showClearButton:true,inputAttr:{'aria-label':key},onValueChanged:function(e){data[key]=e.value;}});
     }
     lookup('#qcStation','Station','/api/lookup/stations');text('#qcNumber','CrNo',{placeholder:'e.g. 42'});text('#qcCasNo','CasNo',{placeholder:'e.g. 123/09/2026'});lookup('#qcRoute','Route','/api/lookup/routes');text('#qcLocation','Location',{placeholder:'Street / road name, nearest landmark'});lookup('#qcCrashType','CrashType','/api/lookup/crashtypes');
-    // Cost Centre is required but intentionally does not filter District or Station yet.
-    // Load it explicitly so a failed request produces a visible message instead of an empty widget.
+   
     var costCentreEditor=$('#qcCostCentre').dxSelectBox({items:[],displayExpr:'text',valueExpr:'id',value:data.CostCentreId||null,searchEnabled:true,showClearButton:true,placeholder:'Select cost centre',inputAttr:{'aria-label':'Cost centre'},onValueChanged:function(e){data.CostCentreId=e.value;}}).dxSelectBox('instance');
     var costCentreLoad=$.getJSON('/api/lookup/costcentres').done(function(items){costCentreEditor.option({items:items||[],value:data.CostCentreId||null});}).fail(function(){DevExpress.ui.notify('Cost centres could not load. Refresh before saving.','error',5000);});
     var savedDistrict=initial?.district||null;
     var district=$('#qcDistrict').dxSelectBox({value:savedDistrict,items:savedDistrict?[savedDistrict]:[],searchEnabled:true,showClearButton:true,inputAttr:{'aria-label':'District'},onValueChanged:function(e){
-        // Do not replace the station data source during initial edit-form hydration.
+        
         if(!e.event)return;var savedStation=data.Station;$.getJSON('/api/lookup/stations',{district:e.value}).done(function(items){items=items||[];if(savedStation&&!items.some(function(x){return x.text===savedStation;}))items.push({text:savedStation});$('#qcStation').dxSelectBox('instance').option({items:undefined,dataSource:items,value:savedStation});});
     }}).dxSelectBox('instance');
     $.getJSON('/api/lookup/districts').done(function(items){items=items||[];if(savedDistrict&&!items.includes(savedDistrict))items.push(savedDistrict);district.option('items',items);});
@@ -97,13 +92,12 @@ $(function(){
     function updateDay(d){$('#qcDay').dxTextBox('instance').option('value',d?d.toLocaleDateString('en-ZA',{weekday:'long'}):'');}
     data.CrashDate=data.CrashDate||localDate(new Date());var startDate=new Date(data.CrashDate+'T00:00:00');
     $('#qcDay').dxTextBox({readOnly:true,inputAttr:{'aria-label':'Day'}});$('#qcDate').dxDateBox({type:'date',value:startDate,displayFormat:'dd/MM/yyyy',inputAttr:{'aria-label':'Date'},onValueChanged:function(e){data.CrashDate=e.value?localDate(e.value):null;updateDay(e.value);}});updateDay(startDate);
-    // Time is typed exactly as reported; it is not restricted to picker intervals.
-    // Stored TimeOnly values can include seconds, so edit displays only HH:mm.
+    
     if(data.CrashTime) data.CrashTime=String(data.CrashTime).substring(0,5);
     $('#qcTime').dxTextBox({value:data.CrashTime||'',placeholder:'HH:mm',maxLength:5,inputAttr:{'aria-label':'Time','inputmode':'numeric'},onValueChanged:function(e){data.CrashTime=e.value?e.value.trim():null;}});
     function forSeverity(s){return people.filter(function(p){return p.Severity===s;});}
     function savedCount(s){if(s==='Fatal')return Number(data.FatalitiesTotal??data.Fatalities??data.FatalCount??0);if(s==='Serious')return Number(data.SeriousInjuriesTotal??data.Serious??0);return Number(data.SlightInjuriesTotal??data.Slight??0);}
-    // Expose blank role rows for legacy records that only stored aggregate injury counts.
+    
     ['Fatal','Serious','Slight'].forEach(function(s){var missing=Math.max(0,savedCount(s)-forSeverity(s).length);while(missing-->0)people.push({Severity:s,Role:null,Gender:null,Race:null,AgeGroupCode:null});});
     function detailed(p){return p.Role||p.Gender||p.Race||p.AgeGroupCode||p.Age!=null;}
     function resize(s,n){var old=forSeverity(s);if(n===old.length)return;function apply(){var keep=old.slice(0,n);while(keep.length<n)keep.push({Severity:s,Role:null,Gender:null,Race:null,AgeGroupCode:null});people=people.filter(function(p){return p.Severity!==s;}).concat(keep);draw(s);}if(n<old.length&&old.slice(n).some(detailed))DevExpress.ui.dialog.confirm('Remove the last '+(old.length-n)+' '+s.toLowerCase()+' entries?','Change injury count').done(function(ok){if(ok)apply();else countEditors[s].option('value',old.length);});else apply();}
@@ -112,11 +106,7 @@ $(function(){
     $('#qcNoInjury').dxNumberBox({min:0,max:10000,value:Number(data.NoInjuriesTotal||0),format:'#0',step:1,showSpinButtons:true,inputAttr:{'aria-label':'No injuries count'},onValueChanged:function(e){data.NoInjuriesTotal=Math.max(0,Math.floor(Number(e.value)||0));}});
     function opts(a){return a.map(function(v){return{text:v,value:v};});}
     function select(parent,p,key,label,items){var f=$('<div class="qc-field">').appendTo(parent);$('<label>').text(label).appendTo(f);$('<div>').appendTo(f).dxSelectBox({items:items,displayExpr:'text',valueExpr:'value',value:p[key],placeholder:'Select...',showClearButton:true,inputAttr:{'aria-label':label},onValueChanged:function(e){p[key]=e.value;if(key==='AgeGroupCode')p.Age=null;if(key==='Role'&&(e.value==='Pedestrian'||e.value==='Cyclist'))p.VehicleNumber=null;if(key==='Gender')refreshFatalGenderHint();}});}
-    // Imports only ever carried aggregate fatal gender counts (crash_summaries.FatalMale/
-    // FatalFemale), never a per-person breakdown, so a freshly-imported record's Fatal
-    // entries below start with Gender blank. This surfaces that original aggregate as a
-    // reference while it's being filled in, and hides itself once the per-person entries
-    // below already add up to it (or once there's nothing on record to compare against).
+   
     function refreshFatalGenderHint(){
         var maleTotal=Number(data.FatalMale||0),femaleTotal=Number(data.FatalFemale||0);
         if(!maleTotal&&!femaleTotal){$('#qcFatalGenderHint').prop('hidden',true);return;}
@@ -128,7 +118,7 @@ $(function(){
     ['Fatal','Serious','Slight'].forEach(draw);
     var vehicleLoad=$.getJSON('/api/lookup/vehicletypes').done(function(items){
         vehicleTypes=items||[];
-        // Retain an older saved type even if it is no longer active in Lookup Data.
+        
         vehicles.forEach(function(v){
             if(v.VehicleTypeCode&&!vehicleTypes.some(function(x){return x.value===v.VehicleTypeCode;}))vehicleTypes.push({value:v.VehicleTypeCode,text:v.VehicleTypeName||v.VehicleTypeCode});
         });
@@ -149,10 +139,10 @@ $(function(){
     $('#qcCancel').dxButton({text:'Cancel',stylingMode:'outlined',onClick:function(){DevExpress.ui.dialog.confirm('Discard this unsaved record?','Cancel capture').done(function(ok){if(ok)window.location.href='/Crashes';});}});
     saveButton=$('#qcSave').dxButton({text:isEdit?'Save changes':'Save record',type:'default',icon:'save',onClick:function(){
         if(costCentreLoad.state()!=='resolved'){DevExpress.ui.notify('Wait for cost centre data to load, or refresh if loading failed.','warning',4000);return;}if(vehicleLoad.state()!=='resolved'){DevExpress.ui.notify('Wait for vehicle data to load, or refresh if loading failed.','warning',4000);return;}if(!data.CostCentreId){DevExpress.ui.notify('Select a cost centre.','warning',4000);return;}if(!data.CrNo||!data.CrNo.trim()||!data.Station||!data.CrashDate){DevExpress.ui.notify('Enter an AR number, SAPS station and date.','warning',4000);return;}if(data.CrashTime&&!/^([01]\d|2[0-3]):[0-5]\d$/.test(data.CrashTime)){DevExpress.ui.notify('Enter time as HH:mm, for example 11:55.','warning',4000);return;}if(people.some(function(p){return p.Severity!=='Fatal'&&!p.Role;})){DevExpress.ui.notify('Select the road user for every serious and slight injury.','warning',4000);return;}if(vehicles.some(function(v){return !v.VehicleTypeCode;})){DevExpress.ui.notify('Select a type for every vehicle.','warning',4000);return;}
-        // Quick Capture does not ask which vehicle a person occupied, so do not submit a stale hidden link.
+        
         people.forEach(function(person){person.VehicleNumber=null;});
         vehicles.forEach(function(vehicle,index){vehicle.VehicleNumber=index+1;vehicle.Make=vehicle.Make?vehicle.Make.trim():null;vehicle.Registration=vehicle.Registration?vehicle.Registration.trim():null;});data.FatalCount=forSeverity('Fatal').length;data.FatalitiesTotal=forSeverity('Fatal').length;data.SeriousInjuriesTotal=forSeverity('Serious').length;data.SlightInjuriesTotal=forSeverity('Slight').length;data.NoInjuriesTotal=Math.max(0,Math.floor(Number(data.NoInjuriesTotal)||0));saveButton.option('disabled',true);
-        // The marker tells EditSummary that injuriesJson contains every severity, not fatalities only.
+       
         var payload=$.extend({},data,{RoleBasedInjuryEditor:true,vehiclesJson:JSON.stringify(vehicles),injuriesJson:JSON.stringify(people),__RequestVerificationToken:$('.qc-page input[name="__RequestVerificationToken"]').val()});
         $.post(isEdit?'/Crashes/EditSummary':'/CreateSummary/CreateSummary',payload).done(function(r){if(r.success)window.location.href='/Crashes';else DevExpress.ui.notify(r.message||'Unable to save.','error',5000);}).fail(function(xhr){DevExpress.ui.notify(xhr.responseJSON?.message||'Unable to save. Your entries are still here.','error',5000);}).always(function(){saveButton.option('disabled',false);});
     }}).dxButton('instance');

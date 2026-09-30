@@ -34,17 +34,7 @@ public class MonthlyMemoDataService
             fromName: req.FromName, fromTitle: req.FromTitle);
     }
 
-    /// <summary>
-    /// Shared orchestration behind every memo-style report — Monthly, Quarterly, and (via
-    /// ReportsHubController's Jan–Jun/Jan–Dec date windows into MonthlyMemoDataService.BuildAsync)
-    /// Six-Month and Annual. This used to be duplicated between this class's BuildAsync and
-    /// QuarterlyReportDataService's own BuildAsync, and the two copies had already drifted:
-    /// Quarterly never attached age/gender demographics; Monthly never populated
-    /// vm.DaysOfWeek["Provincial"] or DistrictMemoStats.Key (so the "Days of the Week" section
-    /// rendered for Quarterly but not Monthly/Six-Month/Annual); and Monthly's
-    /// from.Month==to.Month guard on the 5-year history meant Six-Month/Annual silently got no
-    /// Figure 2 at all. One method now gives all four report kinds the same behaviour.
-    /// </summary>
+   
     protected async Task<MonthlyMemoViewModel> BuildCoreAsync(
         DateOnly from, DateOnly to, DateOnly pFrom, DateOnly pTo,
         string monthYear, string monthName, string province,
@@ -76,17 +66,15 @@ public class MonthlyMemoDataService
             FromTitle = fromTitle
         };
 
-        // ── Load data for current and prior periods ──────────────
+       
         var currentRows = await LoadAsync(from, to);
         var priorRows = await LoadAsync(pFrom, pTo);
 
-        // ── Aggregate rows ──────────────────────────────────────
+        
         var currentAgg = Agg(currentRows);
         var priorAgg = Agg(priorRows);
 
-        // ── Fetch demographics from the dedicated table (previously Monthly-only —
-        // Quarterly's separate copy of this method never called this, so Quarterly reports
-        // never showed the AGE GROUP AND GENDER section) ─────────
+        
         var currentDemo = await GetDemographicsAsync(from, to, province);
         var priorDemo = await GetDemographicsAsync(pFrom, pTo, province);
         currentAgg.FatalAgeGroups = BuildAgeGroupsFromDemographics(currentDemo);
@@ -97,13 +85,7 @@ public class MonthlyMemoDataService
         vm.Provincial.Current = currentAgg;
         vm.Provincial.Prior = priorAgg;
 
-        // ── Districts — discovered from whatever the data actually contains. LoadAsync
-        // already resolves each row's District via IStationDistrictLookup, so grouping on
-        // r.District (rather than re-querying the lookup here) needs no extra DB round trip.
-        // Quarterly used to iterate a hardcoded Ehlanzeni/Bohlabela/GertSibande/Nkangala array
-        // instead — the same class of hardcoded-district-list problem fixed elsewhere this
-        // session, just missed in this one spot. Key is set to the district name itself, which
-        // is all the per-district DaysOfWeek lookup below (and MonthlyMemoDocService's) needs.
+        
         var districtGroups = currentRows.Concat(priorRows)
             .Select(r => r.District)
             .Where(d => !string.IsNullOrWhiteSpace(d) && !string.Equals(d, "Unknown", StringComparison.OrdinalIgnoreCase))
@@ -125,7 +107,7 @@ public class MonthlyMemoDataService
             .ToList();
         vm.Districts = districtGroups;
 
-        // ── Provincial routes ──────────────────────────────────
+        
         vm.ProvincialRoutes = BuildRoutes(currentRows, priorRows)
             .OrderByDescending(r => r.FatalCurr)
             .ThenByDescending(r => r.CrashesCurr)
@@ -135,9 +117,7 @@ public class MonthlyMemoDataService
         vm.VehicleCategories = BuildVehicleCats(currentRows, priorRows);
         vm.TimeSlots = BuildTimeSlots(currentRows, priorRows);
 
-        // ── Days of the week — provincial row plus one per district. Quarterly used to set
-        // both; Monthly used to set neither, which is why this section rendered only for
-        // Quarterly reports before.
+       
         vm.DaysOfWeek["Provincial"] = BuildDays(currentRows, priorRows);
         foreach (var dist in districtGroups)
         {
@@ -146,10 +126,6 @@ public class MonthlyMemoDataService
             vm.DaysOfWeek[dist.Key] = BuildDays(dC, dP);
         }
 
-        // ── 5-year history — the same-length window shifted back 1 to 4 years. This replaces
-        // two separate implementations (Monthly's from.Month==to.Month-gated month loop, which
-        // silently produced nothing for Six-Month/Annual's Jan–Jun/Jan–Dec ranges; Quarterly's
-        // own GetQuarterRange-based loop) with one formula that's correct for any period length.
         for (var yearsBack = 4; yearsBack >= 0; yearsBack--)
         {
             var yFrom = from.AddYears(-yearsBack);
@@ -171,7 +147,7 @@ public class MonthlyMemoDataService
         string ResolveDistrict(string station) =>
             districtMap.TryGetValue(StationDistrictLookup.Normalize(station), out var d) ? d : "Unknown";
 
-        // ── Source 1: real CR1 form captures ─────────────────────
+        
         var crashes = await _context.Crashes
             .Include(c => c.CrashConditions)
             .Include(c => c.CrashVehicles).ThenInclude(cv => cv.Vehicle)
@@ -233,7 +209,7 @@ public class MonthlyMemoDataService
             };
         }).ToList();
 
-        // ── Source 2: Excel-imported summaries ────────────────────
+        
         var summaries = await _context.CrashSummaries
             .Where(s => s.CrashDate >= from && s.CrashDate <= to)
             .ToListAsync();
@@ -566,12 +542,6 @@ public class MonthlyMemoDataService
     }
 
 
-    // ── District load — how many crashes each district accounted for in the
-    // current period. Grouped straight off Row.District, which LoadAsync
-    // already resolves per-station via IStationDistrictLookup, so this needs
-    // no new lookups of its own. Only meaningful for an unscoped (province-
-    // wide) view -- a single-district scope would just be one bar -- so the
-    // view only renders this when DashboardMode is "analytics".
     protected static List<DistrictLoadStats> BuildDistrictLoad(List<Row> curr)
     {
         return curr
@@ -587,10 +557,7 @@ public class MonthlyMemoDataService
             .ToList();
     }
 
-    // ── Severity mix — how the current period's casualties split across
-    // fatal/serious/slight, independent of crash volume. Row already carries
-    // per-crash Fatalities/Serious/Slight counts (same fields MonthlyMemo
-    // uses), so this is a straight sum, not a new query.
+    
     protected static SeverityMixStats BuildSeverityMix(List<Row> curr)
     {
         return new SeverityMixStats

@@ -6,11 +6,7 @@ using System.Security.Claims;
 
 namespace CrashReport.Controllers;
 
-// No longer class-level [AllowAnonymous] — ChangePassword below needs to require
-// login (it's gated by the global AuthorizeFilter like everything else now), and
-// [AllowAnonymous] anywhere in a controller's scope overrides any [Authorize] in
-// that same scope regardless of where each is placed, so it has to come off the
-// class and go on the individual actions that actually need it instead.
+
 public class AccountController : Controller
 {
     private readonly SignInManager<ApplicationUser> _signIn;
@@ -113,9 +109,7 @@ public class AccountController : Controller
     [AllowAnonymous]
     public IActionResult AccessDenied() => View();
 
-    // No [AllowAnonymous] here on purpose — this one needs the global
-    // AuthorizeFilter to require a signed-in user, since it operates on
-    // "the currently logged-in account's own password."
+
     [HttpGet]
     public IActionResult ChangePassword()
     {
@@ -155,10 +149,7 @@ public class AccountController : Controller
         user.MustChangePassword = false;
         await _users.UpdateAsync(user);
 
-        // ChangePasswordAsync rotates the security stamp, which — depending on
-        // SecurityStampValidationInterval — can otherwise sign this session out
-        // on its very next request. Refresh now so the user who just changed
-        // their password isn't immediately bounced back to the login page.
+
         await _signIn.RefreshSignInAsync(user);
 
         return RedirectToAction("Index", "Home");

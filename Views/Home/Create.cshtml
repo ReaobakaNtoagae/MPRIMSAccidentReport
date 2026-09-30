@@ -38,7 +38,7 @@
         border-radius: 10px;
         padding: 18px 24px;
         box-shadow: 0 2px 8px rgba(0,0,0,.08);
-        border: 1px solid #c8e6c9;
+        border: 1px solid #c8d4e6;
         overflow-x: auto;
     }
 
@@ -58,19 +58,19 @@
             left: 60%;
             width: 80%;
             height: 2px;
-            background: #c8e6c9;
+            background: #c8d4e6;
             z-index: 0;
         }
 
         .step-item.completed:not(:last-child)::after {
-            background: #2e7d32;
+            background: #192b45;
         }
 
     .step-circle {
         width: 34px;
         height: 34px;
         border-radius: 50%;
-        border: 2px solid #c8e6c9;
+        border: 2px solid #c8d4e6;
         background: #fff;
         display: flex;
         align-items: center;
@@ -84,14 +84,14 @@
     }
 
     .step-item.active .step-circle {
-        background: #2e7d32;
-        border-color: #2e7d32;
+        background: #192b45;
+        border-color: #192b45;
         color: #fff;
     }
 
     .step-item.completed .step-circle {
-        background: #43a047;
-        border-color: #43a047;
+        background: #2e476d;
+        border-color: #2e476d;
         color: #fff;
     }
 
@@ -105,12 +105,12 @@
     }
 
     .step-item.active .step-label {
-        color: #2e7d32;
+        color: #192b45;
         font-weight: 700;
     }
 
     .step-item.completed .step-label {
-        color: #43a047;
+        color: #2e476d;
     }
 
     .step-panel {
@@ -126,7 +126,7 @@
         border-radius: 10px;
         padding: 24px 28px 16px;
         box-shadow: 0 2px 10px rgba(0,0,0,.07);
-        border: 1px solid #c8e6c9;
+        border: 1px solid #c8d4e6;
         margin-bottom: 16px;
     }
 
@@ -134,11 +134,11 @@
             font-size: .78rem;
             text-transform: uppercase;
             letter-spacing: .7px;
-            color: #2e7d32;
+            color: #192b45;
             font-weight: 700;
             margin-bottom: 16px;
             padding-bottom: 8px;
-            border-bottom: 2px solid #e8f5e9;
+            border-bottom: 2px solid #eaeef3;
         }
 
     .wizard-nav {
@@ -149,7 +149,7 @@
         border-radius: 10px;
         padding: 14px 20px;
         box-shadow: 0 2px 8px rgba(0,0,0,.07);
-        border: 1px solid #c8e6c9;
+        border: 1px solid #c8d4e6;
     }
 
     .field-row {
@@ -187,18 +187,18 @@
     .entry-tab {
         padding: 6px 14px;
         border-radius: 20px;
-        border: 1px solid #a5d6a7;
-        background: #f1f8f1;
-        color: #2e7d32;
+        border: 1px solid #c8d4e6;
+        background: #eaeef3;
+        color: #192b45;
         font-size: .8rem;
         cursor: pointer;
         font-weight: 600;
     }
 
         .entry-tab.active {
-            background: #2e7d32;
+            background: #192b45;
             color: #fff;
-            border-color: #2e7d32;
+            border-color: #192b45;
         }
 
     .entry-form {
@@ -217,7 +217,7 @@
             font-size: .75rem;
             text-transform: uppercase;
             letter-spacing: .6px;
-            color: #2e7d32;
+            color: #192b45;
             font-weight: 700;
             margin-bottom: 8px;
         }
@@ -229,7 +229,7 @@
     }
 
     .review-item {
-        background: #f1f8f1;
+        background: #eaeef3;
         border-radius: 6px;
         padding: 8px 12px;
         font-size: .8rem;
@@ -242,7 +242,7 @@
         }
 
         .review-item .r-value {
-            color: #1b5e20;
+            color: #0f1e34;
             font-weight: 600;
         }
 </style>
@@ -828,7 +828,7 @@
 
             (formOptions.WeatherCondition || []).forEach(function(w) {
                 var wrap = $("<div>").css({ display:"flex", alignItems:"center", gap:"6px",
-                    background:"#f1f8f1", border:"1px solid #c8e6c9", borderRadius:"6px", padding:"6px 12px"
+                    background:"#eaeef3", border:"1px solid #c8d4e6", borderRadius:"6px", padding:"6px 12px"
                 }).appendTo("#weatherCheckboxes");
                 $("<div>").appendTo(wrap).dxCheckBox({
                     text: w,
@@ -977,7 +977,7 @@
 
             function sec(fd,title){
                 $("<div>")
-                    .css({ fontWeight:700, color:"#2e7d32", fontSize:".8rem", textTransform:"uppercase", letterSpacing:".5px", margin:"18px 0 10px" })
+                    .css({ fontWeight:700, color:"#192b45", fontSize:".8rem", textTransform:"uppercase", letterSpacing:".5px", margin:"18px 0 10px" })
                     .text(title)
                     .appendTo(fd);
             }
@@ -1403,11 +1403,7 @@
                 onClick: function() { buildPersonForm(personCount++); }
             });
 
-            // Separate, lightweight capture for passengers who were not
-            // hurt at all -- matches the physical form's own choice to
-            // treat this as a distinct, much shorter section (Surname,
-            // ID, phone, vehicle -- nothing else) rather than a collapsed
-            // version of the full injured-person form above.
+            
             var uninjuredCount = 0;
 
             function buildUninjuredRow(index) {
@@ -1660,7 +1656,7 @@
             buildStepBar();
             updateNavButtons();
 
-            } // end initWizard
+            } 
         });
     </script>
 }

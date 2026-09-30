@@ -404,13 +404,13 @@ public class ExcelImportService
             {
                 var saps = row.Cell(map.Saps).GetString().Trim();
 
-                // ── Skip rows that are empty or contain "TOTAL" (footer totals) ──
+                
                 if (string.IsNullOrWhiteSpace(saps) || saps.Contains("TOTAL", StringComparison.OrdinalIgnoreCase))
                     continue;
 
                 var col7 = row.Cell(map.Location > 0 ? map.Location : 8).GetString().Trim();
 
-                // ── Detect "GRAND TOTAL" or "TOTAL:" (if any) ──
+                
                 if (col7.Equals("GRAND TOTAL", StringComparison.OrdinalIgnoreCase) ||
                     saps.StartsWith("TOTAL:", StringComparison.OrdinalIgnoreCase)||
                     saps.Contains("SUM", StringComparison.OrdinalIgnoreCase))
@@ -420,10 +420,10 @@ public class ExcelImportService
                     continue;
                 }
 
-                // ── If we haven't entered the summary section yet ──
+                
                 if (!inSummary)
                 {
-                    // Check if this row is a header for the demographics summary
+                    
                     if (saps.StartsWith("VICTIMS", StringComparison.OrdinalIgnoreCase) ||
                         saps.StartsWith("AGE", StringComparison.OrdinalIgnoreCase) ||
                         saps.StartsWith("RACE", StringComparison.OrdinalIgnoreCase) ||
@@ -437,12 +437,12 @@ public class ExcelImportService
                         continue;
                     }
 
-                    // Otherwise, treat as a normal data row
+                   
                     dataRows.Add(row);
                 }
                 else
                 {
-                    // Already in summary section – add to summary rows
+                    
                     summaryRows.Add(row);
                 }
             }
@@ -464,7 +464,7 @@ public class ExcelImportService
                         continue;
                     }
 
-                    // ── Path 1: already exists as a full CR1 form ──────
+                    
                     if (existingFormCrNos.Contains(summary.CrNo))
                     {
                         pending.DuplicateCandidates.Add(new DuplicateCandidate
@@ -478,13 +478,7 @@ public class ExcelImportService
                         continue;
                     }
 
-                    // ── Path 2 (NEW): already exists as a previously-
-                    // imported CrashSummary. Same detail-comparison
-                    // approach as the within-file case below -- an exact
-                    // match on date/time/location/type is flagged as a
-                    // likely genuine duplicate; anything else is flagged
-                    // too, but the human sees the actual conflicting
-                    // record's details to judge for themselves. ────────
+                   
                     if (existingSummariesByCrNo.TryGetValue(summary.CrNo, out var existingDbGroup))
                     {
                         var matchesExisting = existingDbGroup.Any(existing =>
@@ -506,10 +500,7 @@ public class ExcelImportService
                         continue;
                     }
 
-                    // ── Path 3: within-file collision (existing logic,
-                    // unchanged) — disambiguate automatically when the
-                    // details clearly differ, since that's not really a
-                    // "should I keep a duplicate" decision at all. ─────
+                   
                     if (crNoGroups.TryGetValue(summary.CrNo, out var existingGroup))
                     {
                         var isGenuineDuplicate = existingGroup.Any(existing =>
@@ -576,20 +567,11 @@ public class ExcelImportService
             fileName, string.Join(", ", sheetsProcessed), string.Join(", ", sheetsSkipped),
             pending.ReadyToImport.Count, pending.DuplicateCandidates.Count);
 
-        // Demographics were already saved above (SaveDemographicsAsync
-        // commits on its own) -- nothing else to commit in this phase.
+       
         return pending;
     }
 
 
-    // ── PHASE 2: Confirm. Commits ReadyToImport as-is, plus only the
-    // duplicate candidates whose index is in keepIndexes. Every KEPT
-    // duplicate gets a disambiguated CrNo applied here, regardless of
-    // whether it was flagged as a "likely genuine" duplicate or not --
-    // this isn't optional: CrashSummary has a UNIQUE(CrNo, SourceFile)
-    // constraint, so two rows sharing a CrNo from the same file cannot
-    // both be inserted without one being renamed, even if the human's
-    // intent is "yes, keep both, they really are separate." ──────────
     public async Task<ImportResult> ConfirmImportAsync(PendingImport pending, List<int> keepIndexes)
     {
         var result = new ImportResult { FileName = pending.FileName, Demographics = pending.Demographics };
@@ -640,17 +622,7 @@ public class ExcelImportService
     }
 
 
-    // ═══════════════════════════════════════════════════════════════════
-    // New supporting classes -- add these alongside the existing
-    // ImportResult/ImportDemographics classes at the bottom of
-    // ExcelImportService.cs (outside the ExcelImportService class itself,
-    // same as the existing two).
-    // ═══════════════════════════════════════════════════════════════════
-
-    // Held server-side in IMemoryCache between Preview and Confirm -- NOT
-    // sent to the browser directly (ReadyToImport/Summary objects are full
-    // EF entities, too large and unnecessary for TempData). The controller
-    // builds a small display-only view model from this for the review page.
+  
     public class PendingImport
     {
         public string FileName { get; set; } = string.Empty;
@@ -1083,7 +1055,7 @@ public class ExcelImportService
 
         if (existing != null)
         {
-            // Accumulate (add) the new counts to the existing ones
+            
             existing.Age0to7 += demographics.Age0to7;
             existing.Age8to12 += demographics.Age8to12;
             existing.Age13to18 += demographics.Age13to18;

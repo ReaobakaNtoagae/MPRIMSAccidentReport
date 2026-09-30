@@ -26,32 +26,17 @@ var mvcBuilder = builder.Services.AddControllersWithViews(options =>
                      .Build();
     options.Filters.Add(new AuthorizeFilter(policy));
 
-    // Authorization filters (the AuthorizeFilter above) always run before
-    // action filters in the MVC pipeline, regardless of registration order —
-    // so this only ever sees requests ASP.NET Core has already confirmed
-    // are authenticated.
+    
     options.Filters.Add<ForcePasswordChangeFilter>();
 
-    // Adds the privilege-level [Authorize(Policy = ...)] the app is currently
-    // missing on several controllers (Persons/Vehicles/Witnesses/
-    // ContributoryFactors, most report-generation endpoints, CrashesController's
-    // own Create action) without hand-editing each file — see
-    // Models/ActionPrivilegeMap.cs for the full reasoning and every mapping.
-    // Also means any future action with neither an [Authorize] attribute nor a
-    // map entry makes the app refuse to start, rather than silently running
-    // open to any logged-in user.
+    
     options.Conventions.Add(new MapDrivenAuthorizationConvention());
 })
 .AddNewtonsoftJson(options =>
     options.SerializerSettings.ContractResolver =
         new DefaultContractResolver());
 
-// Views are normally compiled into the app assembly at build time, so a
-// .cshtml edit on disk has no effect until a full rebuild + restart. That's
-// invisible during ordinary development and easy to mistake for "the change
-// didn't work". Runtime compilation re-parses views on each request instead,
-// so a browser refresh is enough — enabled only in Development so production
-// still ships fully precompiled views.
+
 if (builder.Environment.IsDevelopment())
 {
     mvcBuilder.AddRazorRuntimeCompilation();
@@ -61,8 +46,7 @@ if (builder.Environment.IsDevelopment())
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Register the persisted staged-import pipeline. Each stage has one job: accept
-// the file, parse/validate it, record human review decisions, then commit it.
+
 builder.Services.Configure<ImportWorkbookOptions>(
     builder.Configuration.GetSection(ImportWorkbookOptions.SectionName));
 builder.Services.AddScoped<IImportBatchRepository, EfImportBatchRepository>();

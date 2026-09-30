@@ -301,13 +301,7 @@ public class CrashesController : Controller
     [Authorize(Policy = Privileges.Crashes.Delete)]
     public async Task<IActionResult> DeleteConfirmed(int id)
     {
-        // Previously a bare _context.Crashes.Remove(crash) with no cascade cleanup —
-        // found while extracting ICrashCaptureService: Crash's dependent tables use
-        // the same NO ACTION (not CASCADE) FK pattern documented above for
-        // CrashSummary (multiple-cascade-paths avoidance), so this would throw an
-        // FK-violation exception for any crash with related vehicles/people/etc. —
-        // i.e. any real submitted crash. Now shares the same cascade delete
-        // HomeController.Delete already did correctly.
+
         await _capture.DeleteCrashAsync(id);
         return RedirectToAction(nameof(Index));
     }
@@ -320,22 +314,6 @@ public class CrashesController : Controller
     }
 
 
-    // ═══════════════════════════════════════════════════════════════
-    // EditSummary — now covers vehicles (instance-based) and casualties
-    // across all three severities, matching CreateSummaryController.
-    //
-    // Every CrashSummary — manually quick-captured or imported — is edited
-    // through Quick Capture's own page now. There used to be a second,
-    // separate "detailed" editor (Views/Crashes/EditSummary.cshtml) gated
-    // on SourceFile != "Quick add (manual entry)", kept only for imports.
-    // The data this branch builds (station/district lookup, arSequence,
-    // protectedVehicles, people) was already source-agnostic — it read
-    // straight off whatever summary/vehicles/injuries were passed in — so
-    // the gate was the only thing keeping two editors alive for one record
-    // type, and the unused one had already drifted out of date. Full
-    // Capture (Crashes.Edit / Home.Create) is a different flow entirely
-    // and is untouched by this.
-    // ═══════════════════════════════════════════════════════════════
 
     [HttpGet]
     public async Task<IActionResult> EditSummary(int? id)
@@ -453,8 +431,7 @@ public class CrashesController : Controller
             }
         }
 
-        // Compatibility for the previous totals-only Quick Capture screen. The new
-        // role-based screen sends every severity, so it does not use this marker.
+
         if (Request.Form.ContainsKey("TotalsOnlyEditor"))
         {
             var historical = await _context.CrashSummaryInjuries.AsNoTracking()
@@ -471,8 +448,7 @@ public class CrashesController : Controller
         if (injuryError != null)
             return Json(new { success = false, message = injuryError });
 
-        // Recompute all 12 counts server-side, same as CreateSummary — never trust
-        // submitted counts directly, the injuries list is the real source of truth.
+
         var roleBasedEditor = Request.Form.ContainsKey("RoleBasedInjuryEditor");
         var totalsError = _summaryValidation.ValidateInjuryTotalsAgreement(
             injuries, model, roleBasedEditor, enforceLegacyNonRoleTotalsCheck: false);
@@ -498,19 +474,14 @@ public class CrashesController : Controller
         summary.Location = model.Location;
         summary.CrashType = model.CrashType;
 
-        // Recomputes VehicleCount, FatalitiesTotal, all 12 role×severity counts, and
-        // the fatal-only demographic rollup — zeroes the demographic fields first,
-        // which is required here (an edit must replace old totals, not add to them)
-        // and a no-op for CreateSummary's freshly-constructed CrashSummary.
+
         _summaryValidation.ApplyInjuryRollup(summary, injuries, vehicles.Count);
 
         await using var transaction = await _context.Database.BeginTransactionAsync();
 
         try
         {
-            // Injuries deleted BEFORE vehicles — injuries reference vehicles by FK
-            // (NO ACTION, not CASCADE), so vehicles can't be removed while injuries
-            // still point at them.
+
             await _summaryValidation.DeleteVehiclesAndInjuriesAsync(summary.SummaryId);
 
             var vehicleNumberToId = await _summaryValidation.SaveVehiclesAsync(summary.SummaryId, vehicles);
@@ -531,13 +502,7 @@ public class CrashesController : Controller
         return Json(new { success = true, message = $"Crash record '{summary.CrNo}' has been updated." });
     }
 
-    // Deletes in dependency order — injuries, then vehicles, then the
-    // summary itself. This is REQUIRED now, not a style choice: the FKs
-    // from crash_summary_injuries and crash_summary_vehicles back to
-    // crash_summaries are NO ACTION (not CASCADE) — that was the fix for
-    // the "multiple cascade paths" SQL Server error when the schema was
-    // first built. A bare Remove(summary) will now throw an FK violation
-    // if any vehicles or injuries still reference it.
+
     [HttpPost]
     [ValidateAntiForgeryToken]
     [Authorize(Policy = Privileges.Crashes.Delete)]
@@ -566,9 +531,7 @@ public class CrashesController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    // Sort(...) used to live here -- moved into ICrashGridService.BuildAsync along
-    // with the rest of Grid's filter/page pipeline, so CrashesApiController.Grid
-    // can share it instead of re-implementing the same column-sort switch.
+
 
     private bool CrashExists(int id) =>
         _context.Crashes.Any(c => c.CrashId == id);

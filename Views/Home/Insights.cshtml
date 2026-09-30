@@ -4,10 +4,7 @@
     var roleLabel = ViewBag.RoleLabel as string ?? "";
     var mode = ViewBag.DashboardMode as string ?? "analytics";
 
-    // District load is only meaningful for an unscoped, province-wide view —
-    // Regional Staff are already scoped to one district (see HomeController.
-    // Insights), so that panel would just be a single bar. Mirrors the same
-    // mode gate Index.cshtml uses for its own mode-specific sections.
+   
     var showDistrictPanel = mode == "analytics" && Model.Districts.Count > 0;
 
     var sevTotal = Model.Severity.Total;
@@ -20,18 +17,11 @@
 }
 
 <style>
-    /* ── Panel — this page referenced .panel/.panel-head/.panel-body
-             already, but nothing in the app ever defined them (they only
-             existed, coincidentally, inside Index.cshtml's own <style>
-             block, which doesn't reach this page). Insights has been
-             rendering as unstyled divs — no card, no border, no shadow —
-             since the page shipped. Defined here, matching the same
-             values Index.cshtml uses, so the two pages actually look like
-             one app. ─────────────────────────────────────────────────── */
+   
     .panel {
         background: #fff;
         border-radius: 10px;
-        border: 1px solid #c8e6c9;
+        border: 1px solid #c8d4e6;
         box-shadow: 0 2px 8px rgba(0,0,0,.06);
         overflow: hidden;
         margin-bottom: 20px;
@@ -39,11 +29,11 @@
 
     .panel-head {
         padding: 14px 20px;
-        border-bottom: 2px solid #e8f5e9;
+        border-bottom: 2px solid #eaeef3;
         font-size: .78rem;
         text-transform: uppercase;
         letter-spacing: .7px;
-        color: #2e7d32;
+        color: #192b45;
         font-weight: 700;
         display: flex;
         justify-content: space-between;
@@ -62,7 +52,7 @@
     }
 
     .ins-header i {
-        color: #2e7d32;
+        color: #192b45;
         font-size: 18px;
     }
 
@@ -78,10 +68,7 @@
         margin: 0 0 16px 26px;
     }
 
-    /* ── Info banner — same purpose as the prototype's blue callout:
-             this page is read-only analysis, not a to-do list. Uses the
-             app's existing info-blue tokens (see .review-note on the
-             Dashboard) rather than the prototype's own palette. ──────── */
+    
     .ins-banner {
         display: flex;
         align-items: flex-start;
@@ -157,7 +144,7 @@
 
     .ins-informs {
         font-size: .72rem;
-        color: #2e7d32;
+        color: #192b45;
         margin: 0 0 10px;
         display: flex;
         align-items: flex-start;
@@ -171,9 +158,7 @@
         padding: 8px 2px;
     }
 
-    /* ── Severity donut — plain conic-gradient, percentages computed
-             server-side from real Fatal/Serious/Slight counts (no client
-             charting library involved). ─────────────────────────────── */
+    
     .sev-donut-row {
         display: flex;
         align-items: center;
@@ -281,7 +266,7 @@
                         <span class="name">@d.District</span>
                         <span class="stat">@d.CrashesCurr</span>
                     </div>
-                    <div class="ins-bar-track"><div class="ins-bar-fill" style="width:@(pct)%;background:#2e7d32;"></div></div>
+                    <div class="ins-bar-track"><div class="ins-bar-fill" style="width:@(pct)%;background:#192b45;"></div></div>
                 }
             </div>
         </div>
@@ -349,7 +334,7 @@
             }
             @if (Model.CrashTypes.Count > 5)
             {
-                <div style="font-size:.76rem;color:#2e7d32;cursor:pointer;" onclick="$(this).next().show();$(this).hide();">Show all @Model.CrashTypes.Count types</div>
+                <div style="font-size:.76rem;color:#192b45;cursor:pointer;" onclick="$(this).next().show();$(this).hide();">Show all @Model.CrashTypes.Count types</div>
                 <div style="display:none;">
                     @foreach (var t in Model.CrashTypes.Skip(5))
                     {
@@ -384,7 +369,7 @@
             }
             @if (rankedRoutes.Count > 5)
             {
-                <div style="font-size:.76rem;color:#2e7d32;cursor:pointer;" onclick="$(this).next().show();$(this).hide();">Show all @rankedRoutes.Count routes</div>
+                <div style="font-size:.76rem;color:#192b45;cursor:pointer;" onclick="$(this).next().show();$(this).hide();">Show all @rankedRoutes.Count routes</div>
                 <div style="display:none;">
                     @foreach (var x in rankedRoutes.Skip(5))
                     {
@@ -439,7 +424,7 @@
             }
             @if (Model.Stations.Count > 5)
             {
-                <div style="font-size:.76rem;color:#2e7d32;cursor:pointer;" onclick="$(this).next().show();$(this).hide();">Show all @Model.Stations.Count stations</div>
+                <div style="font-size:.76rem;color:#192b45;cursor:pointer;" onclick="$(this).next().show();$(this).hide();">Show all @Model.Stations.Count stations</div>
                 <div style="display:none;">
                     @foreach (var s in Model.Stations.Skip(5))
                     {

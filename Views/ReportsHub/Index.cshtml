@@ -8,8 +8,8 @@
         <h2>Report type</h2><p>Available reports are based on your privileges.</p>
         @if (Model.CanStandby) { <button type="button" class="rh-choice" data-report="Standby"><span class="rh-icon">S</span><span><strong>Standby report</strong><small>Weekly operational comparison and fatal crash detail</small></span></button> }
         @if (Model.CanMonthly) { <button type="button" class="rh-choice" data-report="Monthly"><span class="rh-icon">M</span><span><strong>Monthly memorandum</strong><small>Monthly comparison with formal memo fields</small></span></button> }
-        @if (Model.CanQuarterly) { <button type="button" class="rh-choice" data-report="Quarterly"><span class="rh-icon">Q</span><span><strong>Quarterly report</strong><small>Selected quarter compared with the prior year</small></span></button> }
-        @if (Model.CanSixMonth) { <button type="button" class="rh-choice" data-report="SixMonth"><span class="rh-icon">6M</span><span><strong>Six-month report</strong><small>January to June compared with the prior year</small></span></button> }
+        @if (Model.CanQuarterly) { <button type="button" class="rh-choice" data-report="Quarterly"><span class="rh-icon">Q</span><span><strong>Quarterly report</strong><small>Calendar or fiscal quarter, compared with the prior year</small></span></button> }
+        @if (Model.CanSixMonth) { <button type="button" class="rh-choice" data-report="SixMonth"><span class="rh-icon">6M</span><span><strong>Six-month report</strong><small>Any period you choose, compared with any prior period</small></span></button> }
         @if (Model.CanAnnual) { <button type="button" class="rh-choice" data-report="Annual"><span class="rh-icon">A</span><span><strong>Annual report</strong><small>Full calendar year compared with the prior year</small></span></button> }
         @if (Model.CanFiveYear) { <button type="button" class="rh-choice" data-report="FiveYear"><span class="rh-icon">5Y</span><span><strong>Five-year analysis</strong><small>One month across five consecutive years</small></span></button> }
     </section>

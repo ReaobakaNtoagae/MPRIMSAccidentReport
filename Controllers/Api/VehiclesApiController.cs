@@ -8,12 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CrashReport.Controllers.Api;
 
-/// <summary>
-/// JSON API counterpart of VehiclesController (MVC), for the Angular/DevExtreme
-/// migration. Purely additive — does not change the MVC controller, its views,
-/// or its routes. Vehicle has no non-trivial business logic beyond straight CRUD,
-/// so no service extraction was needed here.
-/// </summary>
+
 [Route("api/vehicles")]
 [ApiController]
 public class VehiclesApiController : ControllerBase
@@ -170,8 +165,7 @@ public class VehiclesApiController : ControllerBase
         }
         catch (DbUpdateException)
         {
-            // Vehicle is still referenced by a crash (CrashVehicle) — surface as a
-            // conflict rather than a 500.
+            
             return Conflict(new { message = "This vehicle cannot be deleted because it is still linked to one or more crash records." });
         }
 

@@ -6,7 +6,7 @@
     .rm-card {
         background: #fff;
         border-radius: 10px;
-        border: 1px solid #c8e6c9;
+        border: 1px solid #c8d4e6;
         box-shadow: 0 2px 8px rgba(0,0,0,.06);
         overflow: hidden;
         margin-bottom: 20px;
@@ -14,11 +14,11 @@
 
     .rm-card-head {
         padding: 11px 20px;
-        border-bottom: 2px solid #e8f5e9;
+        border-bottom: 2px solid #eaeef3;
         font-size: .72rem;
         text-transform: uppercase;
         letter-spacing: .8px;
-        color: #2e7d32;
+        color: #192b45;
         font-weight: 700;
         display: flex;
         align-items: center;
@@ -62,16 +62,16 @@
         }
 
         .priv-matrix tr:hover td {
-            background: #f9fdf9;
+            background: #fafbfc;
         }
 
         .priv-matrix .group-header td {
-            background: #e8f5e9;
+            background: #eaeef3;
             font-weight: 700;
             font-size: .7rem;
             text-transform: uppercase;
             letter-spacing: .6px;
-            color: #2e7d32;
+            color: #192b45;
             padding: 5px 12px;
         }
 
@@ -83,7 +83,7 @@
             width: 16px;
             height: 16px;
             cursor: pointer;
-            accent-color: #2e7d32;
+            accent-color: #192b45;
         }
 
             .priv-matrix input[type=checkbox]:disabled {
@@ -108,7 +108,7 @@
     }
 </style>
 
-@* ── Role list card ─────────────────────────────────────────── *@
+
 <div class="rm-card">
     <div class="rm-card-head">
         <span>Roles</span>
@@ -120,7 +120,7 @@
     </div>
 </div>
 
-@* ── Privilege matrix card ──────────────────────────────────── *@
+
 <div class="rm-card">
     <div class="rm-card-head">
         <span>Privilege assignment</span>
@@ -145,7 +145,7 @@
             var allPrivileges = [];
             var allRoles      = [];
 
-            // ── Load both datasets in parallel ────────────────────────
+            
             $.when(
                 $.getJSON('/Roles/GetPrivileges'),
                 $.getJSON('/Roles/GetAll')
@@ -156,7 +156,7 @@
                 renderMatrix();
             });
 
-            // ── Roles grid ────────────────────────────────────────────
+            
             function renderRolesGrid() {
                 $("#rolesGrid").dxDataGrid({
                     dataSource: allRoles,
@@ -168,7 +168,7 @@
                             caption: "Type", width: 120,
                             cellTemplate: function (el, info) {
                                 $('<span>').text(info.data.IsCore ? "System role" : "Custom")
-                                           .css("color", info.data.IsCore ? "#2e7d32" : "#666")
+                                           .css("color", info.data.IsCore ? "#192b45" : "#666")
                                            .appendTo(el);
                             }
                         },
@@ -194,12 +194,12 @@
                 });
             }
 
-            // ── Privilege matrix ──────────────────────────────────────
+            
             function renderMatrix() {
                 var groups    = [...new Set(allPrivileges.map(p => p.Group))];
                 var roleNames = allRoles.map(r => r.Name);
 
-                // Build a map: roleName → Set of privileges
+                
                 var rolePrivMap = {};
                 allRoles.forEach(function (r) {
                     rolePrivMap[r.Name] = new Set(r.Privileges);
@@ -207,7 +207,7 @@
 
                 var table = $('<table class="priv-matrix">');
 
-                // Header row
+                
                 var thead = $('<thead>');
                 var hrow  = $('<tr>');
                 hrow.append($('<th>').text('Privilege'));
@@ -219,13 +219,13 @@
 
                 var tbody = $('<tbody>');
                 groups.forEach(function (group) {
-                    // Group header row
+                   
                     var grow = $('<tr class="group-header">');
                     var gtd  = $('<td>').attr('colspan', roleNames.length + 1).text(group);
                     grow.append(gtd);
                     tbody.append(grow);
 
-                    // Privilege rows in this group
+                    
                     allPrivileges.filter(p => p.Group === group).forEach(function (priv) {
                         var row = $('<tr>');
                         row.append($('<td>').text(priv.Label));
@@ -245,14 +245,14 @@
 
                 $('#matrixWrap').empty().append(table);
 
-                // Track changes
+                
                 $('#matrixWrap').on('change', 'input[type=checkbox]', function () {
                     $('#saveNote').text('Unsaved changes');
                     $('#saveNote').css('color', '#e65100');
                 });
             }
 
-            // ── Save matrix ───────────────────────────────────────────
+            
             $("#btnSaveMatrix").dxButton({
                 text: "Save changes", type: "default", icon: "save",
                 onClick: function () { saveMatrix(); }
@@ -273,9 +273,9 @@
                 });
 
                 $.when.apply($, saves).done(function () {
-                    $('#saveNote').text('Saved successfully').css('color', '#2e7d32');
+                    $('#saveNote').text('Saved successfully').css('color', '#192b45');
                     setTimeout(function () { $('#saveNote').text(''); }, 3000);
-                    // Reload to refresh privilege counts in the grid
+                
                     $.getJSON('/Roles/GetAll', function (data) {
                         allRoles = data;
                         renderRolesGrid();
@@ -285,14 +285,14 @@
                 });
             }
 
-            // ── Add role button ───────────────────────────────────────
+           
             $("#btnAddRole").dxButton({
                 text: "Add role", icon: "plus", type: "default", stylingMode: "outlined",
                 onClick: function () {
-                    // Create a fresh container for the popup
+
                     var $popupContainer = $('<div>').appendTo('body');
 
-                    // Create the text box inside the container
+                    
                     var $textBox = $('<div>').appendTo($popupContainer).dxTextBox({
                         placeholder: "Role name...",
                         value: ""
@@ -305,11 +305,11 @@
                         showCloseButton: true,
                         visible: true,
                         contentTemplate: function () {
-                            // Return the text box element (already in the container)
+                            
                             return $textBox;
                         },
                         onHiding: function () {
-                            // Clean up the container when the popup closes
+                            
                             $popupContainer.remove();
                         },
                         toolbarItems: [

@@ -2,17 +2,7 @@ using System.IO.Compression;
 
 namespace CrashReport.Services;
 
-/// <summary>
-/// Faithful C# port of wwwroot/js/charts.js (createGroupedBarChart / createPieChart), which
-/// MonthlyMemoDocService used to invoke through a Node.js subprocess (generate_monthly.js
-/// required charts.js and rendered PNGs via the `pngjs` npm package). Removing the Node.js
-/// dependency (see old-app-remediation-plan.md item 8) meant this pixel-level renderer needed
-/// a C# equivalent — ported algorithm-for-algorithm (same bitmap font, same layout math, same
-/// palettes) rather than swapped for a different charting approach, so the rendered charts
-/// look the same as they always have. The only thing that changed is: no external process, no
-/// npm packages, no NODE_PATH probing — this writes raw PNG bytes itself (IHDR/IDAT/IEND),
-/// exactly the small, self-contained job pngjs was doing for the Node script.
-/// </summary>
+
 public class ChartDataset
 {
     public string Label { get; set; } = string.Empty;
@@ -43,7 +33,7 @@ public class PieChartConfig
 
 public static class MonthlyMemoChartService
 {
-    // ── Palettes (charts.js PALETTE / ROUTE_PALETTE) ────────────────
+    
     public static readonly (byte R, byte G, byte B)[] Palette =
     {
         (68, 114, 196),
@@ -66,7 +56,7 @@ public static class MonthlyMemoChartService
         (255, 160, 122),
     };
 
-    // ── Bitmap font (charts.js `G`) — 7 rows x 5 bits per glyph ─────
+    
     private static readonly Dictionary<char, int[]> Glyphs = new()
     {
         [' '] = new[] { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
@@ -121,12 +111,12 @@ public static class MonthlyMemoChartService
     private const int GlyphH = 7;
     private const int GlyphGap = 1;
 
-    // ── Canvas: flat RGB buffer, matches pngjs's colorType:2 (RGB, no alpha) ─
+    
     private sealed class Canvas
     {
         public readonly int Width;
         public readonly int Height;
-        public readonly byte[] Data; // 3 bytes per pixel (R,G,B)
+        public readonly byte[] Data;
 
         public Canvas(int width, int height)
         {
@@ -323,7 +313,7 @@ public static class MonthlyMemoChartService
         return EncodePng(canvas);
     }
 
-    // ── Pie chart (charts.js createPieChart) ─────────────────────────
+    
     public static byte[] CreatePieChart(PieChartConfig cfg)
     {
         var w = cfg.Width;
@@ -474,13 +464,13 @@ public static class MonthlyMemoChartService
         return EncodePng(canvas);
     }
 
-    // ── Minimal PNG encoder (IHDR/IDAT/IEND) — replaces pngjs ────────
+    
     private static byte[] EncodePng(Canvas c)
     {
         using var output = new MemoryStream();
-        output.Write(new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A }); // PNG signature
+        output.Write(new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A }); 
 
-        // IHDR
+        
         var ihdr = new byte[13];
         WriteUInt32BE(ihdr, 0, (uint)c.Width);
         WriteUInt32BE(ihdr, 4, (uint)c.Height);
@@ -491,13 +481,13 @@ public static class MonthlyMemoChartService
         ihdr[12] = 0; // interlace
         WriteChunk(output, "IHDR", ihdr);
 
-        // Raw scanlines: one filter-type byte (0 = None) + RGB bytes per row
+        
         var raw = new byte[(c.Width * 3 + 1) * c.Height];
         var stride = c.Width * 3;
         for (var y = 0; y < c.Height; y++)
         {
             var rowStart = y * (stride + 1);
-            raw[rowStart] = 0; // filter type: None
+            raw[rowStart] = 0; 
             Buffer.BlockCopy(c.Data, y * stride, raw, rowStart + 1, stride);
         }
 

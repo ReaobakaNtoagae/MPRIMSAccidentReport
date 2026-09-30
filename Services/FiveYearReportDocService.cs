@@ -22,11 +22,11 @@ public class FiveYearReportDocService
             mainPart.Document = new Document();
             var body = mainPart.Document.AppendChild(new Body());
 
-            // ── Title ──
+
             body.AppendChild(Heading(vm.ReportTitle, size: 32, spacingAfter: 200));
             body.AppendChild(Heading($"{vm.StartYear} \u2013 {vm.EndYear}", size: 24, spacingAfter: 300));
 
-            // ── Memo header block ──
+            
             body.AppendChild(Para($"Report date: {vm.ReportDate}"));
             body.AppendChild(Para($"Ref: {vm.RefNumber}"));
             body.AppendChild(Para($"Enquiries: {vm.EnquiryName}  \u00b7  Tel: {vm.EnquiryTel}"));
@@ -36,7 +36,7 @@ public class FiveYearReportDocService
 
             var years = Enumerable.Range(vm.StartYear, vm.EndYear - vm.StartYear + 1).ToArray();
 
-            // ── Section 1: Regional status ──
+            
             foreach (var region in vm.RegionSummaries)
             {
                 body.AppendChild(Heading($"REGIONAL STATUS: {region.RegionName}", size: 24));
@@ -44,7 +44,7 @@ public class FiveYearReportDocService
                 body.AppendChild(SpacerParagraph());
             }
 
-            // ── Section 2: Problematic routes ──
+
             body.AppendChild(Heading("PROVINCIAL PROBLEMATIC ROUTES: CRASHES", size: 24));
             body.AppendChild(BuildRankedTable(vm.ProvincialRoutes.CrashRoutes, years, "ROUTES"));
             body.AppendChild(SpacerParagraph());
@@ -64,7 +64,7 @@ public class FiveYearReportDocService
                 body.AppendChild(SpacerParagraph());
             }
 
-            // ── Section 3: Crash types & vehicle categories ──
+            
             body.AppendChild(Heading("PROVINCIAL CRASH TYPES", size: 24));
             body.AppendChild(BuildRankedTable(vm.CrashTypes, years, "TYPE"));
             body.AppendChild(SpacerParagraph());
@@ -73,7 +73,7 @@ public class FiveYearReportDocService
             body.AppendChild(BuildRankedTable(vm.VehicleCategories, years, "CATEGORY"));
             body.AppendChild(SpacerParagraph());
 
-            // ── Section 4: Time of day ──
+            
             body.AppendChild(Heading("PROVINCE PREVALENT TIMES: CRASHES", size: 24));
             body.AppendChild(BuildRankedTable(vm.TimeSlotsCrashes, years, "TIME"));
             body.AppendChild(SpacerParagraph());
@@ -82,7 +82,7 @@ public class FiveYearReportDocService
             body.AppendChild(BuildRankedTable(vm.TimeSlotsFatalities, years, "TIME"));
             body.AppendChild(SpacerParagraph());
 
-            // ── Section 5: Day of week ──
+            
             body.AppendChild(Heading("PROVINCE DAYS OF THE WEEK: CRASHES", size: 24));
             body.AppendChild(BuildRankedTable(vm.DaysOfWeekCrashes, years, "DAY"));
             body.AppendChild(SpacerParagraph());
@@ -91,7 +91,7 @@ public class FiveYearReportDocService
             body.AppendChild(BuildRankedTable(vm.DaysOfWeekFatalities, years, "DAY"));
             body.AppendChild(SpacerParagraph());
 
-            // ── Section 6: Shock weekend ──
+            
             body.AppendChild(Heading(vm.WeekendsCrashes.Title, size: 24));
             body.AppendChild(BuildRankedTable(vm.WeekendsCrashes, years, "WEEKEND"));
             body.AppendChild(SpacerParagraph());
@@ -100,7 +100,7 @@ public class FiveYearReportDocService
             body.AppendChild(BuildRankedTable(vm.WeekendsFatalities, years, "WEEKEND"));
             body.AppendChild(SpacerParagraph());
 
-            // ── Section 7: Demographics (data-quality caveat) ──
+            
             body.AppendChild(Heading("PROVINCE: VICTIMS PER AGE GROUP", size: 24));
             if (vm.DemographicsHasGaps)
             {
@@ -189,7 +189,7 @@ public class FiveYearReportDocService
             rows.Add(MakeRow(cells, widths));
         }
 
-        // TOTAL footer row, matching the reference document's tables
+        
         var totalCells = new List<string> { "TOTAL" };
         for (int i = 0; i < years.Length; i++)
             totalCells.Add(table.Rows.Sum(r => r.Years.Length > i ? r.Years[i] : 0).ToString());

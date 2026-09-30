@@ -62,11 +62,11 @@ public class UserAdminService : IUserAdminService
 
         var isSelf = currentUserId != null && currentUserId == id;
 
-        // Prevent deactivating your own account — same rule as UsersController.Edit.
+        
         if (isSelf && !isActive)
             return UserAdminResult.Fail(UserAdminOutcome.CannotDeactivateSelf);
 
-        // --- Profile fields ---
+        
         var emailChanged = !string.Equals(user.Email, email, StringComparison.OrdinalIgnoreCase);
         if (emailChanged)
         {
@@ -86,7 +86,7 @@ public class UserAdminService : IUserAdminService
         if (!updateResult.Succeeded)
             return UserAdminResult.Fail(UserAdminOutcome.IdentityError, updateResult.Errors.Select(e => e.Description).ToList());
 
-        // --- Role (read/written against AspNetUserRoles via Identity) ---
+       
         var currentRoles = await _users.GetRolesAsync(user);
         if (!currentRoles.Contains(role))
         {
@@ -95,7 +95,6 @@ public class UserAdminService : IUserAdminService
                 await _users.AddToRoleAsync(user, role);
         }
 
-        // --- Password (optional) ---
         if (!string.IsNullOrWhiteSpace(newPassword))
         {
             var token = await _users.GeneratePasswordResetTokenAsync(user);

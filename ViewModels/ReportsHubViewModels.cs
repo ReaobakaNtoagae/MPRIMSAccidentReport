@@ -19,6 +19,9 @@ public sealed class ReportsHubRequest
     public DateOnly? CompareTo { get; set; }
     public int? Quarter { get; set; }
     public int? Year { get; set; }
+    // Quarterly report only — false/null = calendar quarters, true = fiscal
+    // quarters (year starts 1 April). See QuarterlyReportDataService.
+    public bool? IsFiscalYear { get; set; }
     public int? Month { get; set; }
     public int? EndYear { get; set; }
     public string ReportDate { get; set; } = string.Empty;

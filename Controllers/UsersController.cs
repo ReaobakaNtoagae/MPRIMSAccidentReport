@@ -53,9 +53,7 @@ public class UsersController : Controller
         return Json(data);
     }
 
-    // GET: /Users/GetRoles — role name list for dropdowns, sourced from AspNetRoles
-    // (same table RolesController manages), so this list always matches whatever
-    // roles actually exist rather than a hardcoded copy living in the view.
+
     [HttpGet]
     [Authorize(Policy = Privileges.Admin.Users)]
     public async Task<IActionResult> GetRoles()

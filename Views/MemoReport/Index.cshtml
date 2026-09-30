@@ -279,10 +279,10 @@
 
 <div class="memo-layout">
 
-    <!-- ── LEFT: Controls ─────────────────────────────────────── -->
+    
     <div>
 
-        <!-- Period -->
+       
         <div class="memo-card">
             <div class="memo-card-head" style="cursor:default;">Report Period</div>
             <div class="memo-card-body">
@@ -313,7 +313,8 @@
             </div>
         </div>
 
-        <!-- Memo Header -->
+
+
         <div class="memo-card">
             <div class="memo-card-head" id="hdrToggle">
                 <span>Memo Header</span>
@@ -347,7 +348,7 @@
             </div>
         </div>
 
-        <!-- Actions -->
+        
         <div class="memo-card">
             <div class="memo-card-body" style="display:flex;flex-direction:column;gap:8px;">
                 <div id="btnPreview"></div>
@@ -357,7 +358,7 @@
 
     </div>
 
-    <!-- ── RIGHT: Preview ─────────────────────────────────────── -->
+    
     <div class="memo-card">
         <div class="memo-card-head" style="cursor:default;">
             <span>Data Preview</span>
@@ -379,14 +380,14 @@
 
             var previewData = null;
 
-            // ── Defaults ───────────────────────────────────────────────
+            
             var today        = new Date();
             var firstOfMonth = new Date(today.getFullYear(), today.getMonth(),     1);
             var lastOfMonth  = new Date(today.getFullYear(), today.getMonth() + 1, 0);
             var compFrom     = new Date(firstOfMonth); compFrom.setFullYear(compFrom.getFullYear() - 1);
             var compTo       = new Date(lastOfMonth);  compTo.setFullYear(compTo.getFullYear() - 1);
 
-            // ── Date pickers ───────────────────────────────────────────
+            
             var dateFromInst = $("#dateFromBox").dxDateBox({
                 type: "date", displayFormat: "dd/MM/yyyy", value: firstOfMonth,
                 max: new Date(),
@@ -427,7 +428,7 @@
                 }
             });
 
-            // ── Memo header fields ────────────────────────────────────
+            
             function tb(id, ph, val) {
                 return $(id).dxTextBox({ placeholder: ph, value: val || "", showClearButton: true })
                             .dxTextBox("instance");
@@ -443,7 +444,7 @@
             var enqNameInst  = tb("#enqNameBox",   "Enquiry name",                  "M C Mdhluli");
             var enqTelInst   = tb("#enqTelBox",    "Tel number",                    "082 802 6966");
 
-            // ── Collapsible header section ────────────────────────────
+            
             var hdrOpen = true;
             $("#hdrToggle").on("click", function () {
                 hdrOpen = !hdrOpen;
@@ -451,7 +452,7 @@
                 $("#hdrChevron").css("transform", hdrOpen ? "" : "rotate(-90deg)");
             });
 
-            // ── Build request ─────────────────────────────────────────
+            
             function buildRequest() {
                 function fmt(d) {
                     if (!d) return "";
@@ -476,7 +477,7 @@
                 };
             }
 
-            // ── Buttons ───────────────────────────────────────────────
+            
             $("#btnPreview").dxButton({
                 text: "Preview Data", type: "normal", icon: "find", width: "100%",
                 onClick: runPreview
@@ -539,7 +540,7 @@
                 });
             }
 
-            // ── Preview renderer ──────────────────────────────────────
+            
             function renderPreview(vm) {
                 var p  = vm.Provincial || {};
                 var c  = p.Current     || {};
@@ -550,7 +551,7 @@
 
                 var h = "";
 
-                // ── Tiles
+                /
                 h += '<div class="pv-section"><div class="pv-section-title">Provincial overview</div>';
                 h += '<div class="pv-tiles">';
                 [["Crashes", c.Crashes, pr.Crashes],
@@ -569,7 +570,7 @@
                 });
                 h += '</div></div>';
 
-                // ── Comparison table
+               
                 h += '<div class="pv-section"><div class="pv-section-title">Month comparison</div>';
                 h += minTable([
                     ["Crashes",          pr.Crashes,    c.Crashes   ],
@@ -578,7 +579,7 @@
                     ["Slight injuries",  pr.Slight,     c.Slight    ]
                 ], py, cy) + '</div>';
 
-                // ── 5-year history
+                
                 if (vm.FiveYearHistory && vm.FiveYearHistory.length > 0) {
                     h += '<div class="pv-section"><div class="pv-section-title">5-year history (' + vm.MonthName + ')</div>';
                     h += '<table class="pv-table"><thead><tr><th></th>';
@@ -594,7 +595,7 @@
                     h += '</tbody></table></div>';
                 }
 
-                // ── Victims
+              
                 h += '<div class="pv-section"><div class="pv-section-title">Fatal victims by category</div>';
                 h += minTable([
                     ["Drivers",     pr.FatalDrivers,     c.FatalDrivers    ],
@@ -603,7 +604,7 @@
                     ["Cyclists",    pr.FatalCyclists,    c.FatalCyclists   ]
                 ], py, cy) + '</div>';
 
-                // ── Serious injuries
+                
                 h += '<div class="pv-section"><div class="pv-section-title">Serious injuries by category</div>';
                 h += minTable([
                     ["Drivers",     pr.SeriousDrivers,     c.SeriousDrivers    ],
@@ -612,7 +613,7 @@
                     ["Cyclists",    pr.SeriousCyclists,    c.SeriousCyclists   ]
                 ], py, cy) + '</div>';
 
-                // ── Districts
+                
                 if (vm.Districts && vm.Districts.length > 0) {
                     h += '<div class="pv-section"><div class="pv-section-title">By district</div>';
                     h += '<table class="pv-table"><thead><tr><th></th>';
@@ -634,7 +635,7 @@
                     h += '</tbody></table></div>';
                 }
 
-                // ── Routes
+                
                 if (vm.ProvincialRoutes && vm.ProvincialRoutes.length > 0) {
                     h += '<div class="pv-section"><div class="pv-section-title">Provincial routes</div>';
                     h += '<table class="pv-table"><thead><tr><th>Route</th>' +
@@ -648,7 +649,7 @@
                     h += '</tbody></table></div>';
                 }
 
-                // ── Crash types
+                
                 if (vm.CrashTypes && vm.CrashTypes.length > 0) {
                     h += '<div class="pv-section"><div class="pv-section-title">Crash types</div>';
                     h += '<table class="pv-table"><thead><tr><th>Type</th>' +
@@ -662,7 +663,7 @@
                     h += '</tbody></table></div>';
                 }
 
-                // ── Time slots
+                
                 if (vm.TimeSlots && vm.TimeSlots.length > 0) {
                     h += '<div class="pv-section"><div class="pv-section-title">Prevalent times</div>';
                     h += minTable(
@@ -670,7 +671,7 @@
                         py, cy) + '</div>';
                 }
 
-                // ── Days of week
+                
                 var dow = (vm.DaysOfWeek || {}).Provincial || [];
                 if (dow.length > 0) {
                     h += '<div class="pv-section"><div class="pv-section-title">Days of the week</div>';
@@ -679,7 +680,7 @@
                         py, cy) + '</div>';
                 }
 
-                // ── Summary
+                
                 h += '<div class="pv-section"><div class="pv-section-title">Summary</div>';
                 h += '<div class="pv-summary">';
                 [["Crashes",    pr.Crashes,    c.Crashes   ],
@@ -701,7 +702,7 @@
                 $("#previewArea").html(h);
             }
 
-            // ── Minimal table helper ──────────────────────────────────
+            
             function minTable(rows, py, cy) {
                 var h = '<table class="pv-table"><thead><tr>' +
                         '<th></th><th>' + py + '</th><th>' + cy + '</th><th>Var</th>' +
@@ -727,7 +728,7 @@
                 return (curr >= prev ? "+" : "") + v + "%";
             }
 
-            // ── Loading helpers ───────────────────────────────────────
+           
             function showLoading(msg) {
                 $("#loadingText").text(msg || "Loading…");
                 $("#loadingOverlay").addClass("show");
@@ -736,7 +737,7 @@
                 $("#loadingOverlay").removeClass("show");
             }
 
-            // Auto-preview on load
+            
             runPreview();
         });
     </script>

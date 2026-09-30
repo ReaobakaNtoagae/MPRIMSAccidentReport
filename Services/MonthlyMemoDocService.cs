@@ -11,35 +11,13 @@ using DW = DocumentFormat.OpenXml.Drawing.Wordprocessing;
 
 namespace CrashReport.Services;
 
-/// <summary>
-/// Builds the Monthly/Quarterly/Six-Month/Annual memo Word document directly via
-/// DocumentFormat.OpenXml. This replaces the previous implementation, which shelled out to a
-/// Node.js subprocess (wwwroot/js/generate_monthly.js, which itself required wwwroot/js/charts.js)
-/// using the `docx` and `pngjs` npm packages — see old-app-remediation-plan.md item 8.
-///
-/// Every section, table, narrative sentence and chart below is a line-for-line port of
-/// generate_monthly.js. Nothing was shortened, reordered, or dropped, including a couple of
-/// quirks in the original that look like bugs but are preserved deliberately because "port
-/// faithfully" means porting the actual behaviour, not a corrected version of it:
-///   - Every chart is embedded at a fixed 520x260 box regardless of its actual raster size
-///     (580x300), so charts render slightly stretched — exactly as they always have.
-///   - CONCLUSION's percentage figures are actually the raw count difference run through
-///     Math.Abs(...).ToFixed(2), not a real percentage calculation.
-///   - The "PROVINCIAL DAYS OF THE WEEK" / per-district days tables key off
-///     vm.DaysOfWeek["Provincial"] and vm.Districts[i].Key, neither of which
-///     MonthlyMemoDataService currently populates — so those sections render nothing today,
-///     under Node.js or here. That's a data-service gap, not something this port introduces
-///     or should silently "fix".
-///
-/// Chart PNGs now come from <see cref="MonthlyMemoChartService"/> (the C# port of charts.js)
-/// instead of a Node subprocess call.
-/// </summary>
+
 public class MonthlyMemoDocService
 {
-    // ── Page ─────────────────────────────────────────────────────
+    
     private const int PW = 9638;
 
-    // ── Colours ──────────────────────────────────────────────────
+   
     private const string NAVY = "003366";
     private const string THEAD = "1F3864";
     private const string LGRAY = "F2F2F2";
@@ -55,11 +33,10 @@ public class MonthlyMemoDocService
         public const string DEFAULT = "000000";
     }
 
-    // Both chart PNGs are always rendered at this raster size (charts.js's CW/CH)...
+   
     private const int CW = 580;
     private const int CH = 300;
-    // ...but every embed in the document uses this fixed display box instead (see class
-    // remarks) — the aspect mismatch is a pre-existing, deliberately-preserved quirk.
+    
     private const int ChartBoxW = 520;
     private const int ChartBoxH = 260;
 
@@ -81,9 +58,7 @@ public class MonthlyMemoDocService
         return Task.FromResult(ms.ToArray());
     }
 
-    // ══════════════════════════════════════════════════════════════
-    // Document body
-    // ══════════════════════════════════════════════════════════════
+    
     private Body BuildBody(MonthlyMemoViewModel vm, ImageEmbedder embedder)
     {
         var body = new Body();
@@ -94,10 +69,7 @@ public class MonthlyMemoDocService
         var py = vm.PriorYear;
         var hist = vm.FiveYearHistory ?? new List<YearHistory>();
 
-        // ── Chart generation (mirrors generate_monthly.js's "Existing chart generation"
-        // block). fig1 (a grouped-bar chart) and pctChg() are computed in the JS source but
-        // never used/called anywhere — confirmed dead code, so they are not ported here; the
-        // rendered document is identical either way. ─────────────────────────────────────
+       
 
         var metrics = new[] { "Crashes", "Fatalities", "Serious", "Slight" };
 
@@ -312,7 +284,7 @@ public class MonthlyMemoDocService
         }
         body.AppendChild(Blank(160));
 
-        // ── PURPOSE ───────────────────────────────────────────────
+
         body.AppendChild(Heading("PURPOSE"));
         body.AppendChild(P(R($"To inform the Member of the Executive Council, of crashes and fatalities recorded in the province for the period {vm.PeriodFrom} to {vm.PeriodTo}, as compared with the same period the previous year.", size: "20"), after: "120"));
         body.AppendChild(Blank());
@@ -347,7 +319,7 @@ public class MonthlyMemoDocService
         }) + " as compared with the same period the previous year."));
         body.AppendChild(Blank());
 
-        // ── AVERAGE PER DAY ───────────────────────────────────────
+        
         body.AppendChild(P(R("AVERAGE PER DAY", bold: true, size: "20"), after: "80"));
         {
             var days = vm.DaysInPeriod > 0 ? vm.DaysInPeriod : 30;
@@ -369,7 +341,7 @@ public class MonthlyMemoDocService
             body.AppendChild(Blank());
         }
 
-        // ── 5-year history + FIGURE 2 ─────────────────────────────
+       
         if (hist.Count > 0)
         {
             var avgC = hist.Average(h => h.Crashes);
@@ -391,7 +363,7 @@ public class MonthlyMemoDocService
             body.AppendChild(Blank());
         }
 
-        // ── PROVINCIAL FATALITIES: AGE GROUP AND GENDER ───────────
+       
         var hasAge = ageData.Count > 0;
         var hasGender = genderData.Count > 0;
         if (hasAge || hasGender)
@@ -418,7 +390,7 @@ public class MonthlyMemoDocService
             body.AppendChild(Blank());
         }
 
-        // ── CATEGORIES OF VICTIMS (Fatal) ─────────────────────────
+        
         body.AppendChild(P(R("CATEGORIES OF VICTIMS", bold: true, size: "20"), after: "80"));
         body.AppendChild(CompTable(new List<(string, int?, int?)>
         {
@@ -439,7 +411,7 @@ public class MonthlyMemoDocService
         }) + " as compared with the same period the previous year."));
         body.AppendChild(Blank());
 
-        // ── SERIOUS INJURIES ───────────────────────────────────────
+        
         body.AppendChild(P(R("SERIOUS INJURIES", bold: true, size: "20"), after: "80"));
         body.AppendChild(CompTable(new List<(string, int?, int?)>
         {
@@ -460,7 +432,7 @@ public class MonthlyMemoDocService
         }) + " as compared with the same period the previous year."));
         body.AppendChild(Blank());
 
-        // ── SLIGHT INJURIES ────────────────────────────────────────
+        
         body.AppendChild(P(R("SLIGHT INJURIES", bold: true, size: "20"), after: "80"));
         body.AppendChild(CompTable(new List<(string, int?, int?)>
         {
@@ -481,7 +453,7 @@ public class MonthlyMemoDocService
         }) + " as compared with the same period the previous year."));
         body.AppendChild(Blank());
 
-        // ── COMPARISON BY DISTRICT ─────────────────────────────────
+        
         var districts = vm.Districts ?? new List<DistrictMemoStats>();
         body.AppendChild(P(R($"COMPARISON BY DISTRICT: {vm.PeriodFrom} – {vm.PeriodTo} AS COMPARED WITH THE SAME PERIOD THE PREVIOUS YEAR.", bold: true, size: "20"), after: "80"));
         body.AppendChild(DistTable(districts, py, cy, new (string, Func<DistrictMemoStats, int?>, Func<DistrictMemoStats, int?>)[]
@@ -493,7 +465,7 @@ public class MonthlyMemoDocService
         }));
         body.AppendChild(Blank());
 
-        // ── VICTIMS PER DISTRICT ────────────────────────────────────
+        
         body.AppendChild(P(R("CATEGORIES OF VICTIMS PER DISTRICT", bold: true, size: "20"), after: "80"));
         body.AppendChild(DistTable(districts, py, cy, new (string, Func<DistrictMemoStats, int?>, Func<DistrictMemoStats, int?>)[]
         {
@@ -522,7 +494,7 @@ public class MonthlyMemoDocService
         }));
         body.AppendChild(Blank());
 
-        // ── PROVINCIAL PROBLEMATIC ROUTES ────────────────────────────
+        
         if (vm.ProvincialRoutes != null && vm.ProvincialRoutes.Count > 0)
         {
             var rf = c.Fatalities != 0 ? c.Fatalities : 1;
@@ -539,7 +511,7 @@ public class MonthlyMemoDocService
             }
         }
 
-        // ── REGIONAL PROBLEMATIC ROUTES ──────────────────────────────
+        
         body.AppendChild(Heading("REGIONAL PROBLEMATIC ROUTES"));
         foreach (var d in districts)
         {
@@ -552,7 +524,7 @@ public class MonthlyMemoDocService
             body.AppendChild(Blank());
         }
 
-        // ── PROVINCIAL CRASHES TYPES ──────────────────────────────────
+        
         if (vm.CrashTypes != null && vm.CrashTypes.Count > 0)
         {
             body.AppendChild(Heading("PROVINCIAL CRASHES TYPES"));
@@ -561,11 +533,7 @@ public class MonthlyMemoDocService
 
             var sortedByFatalities = vm.CrashTypes.OrderByDescending(ct => ct.FatalCurr).ToList();
             body.AppendChild(P(R("Priority crashes that make up the highest number of fatalities are as follows:", size: "20"), after: "60"));
-            // NOTE: generate_monthly.js renders these via the docx library's built-in bullet
-            // numbering (`bullet:{level:0}`), which has no OpenXml equivalent without adding a
-            // NumberingDefinitionsPart the codebase doesn't otherwise have. A manual bullet
-            // glyph produces the identical visual result and is exactly what this same script
-            // already does a few sections down, in CONCLUSION.
+            
             foreach (var ct in sortedByFatalities)
             {
                 body.AppendChild(P(new[] { R("•  ", bold: true, size: "20"), R(ct.Type, bold: true, size: "21") },
@@ -574,7 +542,7 @@ public class MonthlyMemoDocService
             body.AppendChild(Blank());
         }
 
-        // ── PROVINCIAL VEHICLE CATEGORIES ────────────────────────────
+        
         if (vm.VehicleCategories != null && vm.VehicleCategories.Count > 0)
         {
             body.AppendChild(Heading("PROVINCIAL VEHICLE CATEGORIES"));
@@ -584,7 +552,7 @@ public class MonthlyMemoDocService
             body.AppendChild(Blank());
         }
 
-        // ── PROVINCIAL PREVALENT TIMES ────────────────────────────────
+       
         {
             body.AppendChild(Heading("PROVINCIAL PREVALENT TIMES"));
             body.AppendChild(P(R("Fatalities are mostly prevalent between 14h00 to 06h00. The table that follows indicates the times and number of crashes in the Province and all Districts respectively.", size: "20"), after: "80"));
@@ -607,7 +575,7 @@ public class MonthlyMemoDocService
             }
         }
 
-        // ── DAYS OF THE WEEK ───────────────────────────────────────────
+        
         if (dowProv.Count > 0)
         {
             body.AppendChild(Heading("PROVINCIAL DAYS OF THE WEEK"));
@@ -640,7 +608,7 @@ public class MonthlyMemoDocService
             }
         }
 
-        // ── CONCLUSION ───────────────────────────────────────────────
+        
         var cV = Variation(pr.Crashes, c.Crashes);
         var fV = Variation(pr.Fatalities, c.Fatalities);
         var sV = Variation(pr.Serious, c.Serious);
@@ -661,7 +629,6 @@ public class MonthlyMemoDocService
         }
         body.AppendChild(Blank(120));
 
-        // ── RECOMMENDATIONS ────────────────────────────────────────────
         body.AppendChild(Heading("RECOMMENDATIONS"));
         body.AppendChild(P(R("It is recommended that the MEC takes note of the contents of the report and give guidance where he deems necessary.", size: "20"), after: "300"));
         body.AppendChild(Blank(300));
@@ -680,9 +647,7 @@ public class MonthlyMemoDocService
         return body;
     }
 
-    // ══════════════════════════════════════════════════════════════
-    // Table builders (each is a direct port of the matching function in generate_monthly.js)
-    // ══════════════════════════════════════════════════════════════
+  
 
     private static Table CompTable(List<(string Label, int? Prev, int? Curr)> rows, int py, int cy)
     {
@@ -962,10 +927,7 @@ public class MonthlyMemoDocService
         return table;
     }
 
-    // ══════════════════════════════════════════════════════════════
-    // Cell / paragraph / run primitives (house style, ported from generate_monthly.js's
-    // run()/para()/heading()/blank()/hdrCell()/dataCell()/labelCell())
-    // ══════════════════════════════════════════════════════════════
+    
 
     private static string MetricColor(string label)
     {
@@ -983,9 +945,7 @@ public class MonthlyMemoDocService
 
     private static Run R(string text, string font = "Arial", string size = "20", bool bold = false, string color = BLACK)
     {
-        // Property order (RunFonts, Bold, FontSize, Color) matches StandbyReportWordService's
-        // established house style — kept consistent even though it isn't strict CT_RPr schema
-        // order, since that's what the existing, working reports already do.
+       
         var rpr = new RunProperties(new RunFonts { Ascii = font, HighAnsi = font });
         if (bold) rpr.AppendChild(new Bold());
         rpr.AppendChild(new FontSize { Val = size });
@@ -996,8 +956,7 @@ public class MonthlyMemoDocService
     private static Paragraph P(IEnumerable<Run> runs, JustificationValues? align = null,
         string before = "0", string after = "120", string? indentLeft = null)
     {
-        // JustificationValues isn't a compile-time-constant-eligible default in this SDK
-        // version (CS1736), so the "no override" case is a null default resolved here instead.
+        
         var ppr = new ParagraphProperties(
             new Justification { Val = align ?? JustificationValues.Left },
             new SpacingBetweenLines { Before = before, After = after });
@@ -1082,10 +1041,7 @@ public class MonthlyMemoDocService
         return table;
     }
 
-    // ══════════════════════════════════════════════════════════════
-    // Narrative helpers (ported from generate_monthly.js: numWords/W/chg/changedList/joinList/variation)
-    // ══════════════════════════════════════════════════════════════
-
+  
     private static string Variation(int? prev, int? curr)
     {
         var p = prev ?? 0;
@@ -1095,8 +1051,7 @@ public class MonthlyMemoDocService
         return (cu >= p ? "+" : "") + diff;
     }
 
-    // Mirrors JS `Math.abs(parseFloat(variation)).toFixed(2)` used (as-is, quirks included —
-    // see class remarks) in CONCLUSION. parseFloat("N/A") -> NaN -> "NaN" in the rendered text.
+   
     private static string FmtPct(string variationText)
     {
         var m = Regex.Match(variationText, @"^[+-]?\d+(\.\d+)?");
@@ -1143,11 +1098,7 @@ public class MonthlyMemoDocService
         return string.Join(" while ", parts);
     }
 
-    // ══════════════════════════════════════════════════════════════
-    // Image embedding (no prior precedent in this codebase — StandbyReportWordService and
-    // FiveYearReportDocService embed no images). Converts each chart PNG into an inline
-    // w:drawing the same way Word itself does: an ImagePart plus a wp:inline/a:graphic tree.
-    // ══════════════════════════════════════════════════════════════
+    
     private sealed class ImageEmbedder
     {
         private readonly MainDocumentPart _mainPart;
@@ -1207,7 +1158,7 @@ public class MonthlyMemoDocService
         }
     }
 
-    // ── Page layout: A4 portrait, matching generate_monthly.js's section.properties.page ──
+    
     private static void ApplyPageLayout(MainDocumentPart main)
     {
         var body = main.Document.Body!;

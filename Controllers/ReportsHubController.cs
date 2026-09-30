@@ -59,7 +59,7 @@ public sealed class ReportsHubController : Controller
         {
             ReportsHubType.Monthly => MapMonthly(await _monthlyData.BuildAsync(ToMonthly(request))),
             ReportsHubType.Quarterly => MapMonthly(await _quarterlyData.BuildAsync(ToQuarterly(request))),
-            ReportsHubType.SixMonth => MapMonthly(await _monthlyData.BuildAsync(ToFixedPeriod(request, 6))),
+            ReportsHubType.SixMonth => MapMonthly(await _monthlyData.BuildAsync(ToMonthly(request))),
             ReportsHubType.Annual => MapMonthly(await _monthlyData.BuildAsync(ToFixedPeriod(request, 12))),
             ReportsHubType.FiveYear => MapFiveYear(await _fiveYearData.BuildAsync(ToFiveYear(request))),
             _ => MapStandby(await _standbyData.BuildAsync(
@@ -87,12 +87,13 @@ public sealed class ReportsHubController : Controller
             case ReportsHubType.Quarterly:
                 var quarterly = await _quarterlyData.BuildAsync(ToQuarterly(request));
                 bytes = await _monthlyDoc.GenerateAsync(quarterly);
-                fileName = $"Quarterly_Report_Q{request.Quarter}_{request.Year}.docx";
+                var basisSuffix = request.IsFiscalYear == true ? "_FY" : "";
+                fileName = $"Quarterly_Report_Q{request.Quarter}_{request.Year}{basisSuffix}.docx";
                 break;
             case ReportsHubType.SixMonth:
-                var sixMonth = await _monthlyData.BuildAsync(ToFixedPeriod(request, 6));
+                var sixMonth = await _monthlyData.BuildAsync(ToMonthly(request));
                 bytes = await _monthlyDoc.GenerateAsync(sixMonth);
-                fileName = $"Six_Month_Report_January_to_June_{request.Year}.docx";
+                fileName = $"Six_Month_Report_{request.DateFrom:yyyy-MM-dd}_to_{request.DateTo:yyyy-MM-dd}.docx";
                 break;
             case ReportsHubType.Annual:
                 var annual = await _monthlyData.BuildAsync(ToFixedPeriod(request, 12));
@@ -130,15 +131,26 @@ public sealed class ReportsHubController : Controller
 
     private static string? Validate(ReportsHubRequest request) => request.ReportType switch
     {
-        ReportsHubType.Standby or ReportsHubType.Monthly
+        ReportsHubType.Standby or ReportsHubType.Monthly or ReportsHubType.SixMonth
             when request.DateFrom is null || request.DateTo is null || request.DateFrom > request.DateTo
             => "Enter a valid current reporting period.",
-        ReportsHubType.Monthly
+        // Six-month used to be a fixed 1 Jan - 30 Jun window derived from a single
+        // Year field; it's now fully free-form (any current period vs. any
+        // comparison period), same as Monthly — so it shares Monthly's stricter
+        // "both periods required" rule rather than Standby's optional one.
+        ReportsHubType.Monthly or ReportsHubType.SixMonth
             when request.CompareFrom is null || request.CompareTo is null || request.CompareFrom > request.CompareTo
             => "Enter a valid comparison period.",
+        // Quarterly supports two bases (request.IsFiscalYear): calendar quarters
+        // (Year = the calendar year) or fiscal quarters, where the department's
+        // year starts 1 April and "Year" is the fiscal year's starting calendar
+        // year (year=2025 means FY2025/26, 1 Apr 2025 - 31 Mar 2026) — see
+        // QuarterlyReportDataService.
         ReportsHubType.Quarterly when request.Quarter is < 1 or > 4 || request.Year is null
             => "Select a valid quarter and year.",
-        ReportsHubType.SixMonth or ReportsHubType.Annual
+        // Annual is still a plain calendar year (1 Jan - 31 Dec) — deliberately
+        // not offered on a fiscal-year basis alongside Quarterly.
+        ReportsHubType.Annual
             when request.Year is < 2000 or > 2100
             => "Select a valid reporting year.",
         ReportsHubType.FiveYear when request.Month is < 1 or > 12 || request.EndYear is null
@@ -166,6 +178,7 @@ public sealed class ReportsHubController : Controller
     {
         Quarter = r.Quarter!.Value,
         Year = r.Year!.Value,
+        IsFiscalYear = r.IsFiscalYear ?? false,
         ReportDate = r.ReportDate,
         RefNumber = r.RefNumber,
         EnquiryName = r.EnquiryName,
@@ -178,9 +191,12 @@ public sealed class ReportsHubController : Controller
 
     private static MemoReportRequest ToFixedPeriod(ReportsHubRequest r, int months)
     {
-        // Six-month and annual reports use the established memo dataset and document
-        // structure; only their date window changes. This avoids duplicating tested
-        // aggregation logic for districts, routes, casualties and demographics.
+        // Annual-only now (months is always 12 from the two call sites above) —
+        // Six-Month used to share this helper too but now takes fully free-form
+        // dates via ToMonthly instead, same as the Monthly report. Kept as a
+        // general "N months from 1 January" helper rather than inlining 12
+        // directly, since Annual's own reuse of the established memo dataset and
+        // document structure is the point, not the parameterization.
         var year = r.Year!.Value;
         var from = new DateOnly(year, 1, 1);
         var to = from.AddMonths(months).AddDays(-1);

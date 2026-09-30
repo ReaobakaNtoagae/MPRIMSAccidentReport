@@ -62,9 +62,7 @@ public class FiveYearReportDataService : MonthlyMemoDataService
             FromTitle = req.FromTitle
         };
 
-        // Load all 5 years of crash rows for this month up front — every
-        // section below just filters/aggregates this same in-memory set,
-        // rather than re-querying the database per section.
+        
         var rowsByYear = new Dictionary<int, List<Row>>();
         foreach (var y in years)
         {
@@ -73,9 +71,7 @@ public class FiveYearReportDataService : MonthlyMemoDataService
             rowsByYear[y] = await LoadAsync(from, to);
         }
 
-        // Districts are discovered from whatever the 5 years of data actually contain
-        // (each row's District is already resolved in LoadAsync via IStationDistrictLookup),
-        // rather than a hardcoded list — same approach as MonthlyMemoDataService.BuildCoreAsync.
+        
         var districtNames = rowsByYear.Values.SelectMany(rows => rows)
             .Select(r => r.District)
             .Where(d => !string.IsNullOrWhiteSpace(d) && !string.Equals(d, "Unknown", StringComparison.OrdinalIgnoreCase))
@@ -83,36 +79,36 @@ public class FiveYearReportDataService : MonthlyMemoDataService
             .OrderBy(d => d, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        // ── Section 1: Regional status summaries ──
+      
         vm.RegionSummaries.Add(BuildRegionSummary("PROVINCIAL", years, rowsByYear, null));
         foreach (var name in districtNames)
             vm.RegionSummaries.Add(BuildRegionSummary(name, years, rowsByYear, name));
 
-        // ── Section 2: Problematic routes — Provincial + each region ──
+        
         vm.ProvincialRoutes = BuildRegionRouteData("PROVINCIAL", years, rowsByYear, null);
         foreach (var name in districtNames)
             vm.RegionRoutes.Add(BuildRegionRouteData(name, years, rowsByYear, name));
 
-        // ── Section 3: Crash types & vehicle categories ──
+        
         vm.CrashTypes = BuildCrashTypeRanking(years, rowsByYear);
         vm.VehicleCategories = BuildVehicleCategoryRanking(years, rowsByYear);
 
-        // ── Section 4: Time of day ──
+        
         (vm.TimeSlotsCrashes, vm.TimeSlotsFatalities) = BuildTimeSlotRanking(years, rowsByYear);
 
-        // ── Section 5: Day of week ──
+        
         (vm.DaysOfWeekCrashes, vm.DaysOfWeekFatalities) = BuildDayOfWeekRanking(years, rowsByYear);
 
-        // ── Section 6: Shock weekend ──
+        
         (vm.WeekendsCrashes, vm.WeekendsFatalities) = BuildWeekendRanking(req.Month, years, rowsByYear);
 
-        // ── Section 7: Demographics (caveat applies) ──
+       
         await PopulateDemographicsAsync(vm, req.Month, years);
 
         return vm;
     }
 
-    // ── Section 1 helper ──────────────────────────────────────────
+    
     private static RegionSummary BuildRegionSummary(
         string displayName, int[] years, Dictionary<int, List<Row>> rowsByYear, string? districtName)
     {
@@ -145,7 +141,7 @@ public class FiveYearReportDataService : MonthlyMemoDataService
         };
     }
 
-    // ── Section 2 helper ──────────────────────────────────────────
+    
     private static RegionRouteData BuildRegionRouteData(
         string displayName, int[] years, Dictionary<int, List<Row>> rowsByYear, string? districtName)
     {
@@ -189,7 +185,7 @@ public class FiveYearReportDataService : MonthlyMemoDataService
         };
     }
 
-    // ── Section 3 helpers ────────────────────────────────────────
+   
     private static RankedTable BuildCrashTypeRanking(int[] years, Dictionary<int, List<Row>> rowsByYear)
     {
         var rows = CrashTypeList.Select(type => new RankedRow
@@ -224,7 +220,7 @@ public class FiveYearReportDataService : MonthlyMemoDataService
         return new RankedTable { Title = "PROVINCIAL VEHICLE CATEGORIES", Rows = rows };
     }
 
-    // ── Section 4 helper ────────────────────────────────────────
+    
     private static (RankedTable Crashes, RankedTable Fatalities) BuildTimeSlotRanking(
         int[] years, Dictionary<int, List<Row>> rowsByYear)
     {
@@ -248,7 +244,7 @@ public class FiveYearReportDataService : MonthlyMemoDataService
         );
     }
 
-    // ── Section 5 helper ────────────────────────────────────────
+    
     private static (RankedTable Crashes, RankedTable Fatalities) BuildDayOfWeekRanking(
         int[] years, Dictionary<int, List<Row>> rowsByYear)
     {
@@ -272,7 +268,7 @@ public class FiveYearReportDataService : MonthlyMemoDataService
         );
     }
 
-    // ── Section 6 helper — "shock weekend" ──────────────────────
+    
     private static (RankedTable Crashes, RankedTable Fatalities) BuildWeekendRanking(
         int month, int[] years, Dictionary<int, List<Row>> rowsByYear)
     {
@@ -324,7 +320,7 @@ public class FiveYearReportDataService : MonthlyMemoDataService
         for (var d = monthStart; d <= monthEnd; d = d.AddDays(1))
         {
             if (d.DayOfWeek == DayOfWeek.Friday)
-                weekends.Add((d, d.AddDays(2))); // Friday → Sunday, may spill into next month
+                weekends.Add((d, d.AddDays(2))); 
         }
 
         return weekends;
@@ -337,7 +333,7 @@ public class FiveYearReportDataService : MonthlyMemoDataService
         return $"{start.Day:D2}-{end.Day:D2} {months[end.Month]}";
     }
 
-    // ── Section 7 helper — demographics (data-quality caveat) ──
+    
     private async Task PopulateDemographicsAsync(FiveYearReportViewModel vm, int month, int[] years)
     {
         var ageLabels = new[] { "0-7", "08-12", "13-18", "19-35", "36+" };
@@ -357,7 +353,7 @@ public class FiveYearReportDataService : MonthlyMemoDataService
             var record = await _context.CrashDemographics
                 .FirstOrDefaultAsync(d => d.PeriodFrom == from && d.PeriodTo == to && d.ProvinceCode == "MP");
 
-            if (record == null) continue; // no submission for this year/month — leave as a gap, not a zero
+            if (record == null) continue; 
 
             yearsWithData.Add(y);
 
@@ -386,7 +382,7 @@ public class FiveYearReportDataService : MonthlyMemoDataService
         vm.FemaleByRole = femaleByLabel.Select(kv => new DemographicYearRow { Label = kv.Key, ByYear = kv.Value }).ToList();
     }
 
-    // ── Shared ────────────────────────────────────────────────────
+    
     private static void ApplyPercent(List<RankedRow> rows)
     {
         var grandTotal = rows.Sum(r => r.Total);

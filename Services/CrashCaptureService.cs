@@ -28,8 +28,7 @@ public class CrashCaptureService : ICrashCaptureService
             return new CrashSubmitResult { Outcome = CrashSubmitOutcome.EmptyForm };
         }
 
-        // Normalise before validation and saving so duplicate checks use the same key.
-        // SapsStation is the accident report field submitted by the full-capture wizard.
+        
         var formNode = JsonNode.Parse(formJson);
         try
         {
@@ -48,18 +47,11 @@ public class CrashCaptureService : ICrashCaptureService
             };
         }
 
-        // Validated by deserializing formJson into the ViewModel SEPARATELY from the
-        // raw JsonDocument parsing the save logic below still uses -- the ViewModel
-        // is a narrower slice of the real posted data (it doesn't cover every field
-        // the raw parse does), so it's used for validation only, never as the save
-        // path itself.
         var vmForValidation = JsonSerializer.Deserialize<CrashReportFormViewModel>(
             formJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new();
 
         var validationErrors = await _validation.ValidateAsync(vmForValidation, existingCrashId: null);
-        // A full report may follow an imported/quick summary because it is the
-        // authoritative source. Only a second full report is a genuine duplicate.
-        // Preserve the posted form when rejecting one so the user loses no work.
+       
         using (var duplicateDocument = JsonDocument.Parse(formJson))
         {
             if (duplicateDocument.RootElement.TryGetProperty("CrashInfo", out var info))
@@ -83,9 +75,7 @@ public class CrashCaptureService : ICrashCaptureService
         // Start a transaction to guarantee all-or-nothing
         await using var transaction = await _context.Database.BeginTransactionAsync();
 
-        // Tracks whether this CrNo already exists as a Quick Add / imported
-        // CrashSummary. NOT used to block the save -- see the check itself,
-        // set inside the CRASH INFO section below once crash.CrNo is known.
+        
         var existsAsSummary = false;
 
         try
@@ -96,7 +86,7 @@ public class CrashCaptureService : ICrashCaptureService
             var crash = new Crash();
             _context.Crashes.Add(crash);
 
-            // ========== 1. CRASH INFO ==========
+           
             if (root.TryGetProperty("CrashInfo", out var crashInfo))
             {
                 crash.CasNo = GetString(crashInfo, "CasNo");
@@ -116,25 +106,15 @@ public class CrashCaptureService : ICrashCaptureService
                 if (crashInfo.TryGetProperty("CrashTime", out var timeEl) && timeEl.ValueKind == JsonValueKind.String)
                     crash.CrashTime = TimeOnly.TryParse(timeEl.GetString(), out var t) ? t : null;
 
-                // VehicleString will be auto-generated later; keep if sent by UI.
+               
                 crash.VehicleString = GetString(crashInfo, "VehicleString");
 
-                // Allow-and-warn, not block -- symmetric with the same check in
-                // CreateSummaryController.CreateSummary. The same physical CR1 form
-                // can legitimately reach the system through both paths (a Cost
-                // Centre Quick Adds a summary before an officer gets around to
-                // digitizing the full form for the same crash), so blocking here
-                // would reject the richer, more authoritative record just because a
-                // thinner one arrived first. MonthlyMemoDataService.LoadAsync
-                // already deduplicates by CrNo across both tables before counting
-                // anything in a report, so this is safe from a reporting
-                // standpoint -- flagging it is for reconciliation visibility, not
-                // correctness.
+                
                 if (!string.IsNullOrWhiteSpace(crash.CrNo))
                     existsAsSummary = await _context.CrashSummaries.AnyAsync(s => s.CrNo == crash.CrNo);
             }
 
-            // ========== 2. LOCATION ==========
+            
             if (root.TryGetProperty("Location", out var location))
             {
                 var crashLocation = new CrashLocation
@@ -166,7 +146,7 @@ public class CrashCaptureService : ICrashCaptureService
                 _context.CrashLocations.Add(crashLocation);
             }
 
-            // ========== 3. CONDITIONS ==========
+            
             if (root.TryGetProperty("Conditions", out var conditions))
             {
                 var crashCondition = new CrashCondition
@@ -231,18 +211,18 @@ public class CrashCaptureService : ICrashCaptureService
                     _context.Vehicles.Add(vehicle);
                     await _context.SaveChangesAsync();
 
-                    // Collect makes for VehicleString
+                   
                     if (!string.IsNullOrEmpty(vehicle.Make))
                         vehicleMakes.Add(vehicle.Make);
 
-                    // ---- 4b. CrashVehicle (link + crash-specific data) ----
+                   
                     var crashVehicle = new CrashVehicle
                     {
                         Crash = crash,
                         Vehicle = vehicle,
                         VehicleReference = GetString(ve, "VehicleReference"),
                         VehicleManoeuvre = GetString(ve, "VehicleManoeuvre"),
-                        SeatbeltUsed = GetString(ve, "SeatbeltHelmetUsed"),  // <-- mapped from frontend
+                        SeatbeltUsed = GetString(ve, "SeatbeltHelmetUsed"),  
                         AlcoholSuspected = GetString(ve, "AlcoholSuspected"),
                         AlcoholTestResult = GetString(ve, "AlcoholTestResult"),
                         DrugSuspected = GetString(ve, "DrugSuspected"),
@@ -254,9 +234,9 @@ public class CrashCaptureService : ICrashCaptureService
 
                     };
                     _context.CrashVehicles.Add(crashVehicle);
-                    await _context.SaveChangesAsync(); // needed to get CrashVehicleId for damages
+                    await _context.SaveChangesAsync(); 
 
-                    // ---- 4c. VehicleDamages ----
+                    
                     if (ve.TryGetProperty("VehicleDamages", out var damages) && damages.ValueKind == JsonValueKind.Array)
                     {
                         foreach (var damage in damages.EnumerateArray())
@@ -272,7 +252,7 @@ public class CrashCaptureService : ICrashCaptureService
                         }
                     }
 
-                    // ---- 4d. DangerousGoods ----
+
                     if (!string.IsNullOrWhiteSpace(GetString(ve, "GoodsCarried")) ||
                         !string.IsNullOrWhiteSpace(GetString(ve, "UnNumber")) ||
                         !string.IsNullOrWhiteSpace(GetString(ve, "CompanyName")))
@@ -291,7 +271,7 @@ public class CrashCaptureService : ICrashCaptureService
                         });
                     }
 
-                    // ---- 4e. Driver (Person) ----
+                    
                     var driverSurname = GetString(ve, "DriverSurname");
                     if (!string.IsNullOrEmpty(driverSurname))
                     {
@@ -317,7 +297,7 @@ public class CrashCaptureService : ICrashCaptureService
 
                         crashVehicle.DriverPersonId = driver.PersonId;
 
-                        // ---- Driver Licence ----
+
                         if (!string.IsNullOrEmpty(GetString(ve, "LicenceCode")))
                         {
                             _context.DriversLicences.Add(new DriversLicence
@@ -331,7 +311,7 @@ public class CrashCaptureService : ICrashCaptureService
                             });
                         }
 
-                        // ---- CrashPerson (Driver) ----
+                        
                         _context.CrashPeople.Add(new CrashPerson
                         {
                             Crash = crash,
@@ -441,13 +421,7 @@ public class CrashCaptureService : ICrashCaptureService
             }
 
 
-            // Passengers visibly not injured -- a separate, lighter section on the
-            // physical form (Page 3), deliberately not routed through the same
-            // fields as injured persons above. Reuses Person/CrashPerson directly
-            // (no new table) -- SeverityOfInjury = "No injury" is the same fourth
-            // severity code the paper form already lists (Fatal/Serious/Slight/No
-            // injury), just reached through a five-field fast path instead of the
-            // full injured-person form.
+            
             if (root.TryGetProperty("UninjuredPassengers", out var uninjured) && uninjured.ValueKind == JsonValueKind.Array)
             {
                 foreach (var up in uninjured.EnumerateArray())
@@ -491,7 +465,7 @@ public class CrashCaptureService : ICrashCaptureService
             }
 
 
-            // 6. CONTRIBUTORY FACTORS
+            
             if (root.TryGetProperty("Factors", out var factors) && factors.ValueKind == JsonValueKind.Array)
             {
                 foreach (var f in factors.EnumerateArray())
@@ -509,7 +483,7 @@ public class CrashCaptureService : ICrashCaptureService
                 }
             }
 
-            // ========== 7. WITNESSES ==========
+
             if (root.TryGetProperty("Witnesses", out var witnesses) && witnesses.ValueKind == JsonValueKind.Array)
             {
                 foreach (var w in witnesses.EnumerateArray())
@@ -529,7 +503,7 @@ public class CrashCaptureService : ICrashCaptureService
                 }
             }
 
-            // ========== OFFICIAL USE ==========
+            
             if (root.TryGetProperty("OfficialUse", out var officialUse))
             {
                 var official = new OfficialUse
@@ -557,7 +531,7 @@ public class CrashCaptureService : ICrashCaptureService
                     Comments = GetString(officialUse, "Comments")
                 };
 
-                // Handle dates
+                
                 if (officialUse.TryGetProperty("DateStamp", out var dateStampEl) && dateStampEl.ValueKind == JsonValueKind.String)
                     official.DateStamp = DateOnly.TryParse(dateStampEl.GetString(), out var ds) ? ds : null;
 
@@ -684,9 +658,7 @@ public class CrashCaptureService : ICrashCaptureService
         return true;
     }
 
-    // ── Tolerant JSON field extraction — the capture wizard's payload shape has
-    // drifted over time, so these read defensively rather than assume every field
-    // is present or in the expected JSON kind. Moved verbatim from HomeController.
+   
 
     private static string? GetString(JsonElement element, string propertyName)
     {
@@ -707,7 +679,7 @@ public class CrashCaptureService : ICrashCaptureService
                 }
                 catch
                 {
-                    // If it's a larger number, try to convert
+                    
                     if (prop.TryGetInt32(out var intVal))
                     {
                         return Convert.ToInt16(Math.Min(intVal, short.MaxValue));
@@ -736,7 +708,7 @@ public class CrashCaptureService : ICrashCaptureService
                 }
                 catch
                 {
-                    // If it's a larger number, try to convert
+                    
                     if (prop.TryGetInt32(out var intVal))
                     {
                         return Convert.ToByte(Math.Min(intVal, byte.MaxValue));

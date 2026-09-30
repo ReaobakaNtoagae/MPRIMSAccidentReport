@@ -49,12 +49,12 @@ public class RoleAdminService : IRoleAdminService
         if (role == null)
             return RoleAdminOutcome.NotFound;
 
-        // Remove all existing privilege claims
+        
         var existing = await _roles.GetClaimsAsync(role);
         foreach (var claim in existing.Where(c => c.Type == Privileges.ClaimType))
             await _roles.RemoveClaimAsync(role, claim);
 
-        // Add the new set
+        
         foreach (var priv in privileges)
             await _roles.AddClaimAsync(role, new Claim(Privileges.ClaimType, priv));
 

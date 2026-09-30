@@ -2,6 +2,7 @@
     ViewData["Title"] = "Dashboard";
     var mode = ViewBag.DashboardMode as string ?? "none";
     var roleLabel = ViewBag.RoleLabel as string ?? "";
+    var fullName = User.FindFirst("FullName")?.Value;
     var userDistrict = ViewBag.UserDistrict as string;
     var userStation = ViewBag.UserStation as string;
     bool canView = ViewBag.CanView;
@@ -34,85 +35,79 @@
 }
 
 <style>
+    /* ── KPI cards — white card + icon-in-square + big number, matching
+             the dashboard prototype's card language instead of the old
+             flat tinted tile with a left accent stripe. ────────────────── */
     .kpi-grid {
         display: grid;
         grid-template-columns: repeat(4, 1fr);
-        gap: 16px;
+        gap: 18px;
         margin-bottom: 20px;
     }
 
     .kpi-card {
-        border-radius: 12px;
-        padding: 16px 18px;
-        background: #f8faf8;
-        border-left: 3px solid transparent;
+        background: #fff;
+        border: 1px solid #c8d4e6;
+        border-radius: 16px;
+        box-shadow: 0 2px 8px rgba(0,0,0,.06);
+        padding: 20px;
     }
 
-        .kpi-card .kpi-head {
+        .kpi-card .kpi-top {
             display: flex;
-            align-items: center;
-            gap: 6px;
-            margin-bottom: 8px;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 10px;
         }
 
-            .kpi-card .kpi-head i {
-                font-size: 16px;
+        .kpi-card .kpi-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 18px;
+        }
+
+            .kpi-card .kpi-icon i {
+                font-size: 18px;
             }
 
         .kpi-card .num {
-            font-size: 1.65rem;
-            font-weight: 700;
-            line-height: 1;
+            font-size: 1.9rem;
+            font-weight: 800;
+            letter-spacing: -.01em;
+            line-height: 1.1;
+            color: #14213d;
+            margin-top: 16px;
         }
 
         .kpi-card .label {
-            font-size: .72rem;
-            color: #666;
+            font-size: .78rem;
+            font-weight: 600;
+            color: #5c6b85;
+            margin-top: 3px;
         }
 
         .kpi-card .sub {
-            font-size: .7rem;
-            color: #999;
-            margin-top: 7px;
+            font-size: .72rem;
+            font-weight: 700;
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
         }
 
-    .qa-section {
-        margin-bottom: 20px;
-    }
-
-    .qa-section-label {
-        font-size: .68rem;
-        text-transform: uppercase;
-        letter-spacing: .8px;
-        color: #888;
-        font-weight: 700;
-        margin-bottom: 8px;
-    }
-
-    .qa-row {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        align-items: flex-start;
-    }
-
-        .qa-row .dx-button {
-            width: 180px;
-        }
-
-        .qa-row.horizontal {
-            flex-direction: row;
-            flex-wrap: wrap;
-        }
-
-            .qa-row.horizontal .dx-button {
-                width: auto;
+            .kpi-card .sub i {
+                font-size: 13px;
             }
 
     .panel {
         background: #fff;
         border-radius: 10px;
-        border: 1px solid #c8e6c9;
+        border: 1px solid #c8d4e6;
         box-shadow: 0 2px 8px rgba(0,0,0,.06);
         overflow: hidden;
         margin-bottom: 20px;
@@ -120,11 +115,11 @@
 
     .panel-head {
         padding: 14px 20px;
-        border-bottom: 2px solid #e8f5e9;
+        border-bottom: 2px solid #eaeef3;
         font-size: .78rem;
         text-transform: uppercase;
         letter-spacing: .7px;
-        color: #2e7d32;
+        color: #192b45;
         font-weight: 700;
         display: flex;
         justify-content: space-between;
@@ -147,66 +142,101 @@
     }
 
         .why-note b {
-            color: #2e7d32;
+            color: #192b45;
             font-weight: 700;
         }
 
-    /* ── Recent activity — compact table, not stacked rows ─────────── */
-    .activity-table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: .78rem;
+    /* ── Two-up row for Recent activity + Quick actions — the prototype's
+             three-column layout (activity / severity mix / actions) minus
+             the severity mix column, so activity gets the extra room
+             instead of leaving a gap. ─────────────────────────────────── */
+    .dash-row {
+        display: grid;
+        grid-template-columns: 1.6fr 1fr;
+        gap: 18px;
+        align-items: start;
     }
 
-        .activity-table th {
-            text-align: left;
-            font-size: .65rem;
-            text-transform: uppercase;
-            letter-spacing: .4px;
-            color: #9ca3af;
-            font-weight: 600;
-            padding: 4px 8px;
-            border-bottom: 1px solid #f0f4f0;
+        @@media (max-width: 900px) {
+            .dash-row {
+                grid-template-columns: 1fr;
+            }
         }
 
-        .activity-table td {
-            padding: 7px 8px;
-            border-bottom: 1px solid #f6f8f6;
+    /* ── Recent activity — a labeled table (CR No / Location / Severity /
+             Source columns) so every value has a header instead of the
+             icon-dot-and-badge row list that gave no clue what each piece
+             of unlabeled text next to a record meant. ─────────────────── */
+    .activity-tbl {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: .8rem;
+    }
+
+        .activity-tbl thead th {
+            text-align: left;
+            font-size: .66rem;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            color: #9ca3af;
+            font-weight: 700;
+            padding: 6px 8px;
+            border-bottom: 1px solid #e5e9f0;
+            white-space: nowrap;
+        }
+
+        .activity-tbl tbody td {
+            padding: 9px 8px;
+            border-bottom: 1px solid #f0f2f4;
             vertical-align: middle;
         }
 
-        .activity-table tr:last-child td {
+        .activity-tbl tbody tr:last-child td {
             border-bottom: none;
         }
 
-        .activity-table tr.clickable {
+        .activity-tbl tbody tr.clickable {
             cursor: pointer;
         }
 
-            .activity-table tr.clickable:hover td {
-                background: #f4fbf5;
-            }
-
-        .activity-table .cr-no {
-            font-weight: 700;
-            color: #1a1a1a;
+        .activity-tbl tbody tr.clickable:hover td {
+            background: #f5f9fd;
         }
 
-        .activity-table .where {
-            color: #777;
-            font-size: .74rem;
-        }
+    .act-dot {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        margin-right: 7px;
+    }
+
+        .act-dot.fatal    { background: #b71c1c; }
+        .act-dot.serious  { background: #e65100; }
+        .act-dot.none     { background: #c0c0c0; }
+
+    .activity-tbl .cr-no {
+        font-size: .85rem;
+        font-weight: 700;
+        color: #14213d;
+    }
+
+    .activity-tbl .where {
+        color: #777;
+    }
 
     .src-badge {
         font-size: .62rem;
         padding: 2px 6px;
         border-radius: 5px;
         white-space: nowrap;
+        flex-shrink: 0;
     }
 
     .src-manual {
-        background: #e8f5e9;
-        color: #2e7d32;
+        background: #eaeef3;
+        color: #192b45;
     }
 
     .src-import {
@@ -220,6 +250,7 @@
         border-radius: 8px;
         font-weight: 700;
         white-space: nowrap;
+        flex-shrink: 0;
     }
 
     .sev-fatal {
@@ -235,85 +266,118 @@
     .sev-none {
         color: #c0c0c0;
         font-size: .72rem;
+        flex-shrink: 0;
     }
 
     .view-all-link {
         font-size: .78rem;
-        color: #2e7d32;
+        color: #192b45;
         font-weight: 600;
         text-decoration: none;
     }
 
-    /* ── Quick actions — every action gets its own small section,
-             matching the Import page's separate-card pattern, instead of
-             either one oversized hero tile (when only one action is
-             privileged, which is the normal case) or several buttons
-             crammed into one shared panel. ─────────────────────────── */
-    .action-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-        gap: 14px;
-        margin-bottom: 20px;
+    /* ── Quick actions — compact row list (icon square, label, chevron)
+             inside a single panel, matching the prototype's Quick Actions
+             card instead of a grid of separate tiles. ──────────────────── */
+    .action-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
     }
 
-    .action-card {
+    .action-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 13px 14px;
+        border-radius: 12px;
+        border: 1px solid #c8d4e6;
         background: #fff;
-        border-radius: 10px;
-        border: 1px solid #c8e6c9;
-        box-shadow: 0 2px 8px rgba(0,0,0,.06);
-        padding: 18px 18px 16px;
+        cursor: pointer;
+        transition: all .15s ease;
+        text-decoration: none;
+        color: inherit;
     }
 
-        .action-card .icon {
-            font-size: 22px;
-            color: #2e7d32;
-            margin-bottom: 8px;
-            display: block;
+        .action-row:hover {
+            border-color: #9cb1d2;
+            background: #f5f9fd;
         }
 
-        .action-card .title {
-            font-size: .88rem;
-            font-weight: 700;
-            color: #1a1a1a;
-            margin-bottom: 3px;
-        }
+    .action-row .a-icon {
+        width: 34px;
+        height: 34px;
+        border-radius: 9px;
+        background: #eaeef3;
+        color: #192b45;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        font-size: 16px;
+    }
 
-        .action-card .desc {
-            font-size: .74rem;
-            color: #888;
-            margin-bottom: 12px;
-            min-height: 2.2em;
-        }
+    .action-row .a-text {
+        flex-grow: 1;
+        min-width: 0;
+    }
 
-        .action-card .dx-button {
-            width: 100%;
-        }
+    .action-row .a-label {
+        font-size: .85rem;
+        font-weight: 600;
+        color: #14213d;
+    }
+
+    .action-row .a-desc {
+        font-size: .72rem;
+        color: #888;
+        margin-top: 1px;
+    }
+
+    .action-row .a-chevron {
+        color: #9ca3af;
+        font-size: 15px;
+        flex-shrink: 0;
+    }
 
     .scope-banner {
         display: flex;
         align-items: center;
-        justify-content: space-between;
-        background: #fff;
-        border: 1px solid #c8e6c9;
-        border-radius: 10px;
-        padding: 10px 18px;
+        gap: 12px;
+        background: #f5f9fd;
+        border: 1px solid #b9d4ea;
+        border-radius: 14px;
+        padding: 14px 18px;
         margin-bottom: 20px;
-        font-size: .82rem;
     }
 
-        .scope-banner .role-tag {
-            font-size: .68rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: .5px;
-            color: #2e7d32;
-            background: #e8f5e9;
-            padding: 4px 10px;
-            border-radius: 6px;
+        .scope-banner .scope-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 9px;
+            background: #eaeef3;
+            color: #192b45;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 16px;
         }
 
-        .scope-banner .scope-value {
-            color: #444;
+        .scope-banner .scope-text {
+            font-size: .85rem;
+            font-weight: 600;
+            color: #192b45;
+        }
+
+        .scope-banner .role-tag {
+            font-size: .75rem;
+            font-weight: 600;
+            color: #192b45;
+            background: #eaeef3;
+            padding: 4px 10px;
+            border-radius: 6px;
+            margin-left: 2px;
         }
 
         .scope-banner .not-enforced {
@@ -350,7 +414,7 @@
     }
 
         .insights-callout:hover {
-            border-color: #a5d6a7;
+            border-color: #a5b9d6;
         }
 
         .insights-callout .ic-left {
@@ -363,12 +427,12 @@
             width: 38px;
             height: 38px;
             border-radius: 10px;
-            background: #e8f5e9;
+            background: #eaeef3;
             display: flex;
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
-            color: #2e7d32;
+            color: #192b45;
             font-size: 17px;
         }
 
@@ -387,7 +451,7 @@
         .insights-callout .ic-cta {
             font-size: .78rem;
             font-weight: 700;
-            color: #2e7d32;
+            color: #192b45;
             white-space: nowrap;
         }
 </style>
@@ -395,9 +459,11 @@
 <!-- Scope banner — every role's actual data scope, now genuinely
      enforced (see HomeController.Index). -->
 <div class="scope-banner">
-    <div style="display:flex;align-items:center;gap:10px;">
-        <span class="role-tag">@roleLabel</span>
-        <span class="scope-value">
+    <div class="scope-icon">
+        <i class="ti @(mode == "analytics" ? "ti-world" : mode == "review" ? "ti-list-check" : "ti-map-pin")" aria-hidden="true"></i>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <span class="scope-text">
             @if (mode == "analytics")
             {
                 <text>All districts &middot; province-wide</text>
@@ -411,31 +477,59 @@
                 <text>Your station: @(userStation ?? "not set")</text>
             }
         </span>
+        <span class="role-tag">Hello, @(string.IsNullOrWhiteSpace(fullName) ? roleLabel : fullName)</span>
     </div>
-    <i class="ti @(mode == "analytics" ? "ti-world" : mode == "review" ? "ti-list-check" : "ti-map-pin")" style="font-size:18px;color:#9ca3af;" aria-hidden="true"></i>
 </div>
 
 @{
     var scopeSuffix = mode == "analytics" ? " (all time)" : " (your scope)";
 }
 <div class="kpi-grid">
-    <div class="kpi-card" style="border-left-color:#2e7d32;">
-        <div class="kpi-head" style="color:#2e7d32;"><i class="ti ti-car-crash" aria-hidden="true"></i><span class="label">Total crash reports@scopeSuffix</span></div>
-        <div class="num" style="color:#2e7d32;">@ViewBag.TotalCrashes</div>
-        <div class="sub">@ViewBag.ThisMonthCrashes new in @ViewBag.CurrentMonth</div>
+    <div class="kpi-card">
+        <div class="kpi-top">
+            <div>
+                <div class="num">@ViewBag.TotalCrashes</div>
+                <div class="label">Total crash reports@scopeSuffix</div>
+            </div>
+            <div class="kpi-icon" style="background:rgba(25,43,69,.10);color:#192b45;">
+                <i class="ti ti-car-crash" aria-hidden="true"></i>
+            </div>
+        </div>
+        <div class="sub" style="color:#192b45;"><i class="ti ti-trending-up" aria-hidden="true"></i>@ViewBag.ThisMonthCrashes new in @ViewBag.CurrentMonth</div>
     </div>
-    <div class="kpi-card" style="border-left-color:#b71c1c;">
-        <div class="kpi-head" style="color:#b71c1c;"><i class="ti ti-alert-triangle" aria-hidden="true"></i><span class="label">Fatal injuries@scopeSuffix</span></div>
-        <div class="num" style="color:#b71c1c;">@ViewBag.FatalCount</div>
-        <div class="sub">@ViewBag.ThisMonthFatal this month</div>
+    <div class="kpi-card">
+        <div class="kpi-top">
+            <div>
+                <div class="num" style="color:#b71c1c;">@ViewBag.FatalCount</div>
+                <div class="label">Fatal injuries@scopeSuffix</div>
+            </div>
+            <div class="kpi-icon" style="background:rgba(183,28,28,.10);color:#b71c1c;">
+                <i class="ti ti-alert-triangle" aria-hidden="true"></i>
+            </div>
+        </div>
+        <div class="sub" style="color:#b71c1c;"><i class="ti ti-trending-up" aria-hidden="true"></i>@ViewBag.ThisMonthFatal this month</div>
     </div>
-    <div class="kpi-card" style="border-left-color:#e65100;">
-        <div class="kpi-head" style="color:#e65100;"><i class="ti ti-first-aid-kit" aria-hidden="true"></i><span class="label">Serious injuries@scopeSuffix</span></div>
-        <div class="num" style="color:#e65100;">@ViewBag.SeriousCount</div>
+    <div class="kpi-card">
+        <div class="kpi-top">
+            <div>
+                <div class="num" style="color:#e65100;">@ViewBag.SeriousCount</div>
+                <div class="label">Serious injuries@scopeSuffix</div>
+            </div>
+            <div class="kpi-icon" style="background:rgba(230,81,0,.10);color:#e65100;">
+                <i class="ti ti-first-aid-kit" aria-hidden="true"></i>
+            </div>
+        </div>
     </div>
-    <div class="kpi-card" style="border-left-color:#0277bd;">
-        <div class="kpi-head" style="color:#0277bd;"><i class="ti ti-bandage" aria-hidden="true"></i><span class="label">Slight injuries@scopeSuffix</span></div>
-        <div class="num" style="color:#0277bd;">@ViewBag.SlightCount</div>
+    <div class="kpi-card">
+        <div class="kpi-top">
+            <div>
+                <div class="num" style="color:#0277bd;">@ViewBag.SlightCount</div>
+                <div class="label">Slight injuries@scopeSuffix</div>
+            </div>
+            <div class="kpi-icon" style="background:rgba(2,119,189,.10);color:#0277bd;">
+                <i class="ti ti-bandage" aria-hidden="true"></i>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -455,20 +549,33 @@
 
 @if (mode == "analytics")
 {
-    <div class="qa-section-label">Quick actions</div>
-    <div class="action-grid" id="quickActionsAll"></div>
-
-    <div class="panel">
-        <div class="panel-head">
-            Recent activity
-            @if (canView)
-            {
-                <a href="/Crashes" class="view-all-link">View all crash reports →</a>
-            }
+    <div class="dash-row">
+        <div class="panel">
+            <div class="panel-head">
+                Recent activity
+                @if (canView)
+                {
+                    <a href="/Crashes" class="view-all-link">View all crash reports →</a>
+                }
+            </div>
+            <div class="why-note"><b>Why it's here — </b>the newest records across every district, in submission order — the first thing worth a glance each morning.</div>
+            <div class="panel-body">
+                <table class="activity-tbl">
+                    <thead>
+                        <tr><th>CR No.</th><th>Location</th><th>Severity</th><th>Source</th></tr>
+                    </thead>
+                    <tbody id="recentActivityBody">
+                        <tr><td colspan="4" style="color:#999; font-size:.8rem;">Loading…</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
-        <div class="why-note"><b>Why it's here — </b>the newest records across every district, in submission order — the first thing worth a glance each morning.</div>
-        <div class="panel-body" id="recentActivityBody">
-            <div style="color:#999; font-size:.8rem;">Loading…</div>
+
+        <div class="panel">
+            <div class="panel-head">Quick actions</div>
+            <div class="panel-body">
+                <div class="action-list" id="quickActionsAll"></div>
+            </div>
         </div>
     </div>
 }
@@ -477,52 +584,71 @@
     if (mode == "capture")
     {
         <!-- ══════════ Capture: SAPS Officer or Cost Centre Administrator.
-             Cards are strictly per-privilege — SAPS Officer never sees Quick
+             Rows are strictly per-privilege — SAPS Officer never sees Quick
              add (no CreateSummary), Cost Centre Administrator never sees
-             New CR1 (no Create). Every available action is one card among
+             New CR1 (no Create). Every available action is one row among
              equals, not a single oversized tile with empty space beside it. ══ -->
-        <div class="qa-section-label">Quick actions</div>
-        <div class="action-grid">
-            @if (canCreateFull)
-            {
-                <div class="action-card">
-                    <i class="ti ti-file-text icon" aria-hidden="true"></i>
-                    <div class="title">New CR1 report</div>
-                    <div class="desc">Full crash report form</div>
-                    <div id="actionNewCr1"></div>
+        <div class="dash-row">
+            <div class="panel">
+                <div class="panel-head">
+                    Recent activity — your station
+                    @if (canView)
+                    {
+                        <a href="/Crashes" class="view-all-link">View all crash reports →</a>
+                    }
                 </div>
-            }
-            @if (canQuickAdd)
-            {
-                <div class="action-card">
-                    <i class="ti ti-bolt icon" aria-hidden="true"></i>
-                    <div class="title">Quick add</div>
-                    <div class="desc">Fast capture from a completed form</div>
-                    <div id="actionQuickAdd"></div>
+                <div class="why-note"><b>Why it's here — </b>only what was filed at your station — records elsewhere never reach this list, by design.</div>
+                <div class="panel-body">
+                    <table class="activity-tbl">
+                        <thead>
+                            <tr><th>CR No.</th><th>Location</th><th>Severity</th><th>Source</th></tr>
+                        </thead>
+                        <tbody id="recentActivityBody">
+                            <tr><td colspan="4" style="color:#999; font-size:.8rem;">Loading…</td></tr>
+                        </tbody>
+                    </table>
                 </div>
-            }
-            @if (canImport)
-            {
-                <div class="action-card">
-                    <i class="ti ti-upload icon" aria-hidden="true"></i>
-                    <div class="title">Import Excel</div>
-                    <div class="desc">Bring in a batch of records from a workbook</div>
-                    <div id="actionImport"></div>
-                </div>
-            }
-        </div>
-
-        <div class="panel">
-            <div class="panel-head">
-                Recent activity — your station
-                @if (canView)
-                {
-                    <a href="/Crashes" class="view-all-link">View all crash reports →</a>
-                }
             </div>
-            <div class="why-note"><b>Why it's here — </b>only what was filed at your station — records elsewhere never reach this list, by design.</div>
-            <div class="panel-body" id="recentActivityBody">
-                <div style="color:#999; font-size:.8rem;">Loading…</div>
+
+            <div class="panel">
+                <div class="panel-head">Quick actions</div>
+                <div class="panel-body">
+                    <div class="action-list">
+                        @if (canCreateFull)
+                        {
+                            <a class="action-row" href="/Home/Create">
+                                <div class="a-icon"><i class="ti ti-file-text" aria-hidden="true"></i></div>
+                                <div class="a-text">
+                                    <div class="a-label">New CR1 report</div>
+                                    <div class="a-desc">Full crash report form</div>
+                                </div>
+                                <i class="ti ti-chevron-right a-chevron" aria-hidden="true"></i>
+                            </a>
+                        }
+                        @if (canQuickAdd)
+                        {
+                            <a class="action-row" href="/Crashes/CreateSummary">
+                                <div class="a-icon"><i class="ti ti-bolt" aria-hidden="true"></i></div>
+                                <div class="a-text">
+                                    <div class="a-label">Quick add</div>
+                                    <div class="a-desc">Fast capture from a completed form</div>
+                                </div>
+                                <i class="ti ti-chevron-right a-chevron" aria-hidden="true"></i>
+                            </a>
+                        }
+                        @if (canImport)
+                        {
+                            <a class="action-row" href="/Import">
+                                <div class="a-icon"><i class="ti ti-upload" aria-hidden="true"></i></div>
+                                <div class="a-text">
+                                    <div class="a-label">Import Excel</div>
+                                    <div class="a-desc">Bring in a batch of records from a workbook</div>
+                                </div>
+                                <i class="ti ti-chevron-right a-chevron" aria-hidden="true"></i>
+                            </a>
+                        }
+                    </div>
+                </div>
             </div>
         </div>
     }
@@ -532,36 +658,74 @@
              (added per the explicit per-role spec — needs Crashes.
              CreateSummary in the privilege model to actually work, not
              just display). No New CR1/full-report generation. ══════════ -->
-        @if (canQuickAdd)
-        {
-            <div class="qa-section-label">Quick actions</div>
-            <div class="action-grid">
-                <div class="action-card">
-                    <i class="ti ti-bolt icon" aria-hidden="true"></i>
-                    <div class="title">Quick add</div>
-                    <div class="desc">Fast capture from a completed form</div>
-                    <div id="actionQuickAdd"></div>
-                </div>
-            </div>
-        }
-
         <div class="review-note">
             Showing recent crash records for your region: @(userDistrict ?? "not set").
         </div>
 
-        <div class="panel">
-            <div class="panel-head">
-                Records to review
-                @if (canView)
-                {
-                    <a href="/Crashes" class="view-all-link">Open Crash Reports →</a>
-                }
+        @if (canQuickAdd)
+        {
+            <div class="dash-row">
+                <div class="panel">
+                    <div class="panel-head">
+                        Records to review
+                        @if (canView)
+                        {
+                            <a href="/Crashes" class="view-all-link">Open Crash Reports →</a>
+                        }
+                    </div>
+                    <div class="why-note"><b>Why it's here — </b>recently filed records awaiting a regional look before they count toward the province total.</div>
+                    <div class="panel-body">
+                        <table class="activity-tbl">
+                            <thead>
+                                <tr><th>CR No.</th><th>Location</th><th>Severity</th><th>Source</th></tr>
+                            </thead>
+                            <tbody id="recentActivityBody">
+                                <tr><td colspan="4" style="color:#999; font-size:.8rem;">Loading…</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-head">Quick actions</div>
+                    <div class="panel-body">
+                        <div class="action-list">
+                            <a class="action-row" href="/Crashes/CreateSummary">
+                                <div class="a-icon"><i class="ti ti-bolt" aria-hidden="true"></i></div>
+                                <div class="a-text">
+                                    <div class="a-label">Quick add</div>
+                                    <div class="a-desc">Fast capture from a completed form</div>
+                                </div>
+                                <i class="ti ti-chevron-right a-chevron" aria-hidden="true"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="why-note"><b>Why it's here — </b>recently filed records awaiting a regional look before they count toward the province total.</div>
-            <div class="panel-body" id="recentActivityBody">
-                <div style="color:#999; font-size:.8rem;">Loading…</div>
+        }
+        else
+        {
+            <div class="panel">
+                <div class="panel-head">
+                    Records to review
+                    @if (canView)
+                    {
+                        <a href="/Crashes" class="view-all-link">Open Crash Reports →</a>
+                    }
+                </div>
+                <div class="why-note"><b>Why it's here — </b>recently filed records awaiting a regional look before they count toward the province total.</div>
+                <div class="panel-body">
+                    <table class="activity-tbl">
+                        <thead>
+                            <tr><th>CR No.</th><th>Location</th><th>Severity</th><th>Source</th></tr>
+                        </thead>
+                        <tbody id="recentActivityBody">
+                            <tr><td colspan="4" style="color:#999; font-size:.8rem;">Loading…</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
-        </div>
+        }
     }
     else
     {
@@ -603,10 +767,12 @@
         if (successMsg) DevExpress.ui.notify(successMsg, "success", 4000);
         if (errorMsg)   DevExpress.ui.notify(errorMsg,   "error",   5000);
 
-        // Builds a full action-card (icon, title, description, button)
-        // into a grid container — every quick action gets its own small
-        // section, matching how the Import page separates its cards,
-        // rather than several buttons sharing one panel.
+        // Builds one action-row (icon, label, description, chevron) per
+        // item into a vertical list — matches the server-rendered rows
+        // used for capture/review mode's quick actions, just assembled
+        // client-side here since analytics mode's action set depends on
+        // which of the two roles (System Administrator / Provincial
+        // Staff) is signed in.
         var ACTION_META = {
         "Manage users":       { icon: "ti-users",         desc: "Add, edit, or deactivate user accounts" },
         "Manage roles":       { icon: "ti-shield-lock",   desc: "Adjust role privileges and permissions" },
@@ -621,44 +787,43 @@
         function addActionCards(containerId, items) {
         items.forEach(function (a) {
         var meta = ACTION_META[a.text] || { icon: "ti-arrow-right", desc: "" };
-        var card = $("<div class='action-card'>").appendTo(containerId);
-        $("<i>").addClass("ti " + meta.icon + " icon").attr("aria-hidden", "true").appendTo(card);
-        $("<div class='title'>").text(a.text).appendTo(card);
-        $("<div class='desc'>").text(meta.desc).appendTo(card);
-        $("<div>").appendTo(card).dxButton({
-        text: "Open", type: a.type,
-        onClick: function () { window.location.href = a.url; }
-        });
+        var row = $("<a class='action-row'>").attr("href", a.url).appendTo(containerId);
+        $("<div class='a-icon'>").appendTo(row)
+        .append($("<i>").addClass("ti " + meta.icon).attr("aria-hidden", "true"));
+        var text = $("<div class='a-text'>").appendTo(row);
+        $("<div class='a-label'>").text(a.text).appendTo(text);
+        $("<div class='a-desc'>").text(meta.desc).appendTo(text);
+        $("<i class='ti ti-chevron-right a-chevron'>").attr("aria-hidden", "true").appendTo(row);
         });
         }
 
         if (mode === "analytics") {
-        // Every button here is gated on its own privilege flag —
-        // nothing is pushed unconditionally, including "Search
-        // crashes" (requires canView) which previously always
-        // appeared regardless of privilege.
-        // Quick Actions content is now an exact, explicit list per
-        // role — not "whatever the privilege flags happen to allow."
-        // System Administrator: management only. Provincial Staff:
-        // reports + import only. Neither shows capture buttons even
-        // though System Administrator technically holds those
-        // privileges too — this is a deliberate curation choice for
-        // this panel, not a privilege restriction (the sidebar nav
-        // still reflects full privileges separately).
+        // Every row here is gated on its own privilege flag — nothing is
+        // pushed unconditionally, including "Search crashes" (requires
+        // canView) which previously always appeared regardless of
+        // privilege.
+        // Quick Actions content is an exact, explicit list per role —
+        // not "whatever the privilege flags happen to allow." System
+        // Administrator: management only. Provincial Staff: reports +
+        // import only. Neither shows capture actions even though System
+        // Administrator technically holds those privileges too — this is
+        // a deliberate curation choice for this panel, not a privilege
+        // restriction (the sidebar nav still reflects full privileges
+        // separately).
         var allButtons = [];
         if (roleLabel === "System Administrator") {
         allButtons = [
-        { text: "Manage users",   type: "default", icon: "user",  url: "/Users" },
-        { text: "Manage roles",   type: "normal",  icon: "key",   url: "/Roles" },
-        { text: "Manage lookups", type: "normal",  icon: "align", url: "/Lookups" }
+        { text: "Manage users",   url: "/Users" },
+        { text: "Manage roles",   url: "/Roles" },
+        { text: "Manage lookups", url: "/Lookups" }
         ];
         } else if (roleLabel === "Provincial Staff") {
         allButtons = [
-        { text: "Weekly standby",   type: "default", icon: "clock", url: "/StandbyReport" },
-        { text: "Monthly memo",     type: "normal",  icon: "chart", url: "/MemoReport" },
-        { text: "Quarterly report", type: "normal",  icon: "chart", url: "/QuarterlyReport" },
-        { text: "Five year report", type: "normal",  icon: "chart", url: "/FiveYearReport" },
-        { text: "Import Excel",     type: "normal",  icon: "upload", url: "/Import" }
+        { text: "Weekly standby",   url: "/StandbyReport" },
+        { text: "Monthly memo",     url: "/MemoReport" },
+        { text: "Quarterly report", url: "/QuarterlyReport" },
+        { text: "Five year report", url: "/FiveYearReport" },
+        { text: "Import Excel",     url: "/Import" }
         ];
         }
         addActionCards("#quickActionsAll", allButtons);
@@ -671,53 +836,28 @@
         var rows = result.rows || [];
         renderRecentActivity(rows.slice(0, 8), false);
         }).fail(function () {
-        $("#recentActivityBody").html('<div style="color:#b71c1c; font-size:.8rem;">Could not load recent activity.</div>');
+        $("#recentActivityBody").html('<tr><td colspan="4" style="color:#b71c1c; font-size:.8rem;">Could not load recent activity.</td></tr>');
         });
 
-        } else if (mode === "capture") {
-        // Each card's button is mounted directly into the card already
-        // rendered server-side (icon/title/desc), rather than building
-        // the whole card in JS — the set of cards shown is privilege-
-        // gated in Razor, so JS only needs to wire up what's present.
-        if (canCreateFull) {
-        $("#actionNewCr1").dxButton({ text: "Open", type: "default", onClick: function () { window.location.href = "/Home/Create"; } });
-        }
-        if (canQuickAdd) {
-        $("#actionQuickAdd").dxButton({ text: "Open", type: "default", onClick: function () { window.location.href = "/Crashes/CreateSummary"; } });
-        }
-        if (canImport) {
-        $("#actionImport").dxButton({ text: "Open", type: "default", onClick: function () { window.location.href = "/Import"; } });
-        }
-        // Scoped server-side in HomeController.Index -- no separate
-        // fetch needed, and no risk of accidentally rendering the
-        // unscoped list this used to pull from /Crashes/Grid.
-        renderRecentActivity(scopedRecentActivity || [], canEdit);
-
-        } else if (mode === "review") {
-        if (canQuickAdd) {
-        $("#actionQuickAdd").dxButton({ text: "Open", type: "default", onClick: function () { window.location.href = "/Crashes/CreateSummary"; } });
-        }
+        } else if (mode === "capture" || mode === "review") {
+        // Capture/review mode's quick-action rows are rendered directly
+        // in Razor now (plain links, privilege-gated server-side), so
+        // there's nothing left to wire up here beyond loading the data.
         renderRecentActivity(scopedRecentActivity || [], canEdit);
         }
 
-        // ── Recent activity — compact table, not stacked cards ──────
+        // ── Recent activity — a labeled table (CR No / Location / Severity /
+        //    Source), matching the prototype's activity feed but with real
+        //    column headers instead of an icon-and-badge row list. ───────
         function renderRecentActivity(recent, clickableToEdit) {
         var body = $("#recentActivityBody").empty();
         if (recent.length === 0) {
-        body.append('<div style="color:#999; font-size:.8rem;">No crash reports yet.</div>');
+        body.append('<tr><td colspan="4" style="color:#999; font-size:.8rem;">No crash reports yet.</td></tr>');
         return;
         }
 
-        var table = $('<table class="activity-table"></table>');
-        table.append(
-        '<thead><tr>' +
-        '<th>CR No.</th><th>Where</th><th>Severity</th><th>Source</th>' +
-        '</tr></thead>'
-        );
-
-        var tbody = $('<tbody></tbody>').appendTo(table);
-
         recent.forEach(function (r) {
+        var dotCls = r.Fatalities > 0 ? "fatal" : (r.Serious > 0 ? "serious" : "none");
         var sevBadge = r.Fatalities > 0
         ? '<span class="sev-badge sev-fatal">' + r.Fatalities + ' fatal</span>'
         : (r.Serious > 0
@@ -727,23 +867,21 @@
         ? '<span class="src-badge src-import">Import</span>'
         : '<span class="src-badge src-manual">Manual</span>';
 
-        var $tr = $('<tr' + (clickableToEdit ? ' class="clickable"' : '') + '>' +
-        '<td class="cr-no">' + r.CrNo + '</td>' +
+        var $row = $('<tr' + (clickableToEdit ? ' class="clickable"' : '') + '>' +
+        '<td><span class="act-dot ' + dotCls + '"></span><span class="cr-no">' + r.CrNo + '</span></td>' +
         '<td class="where">' + r.District + ', ' + r.Station + '</td>' +
         '<td>' + sevBadge + '</td>' +
         '<td>' + srcBadge + '</td>' +
         '</tr>');
 
         if (clickableToEdit) {
-        $tr.on("click", function () {
+        $row.on("click", function () {
         var editUrl = r.Source === "Import" ? "/Crashes/EditSummary/" + r.SummaryId : "/Crashes/Edit/" + r.CrashId;
         window.location.href = editUrl;
         });
         }
-        tbody.append($tr);
+        body.append($row);
         });
-
-        body.append(table);
         }
         });
     </script>

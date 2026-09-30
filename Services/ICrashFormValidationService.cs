@@ -30,13 +30,7 @@ public class CrashFormValidationService : ICrashFormValidationService
         var ci = vm.CrashInfo;
         var today = DateOnly.FromDateTime(DateTime.Today);
 
-        // ── Step 1: Crash Info ─────────────────────────────────
-
-        // UPDATED: CrNo used to be optional as long as CasNo was present --
-        // a leftover from before CR No. became the single, manually-entered
-        // real-world identifier (the number already on the physical form,
-        // also used for revenue/payment lookups). It's now required
-        // outright; CasNo remains optional alongside it.
+        
         if (string.IsNullOrWhiteSpace(ci.CrNo))
             errors.Add("CR No. is required.");
 
@@ -61,20 +55,14 @@ public class CrashFormValidationService : ICrashFormValidationService
             if (duplicate)
                 errors.Add($"CR No. '{ci.CrNo.Trim()}' already exists in the database.");
 
-            // NOTE: this intentionally does NOT also check CrashSummaries.
-            // A crash existing in both Crashes and CrashSummaries under the
-            // same CrNo is expected, routine behaviour given the AS-IS
-            // workflow (a Cost Centre can legitimately Quick Add a summary
-            // before an officer digitizes the full form for the same
-            // crash) -- that case is handled separately in Submit() as an
-            // allow-and-warn note, not a blocking validation error here.
+            
         }
 
         if (ci.SpeedLimitKmh.HasValue && !ValidSpeedLimits.Contains(ci.SpeedLimitKmh.Value))
             errors.Add($"Speed limit {ci.SpeedLimitKmh} km/h is not a valid South African " +
                        $"speed limit. Must be one of: {string.Join(", ", ValidSpeedLimits.Order())}.");
 
-        // ── Step 2: Location ───────────────────────────────────
+        
 
         var loc = vm.Location;
         bool hasLocation = !string.IsNullOrWhiteSpace(loc?.StreetRoadName) ||
@@ -112,7 +100,7 @@ public class CrashFormValidationService : ICrashFormValidationService
             vm.Conditions.WeatherConditions.Count == 0)
             errors.Add("At least one weather condition must be selected.");
 
-        // ── Step 4: Vehicles ────────────────────────────────────
+        
 
         if (vm.Vehicles == null || vm.Vehicles.Count == 0)
             errors.Add("At least one vehicle must be entered.");
@@ -154,7 +142,7 @@ public class CrashFormValidationService : ICrashFormValidationService
             }
         }
 
-        // ── Step 5: Persons ─────────────────────────────────────
+        
 
         var vehicleRefs = (vm.Vehicles ?? new())
             .Select(v => v.VehicleReference?.Trim().ToUpper())
@@ -210,7 +198,7 @@ public class CrashFormValidationService : ICrashFormValidationService
                 errors.Add($"Person '{pe.Surname}': gender is required for fatal victims (needed for demographic reports).");
         }
 
-        // ── Step 6: Contributory Factors ────────────────────────
+       
 
         var majorFactorCount = (vm.Factors ?? new()).Count(f => f.IsMajorFactor);
         if (majorFactorCount > 1)
@@ -218,7 +206,7 @@ public class CrashFormValidationService : ICrashFormValidationService
 
         
 
-        // ── Cross-step rules ─────────────────────────────────────
+        
 
         var crashType = vm.Conditions?.CrashType;
         if (!string.IsNullOrWhiteSpace(crashType) &&

@@ -8,22 +8,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CrashReport.Controllers.Api;
 
-/// <summary>
-/// JSON API counterpart of WitnessesController (MVC), for the Angular/DevExtreme
-/// migration. Purely additive — does not change the MVC controller, its views,
-/// or its routes. WitnessesController itself has no non-trivial business logic
-/// (Create is a straight insert, Delete a straight remove), so no service
-/// extraction was needed here.
-///
-/// The MVC controller only exposes Create/Delete (no list/details actions), so
-/// GetByCrash/GetById below are new, REST-appropriate additions for the SPA to
-/// fetch a crash's witnesses — authorized the same way Persons/Vehicles reads
-/// are (Crashes.View), matching the read-vs-mutate privilege split used
-/// throughout this group.
-/// </summary>
 [Route("api/witnesses")]
 [ApiController]
 public class WitnessesApiController : ControllerBase
+
 {
     private readonly AppDbContext _context;
 

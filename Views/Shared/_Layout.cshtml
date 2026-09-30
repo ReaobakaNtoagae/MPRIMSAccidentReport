@@ -10,8 +10,10 @@
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
     <!-- Views/Home/Index.cshtml and Views/Home/Insights.cshtml use "ti ti-*" (Tabler Icons)
          classes with no stylesheet loaded anywhere in the app — they were rendering as blank.
-         Pinned to a fixed version rather than @@latest for stability. -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@@tabler/icons-webfont@2.47.0/dist/tabler-icons.min.css" />
+         Pinned to a fixed version rather than @@latest for stability. Note: unlike newer
+         releases, the 2.47.0 package publishes its CSS at the package root, not under a
+         /dist/ folder — a /dist/ path 404s and silently drops every icon on the page. -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@@tabler/icons-webfont@2.47.0/tabler-icons.min.css" />
 
     <style>
         *, *::before, *::after {
@@ -27,30 +29,37 @@
             /* --g-800 is referenced by the DevExtreme grid-header override
                below but was never defined here — color: var(--g-800) was
                invalid at computed-value time, so header text fell back to
-               whatever it inherited instead of a real dark green, against
-               a light-green header background. That's why grid column
+               whatever it inherited instead of a real dark shade, against
+               a light header background. That's why grid column
                titles have been unreadable/invisible across the app.
-               Filled in with the next step down the existing Material
-               green ramp (g-700/600/500 are Material Green 700/600/500). */
-            --g-800: #1b5e20;
-            --g-700: #2e7d32;
-            --g-600: #388e3c;
-            --g-500: #43a047;
-            --g-400: #2e7d32;
-            --g-100: #e8f5e9;
-            --g-50: #f4fbf5;
+               Filled in with the next step down the existing brand
+               ramp (g-700/600/500 are the brand's navy 700/600/500). */
+            --g-800: #0f1e34;
+            --g-700: #192b45;
+            --g-600: #233858;
+            --g-500: #2e476d;
+            --g-400: #192b45;
+            --g-100: #eaeef3;
+            --g-50: #ffffff;
             --ink: #1a1a1a;
             --muted: #6b7280;
             --border: #e5e7eb;
-            --sb-bg: #ffffff;
-            --sb-border: #e5e7eb;
-            --sb-text: #6b7280;
-            --sb-text-hover: #111827;
-            --sb-active-bg: #f3f4f6;
-            --sb-active-txt: #111827;
-            --sb-active-bar: #2e7d32;
-            --sb-section: #9ca3af;
-            --sb-toggle-bg: #2e7d32;
+            /* Sidebar is the darkest step of the navy ramp (g-800) — everything
+               below that used to assume a WHITE sidebar with dark-on-light text
+               is flipped to light-on-dark here. --sb-accent is the one new color
+               in this file: a cyan for the active-item indicator, since the navy
+               ramp itself (g-500/600/700) is too close in value to g-800 to read
+               as a highlight against it. */
+            --sb-bg: var(--g-800);
+            --sb-border: rgba(255, 255, 255, .10);
+            --sb-text: rgba(255, 255, 255, .62);
+            --sb-text-hover: #ffffff;
+            --sb-active-bg: rgba(255, 255, 255, .08);
+            --sb-active-txt: #ffffff;
+            --sb-accent: #4fc3e0;
+            --sb-active-bar: var(--sb-accent);
+            --sb-section: rgba(255, 255, 255, .38);
+            --sb-toggle-bg: var(--g-600);
         }
 
         body {
@@ -95,14 +104,14 @@
         .brand-wordmark {
             font-size: .95rem;
             font-weight: 600;
-            color: #111827;
+            color: #ffffff;
             letter-spacing: .1px;
             transition: opacity var(--transition);
         }
 
         .brand-sub {
             margin-top: 3px;
-            color: #9ca3af;
+            color: rgba(255, 255, 255, .48);
             font-size: .64rem;
             font-family: 'DM Mono', monospace;
             letter-spacing: 1px;
@@ -114,7 +123,7 @@
             display: none;
             font-size: .78rem;
             font-weight: 700;
-            color: var(--g-600);
+            color: #ffffff;
             font-family: 'DM Mono', monospace;
             letter-spacing: .5px;
             padding-top: 6px;
@@ -150,7 +159,7 @@
             box-shadow: 0 2px 8px rgba(0,0,0,.25);
         }
 
-            .sidebar-toggle:hover { background: var(--g-600); }
+            .sidebar-toggle:hover { background: var(--g-500); }
 
             .sidebar-toggle svg {
                 width: 10px;
@@ -243,17 +252,17 @@
             width: 6px;
             height: 6px;
             border-radius: 50%;
-            background: #d1d5db;
+            background: rgba(255, 255, 255, .3);
             transition: background var(--transition);
         }
 
         .sidebar.collapsed .nav-dot   { display: block; }
         .sidebar.collapsed .nav-label { display: none;  }
 
-        .nav-link:hover .nav-dot { background: #6b7280; }
+        .nav-link:hover .nav-dot { background: rgba(255, 255, 255, .7); }
 
         .nav-link.active .nav-dot {
-            background: var(--g-600);
+            background: var(--sb-accent);
             width: 7px;
             height: 7px;
         }
@@ -470,7 +479,7 @@
 
         <nav class="nav-scroll">
 
-            <div class="nav-section-label"><span>Main</span></div>
+            <div class="nav-section-label"><span>Overview</span></div>
 
             <div class="nav-item" data-label="Dashboard">
                 <a class="nav-link" asp-controller="Home" asp-action="Index">
@@ -489,18 +498,52 @@
                 </div>
             }
 
-            @if (canCreateFull)
+            @* Everything that creates or looks up a crash record, grouped together —
+               previously split between an unlabeled "Main" section (the two capture
+               entry points) and a separate "Records" section (the search/grid), even
+               though they're all the same entity. Persons/Vehicles removed: their
+               nav links pointed at Views/Persons and Views/Vehicles, which don't
+               exist in this project — the links 404'd with a view-not-found error
+               for anyone who clicked them. *@
+            @if (canCreateFull || canQuickAdd || canView)
             {
-                <div class="nav-item" data-label="Crash Report Form">
-                    <a class="nav-link" asp-controller="Home" asp-action="Create">
-                        <span class="nav-dot"></span>
-                        <span class="nav-label">Crash Report Form</span>
-                    </a>
-                </div>
-            }   
+                <div class="nav-section-label"><span>Crash Data</span></div>
+
+                @if (canCreateFull)
+                {
+                    <div class="nav-item" data-label="Crash Report Form">
+                        <a class="nav-link" asp-controller="Home" asp-action="Create">
+                            <span class="nav-dot"></span>
+                            <span class="nav-label">Crash Report Form</span>
+                        </a>
+                    </div>
+                }
+
+                @if (canQuickAdd)
+                {
+                    <div class="nav-item" data-label="Quick Add">
+                        <a class="nav-link" asp-controller="CreateSummary" asp-action="CreateSummary">
+                            <span class="nav-dot"></span>
+                            <span class="nav-label">Quick Add</span>
+                        </a>
+                    </div>
+                }
+
+                @if (canView)
+                {
+                    <div class="nav-item" data-label="Crash Records">
+                        <a class="nav-link" asp-controller="Crashes" asp-action="Index">
+                            <span class="nav-dot"></span>
+                            <span class="nav-label">Crash Records</span>
+                        </a>
+                    </div>
+                }
+            }
 
             @if (canImport)
             {
+                <div class="nav-section-label"><span>Import</span></div>
+
                 <div class="nav-item" data-label="Import Excel">
                     <a class="nav-link" asp-controller="Import" asp-action="Index">
                         <span class="nav-dot"></span>
@@ -515,56 +558,14 @@
                 </div>
             }
 
-            @if (canQuickAdd)
-            {
-                <div class="nav-item" data-label="Quick Add">
-                    <a class="nav-link" asp-controller="CreateSummary" asp-action="CreateSummary">
-                        <span class="nav-dot"></span>
-                        <span class="nav-label">Quick Add</span>
-                    </a>
-                </div>
-            }
-
             @if (canAnyReport)
             {
                 <div class="nav-section-label"><span>Reports</span></div>
 
-               
-                    <div class="nav-item" data-label="Crash ReportsHub">
-                        <a class="nav-link" asp-controller="ReportsHub" asp-action="Index">
-                            <span class="nav-dot"></span>
-                            <span class="nav-label">Reports</span>
-                        </a>
-                    </div>
-                
-
-                
-
-
-            }
-
-            @if (canView)
-            {
-                <div class="nav-section-label"><span>Records</span></div>
-
-                <div class="nav-item" data-label="Crash Reports">
-                    <a class="nav-link" asp-controller="Crashes" asp-action="Index">
+                <div class="nav-item" data-label="Reports Hub">
+                    <a class="nav-link" asp-controller="ReportsHub" asp-action="Index">
                         <span class="nav-dot"></span>
-                        <span class="nav-label">Crash Reports</span>
-                    </a>
-                </div>
-
-                <div class="nav-item" data-label="Persons">
-                    <a class="nav-link" asp-controller="Persons" asp-action="Index">
-                        <span class="nav-dot"></span>
-                        <span class="nav-label">Persons</span>
-                    </a>
-                </div>
-
-                <div class="nav-item" data-label="Vehicles">
-                    <a class="nav-link" asp-controller="Vehicles" asp-action="Index">
-                        <span class="nav-dot"></span>
-                        <span class="nav-label">Vehicles</span>
+                        <span class="nav-label">Reports Hub</span>
                     </a>
                 </div>
             }

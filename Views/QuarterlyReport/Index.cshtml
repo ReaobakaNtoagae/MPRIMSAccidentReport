@@ -222,7 +222,7 @@
                 };
             }
 
-            // ── Preview ────────────────────────────────────────────────
+            
             var previewBtn = $("#btnPreview").dxButton({
                 text: "Preview", icon: "preview", type: "normal", stylingMode: "outlined",
                 onClick: function () { runPreview(); }
@@ -299,10 +299,7 @@
                 });
             }
 
-            // ── Download ───────────────────────────────────────────────
-            // Download takes a JSON body and returns a .docx byte stream, so a
-            // plain <form> POST won't work here — fetch + blob triggers the
-            // browser's file save the same way a form submission would.
+            
             var downloadBtn = $("#btnDownload").dxButton({
                 text: "Download Word report", icon: "download", type: "default",
                 onClick: function () { runDownload(); }

@@ -9,14 +9,14 @@
     .um-card {
         background: #fff;
         border-radius: 10px;
-        border: 1px solid #c8e6c9;
+        border: 1px solid #c8d4e6;
         box-shadow: 0 2px 8px rgba(0,0,0,.06);
         overflow: hidden;
     }
 
     .um-card-head {
         padding: 14px 20px;
-        border-bottom: 2px solid #e8f5e9;
+        border-bottom: 2px solid #eaeef3;
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -27,7 +27,7 @@
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: .9px;
-        color: #2e7d32;
+        color: #192b45;
     }
 
     .um-head-meta {
@@ -53,9 +53,9 @@
     }
 
         .status-pill.active {
-            background: #e8f5e9;
-            color: #2e7d32;
-            border: 1px solid #c8e6c9;
+            background: #eaeef3;
+            color: #192b45;
+            border: 1px solid #c8d4e6;
         }
 
         .status-pill.inactive {
@@ -73,17 +73,21 @@
             flex-shrink: 0;
         }
 
-    /* ── Role badge ───────────────────────────────────────────── */
+    /* ── Role badge — same pill shape/tokens as .status-pill so the two
+             read as one family instead of two unrelated components. No
+             leading dot here: role isn't a state, so a colored indicator
+             would just be visual noise. ─────────────────────────────── */
     .role-badge {
-        display: inline-block;
-        padding: 2px 9px;
-        border-radius: 4px;
+        display: inline-flex;
+        align-items: center;
+        padding: 3px 10px;
+        border-radius: 20px;
         font-size: .72rem;
         font-weight: 600;
-        background: #f3f4f6;
-        color: #374151;
-        border: 1px solid #e5e7eb;
-        font-family: 'DM Mono', monospace;
+        letter-spacing: .2px;
+        background: #eaeef3;
+        color: #192b45;
+        border: 1px solid #c8d4e6;
     }
 
     /* ── Action button strip ──────────────────────────────────── */
@@ -112,7 +116,7 @@
     }
 
         .pw-rule.met {
-            color: #2e7d32;
+            color: #192b45;
         }
 
         .pw-rule .dot {
@@ -124,7 +128,7 @@
         }
 
         .pw-rule.met .dot {
-            background: #2e7d32;
+            background: #192b45;
         }
 
     /* ── Grid — scoped to #usersGrid so this doesn't leak into other
@@ -146,7 +150,7 @@
              sets, and give the header row a real bottom border so it reads
              as a distinct band rather than blending into the data rows. */
     #usersGrid .dx-datagrid-headers {
-        border-bottom: 2px solid #c8e6c9 !important;
+        border-bottom: 2px solid #c8d4e6 !important;
     }
 
         #usersGrid .dx-datagrid .dx-row.dx-header-row > td {
@@ -161,16 +165,16 @@
     #usersGrid .dx-datagrid-rowsview .dx-row > td {
         vertical-align: middle !important;
         padding: 11px 16px !important;
-        border-bottom: 1px solid #f0f4f0 !important;
+        border-bottom: 1px solid #f0f2f4 !important;
         font-size: .82rem;
     }
 
     #usersGrid .dx-datagrid-rowsview .dx-row.dx-data-row.dx-row-alt > td {
-        background: #f7fbf7 !important;
+        background: #f7f9fb !important;
     }
 
     #usersGrid .dx-datagrid-rowsview .dx-row.dx-data-row.dx-state-hover:not(.dx-row-removed) > td {
-        background: #eef7ef !important;
+        background: #eff2f6 !important;
     }
 
     /* Filter row — align its look with the header band it sits under. */
@@ -179,14 +183,14 @@
     }
 
     #usersGrid .dx-datagrid-filter-row td {
-        background: #fbfdfb !important;
-        border-bottom: 1px solid #e8f5e9 !important;
+        background: #fbfcfd !important;
+        border-bottom: 1px solid #eaeef3 !important;
     }
 
     /* Footer pager */
     #usersGrid .dx-datagrid-pager {
         padding: 12px 20px !important;
-        border-top: 1px solid #f0f4f0 !important;
+        border-top: 1px solid #f0f2f4 !important;
     }
 
     /* Empty state */
@@ -306,14 +310,14 @@
                     {
                         dataField: "FullName",
                         caption: "Name",
-                        width: 200,
+                        width: 240,
                         cellTemplate: function (el, info) {
                             var initial = (info.value || "?")[0].toUpperCase();
                             var wrap = $('<div>').css({ display:"flex", alignItems:"center", gap:"10px" });
                             $('<div>').text(initial).css({
                                 width:"32px", height:"32px", borderRadius:"50%",
-                                background:"#e8f5e9", border:"1.5px solid #c8e6c9",
-                                color:"#2e7d32", fontWeight:"700", fontSize:".78rem",
+                                background:"#eaeef3", border:"1.5px solid #c8d4e6",
+                                color:"#192b45", fontWeight:"700", fontSize:".78rem",
                                 display:"flex", alignItems:"center", justifyContent:"center",
                                 flexShrink:"0", fontFamily:"'DM Mono', monospace"
                             }).appendTo(wrap);
@@ -326,7 +330,7 @@
                     {
                         dataField: "Email",
                         caption: "Email",
-                        minWidth: 200,
+                        width: 200,
                         cellTemplate: function (el, info) {
                             $('<span>').text(info.value || "—").css({
                                 fontSize:".82rem", color:"#6b7280"
@@ -337,7 +341,7 @@
                     {
                         dataField: "Roles",
                         caption: "Role",
-                        width: 150,
+                        width: 190,
                         cellTemplate: function (el, info) {
                             var role = info.value || "No role";
                             $('<span class="role-badge">').text(role).appendTo(el);
@@ -458,11 +462,31 @@
                                 template: function () {
                                     return $(buildPasswordRulesHtml("createPwRules"));
                                 }
+                            },
+                            {
+                                dataField: "ConfirmPassword",
+                                label: { text: "Confirm password" },
+                                colSpan: 2,
+                                isRequired: true,
+                                editorOptions: {
+                                    mode: "password",
+                                    placeholder: "Re-enter the password",
+                                    valueChangeEvent: "keyup"
+                                },
+                                validationRules: [
+                                    {
+                                        type: "custom",
+                                        message: "Passwords don't match.",
+                                        validationCallback: function (e) {
+                                            return e.value === createForm.option("formData").Password;
+                                        }
+                                    }
+                                ]
                             }
                         ]
                     }).dxForm("instance");
 
-                    $("<div>").css({ marginTop: "20px", borderTop: "1px solid #f0f4f0", paddingTop: "16px" })
+                    $("<div>").css({ marginTop: "20px", borderTop: "1px solid #f0f2f4", paddingTop: "16px" })
                         .appendTo(wrap)
                         .dxButton({
                             text: "Create user",
@@ -518,7 +542,8 @@
                                 District: user.District,
                                 Role: currentRole,
                                 IsActive: user.IsActive,
-                                NewPassword: ""
+                                NewPassword: "",
+                                ConfirmNewPassword: ""
                             },
                             items: [
                                 {
@@ -572,12 +597,12 @@
                                         valueChangeEvent: "keyup",
                                         onValueChanged: function (e) {
                                             var $rules = $("#editPwRules");
-                                          
+
                                             $rules.toggle(!!e.value);
                                             updatePasswordRulesUi("editPwRules", e.value);
                                         }
                                     },
-                                    
+
                                     validationRules: [
                                         {
                                             type: "custom",
@@ -592,9 +617,29 @@
                                     itemType: "simple",
                                     colSpan: 2,
                                     template: function () {
-                                        
+
                                         return $(buildPasswordRulesHtml("editPwRules")).hide();
                                     }
+                                },
+                                {
+                                    dataField: "ConfirmNewPassword",
+                                    label: { text: "Confirm new password" },
+                                    colSpan: 2,
+                                    editorOptions: {
+                                        mode: "password",
+                                        placeholder: "Re-enter the new password if you're changing it",
+                                        valueChangeEvent: "keyup"
+                                    },
+                                    validationRules: [
+                                        {
+                                            type: "custom",
+                                            message: "Passwords don't match.",
+                                            validationCallback: function (e) {
+                                                var pwd = editForm.option("formData").NewPassword;
+                                                return !pwd || e.value === pwd;
+                                            }
+                                        }
+                                    ]
                                 }
                             ]
                         }).dxForm("instance");

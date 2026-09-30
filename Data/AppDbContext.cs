@@ -42,21 +42,11 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<LookupRoute> LookupRoutes { get; set; }
     public DbSet<LookupCrashType> LookupCrashTypes { get; set; }
     public DbSet<LookupVehicleType> LookupVehicleTypes { get; set; }
-    // LookupCostCentre (Models/Lookupmodels.cs) was already a fully-mapped entity
-    // (its own [Table("lkp_cost_centres")] attribute, its own comment explaining
-    // why it exists) referenced directly as _context.LookupCostCentres by four
-    // existing call sites (LookupController.CostCentres, CreateSummaryController.
-    // CreateSummary, CrashesController.EditSummary, and now the new Quick Capture
-    // API controllers) -- but this DbSet property itself was missing, which would
-    // fail to compile every one of those call sites. Found while building the new
-    // API controllers, not introduced by them; fixed here since it blocks the
-    // whole app, not something worth working around per-caller.
     public DbSet<LookupCostCentre> LookupCostCentres { get; set; }
 
     public DbSet<OptionListItem> OptionListItems { get; set; }
 
-    // These tables hold uploaded data until validation and human review are complete.
-    // They are intentionally separate from the production crash-summary tables.
+    
     public DbSet<ImportBatch> ImportBatches { get; set; }
     public DbSet<StagingCrashSummary> StagingCrashSummaries { get; set; }
     public DbSet<StagingImportDemographics> StagingImportDemographics { get; set; }

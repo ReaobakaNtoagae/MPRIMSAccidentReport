@@ -238,7 +238,7 @@
         <div class="sr-title">WEEKLY STATISTICS REPORT: @fullRange</div>
         <div class="sr-sub">(@Model.DayRange)</div>
 
-        @* ── CRASH SUMMARY TABLE ── *@
+        
         <table class="rt">
             <thead>
                 <tr class="hdr-district">
@@ -319,7 +319,7 @@
             </tbody>
         </table>
 
-        @* ── FATALITIES TIME-BAND TABLE ── *@
+        
         <div class="sr-hd">FATALITIES</div>
         <table class="rt">
             <thead>
@@ -388,7 +388,7 @@
             </tbody>
         </table>
 
-        @* ── NARRATIVE ── *@
+        
         <div class="narrative">
             <strong>FATALITIES OCCURRED BETWEEN</strong>
             06:00 TO 14:00 (<strong>@Model.CurrentProvince.FatalTime1</strong>)
@@ -417,7 +417,7 @@
             }
         </div>
 
-        @* ── PROBLEMATIC ROUTES ── *@
+      
         @if (Model.ProblematicRoutes.Any())
         {
             <div class="sr-hd">PROBLEMATIC ROUTES</div>
@@ -442,7 +442,7 @@
             </div>
         }
 
-        @* ── FATAL CRASH DETAIL (if any) ── *@
+        
         @{
             var fatalDistricts = new[]
             {
@@ -486,8 +486,6 @@
                 </tbody>
             </table>
         }
-
-        @* ── SUB-PERIOD (e.g., Valentine's Weekend) ── *@
         @if (Model.SubPeriod is not null)
         {
             var sp = Model.SubPeriod;

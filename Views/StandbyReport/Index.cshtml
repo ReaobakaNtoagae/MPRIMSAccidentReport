@@ -5,17 +5,13 @@
 
 <style>
 
-    /* These were referenced below via var(--green-*) but never defined anywhere,
-       which made them invalid at computed-value time (rendering as transparent/unstyled).
-       Mapped onto the app's existing green theme scale from _Layout.cshtml (--g-700/600/100)
-       and the literal border green (#c8e6c9) already used consistently on other admin pages
-       (e.g. Roles/Index.cshtml), rather than introducing new colors. */
+
     .sr-page {
         --green-dark: var(--g-700);
         --green-mid: var(--g-600);
         --green-accent: var(--g-500);
         --green-light: var(--g-100);
-        --green-border: #c8e6c9;
+        --green-border: #c8d4e6;
     }
 
     .sr-page {
@@ -42,7 +38,7 @@
         justify-content: center;
         font-size: 1.3rem;
         flex-shrink: 0;
-        box-shadow: 0 2px 8px rgba(27,94,32,.25);
+        box-shadow: 0 2px 8px rgba(15, 30, 52, .25);
     }
 
     .sr-page-header h4 {
@@ -61,7 +57,7 @@
 
     .sr-card {
         background: #fff;
-        border: 1px solid #dde8dd;
+        border: 1px solid #dde1e8;
         border-radius: 10px;
         margin-bottom: 16px;
         overflow: hidden;
@@ -70,14 +66,14 @@
     }
 
         .sr-card:focus-within {
-            box-shadow: 0 2px 12px rgba(46,125,50,.15);
+            box-shadow: 0 2px 12px rgba(25, 43, 69, .15);
             border-color: var(--green-border);
         }
 
     .sr-card-header {
         padding: 11px 18px;
         background: var(--green-light);
-        border-bottom: 1px solid #c8e6c9;
+        border-bottom: 1px solid #c8d4e6;
         display: flex;
         align-items: center;
         gap: 8px;
@@ -153,7 +149,7 @@
 
         .sr-input:focus {
             border-color: var(--green-mid);
-            box-shadow: 0 0 0 3px rgba(46,125,50,.12);
+            box-shadow: 0 0 0 3px rgba(25, 43, 69, .12);
             background: #fff;
         }
 
@@ -237,7 +233,7 @@
         gap: 8px;
         padding: 0 28px;
         height: 42px;
-        background: darkgreen; 
+        background: #0f1e34; 
         color: #fff;
         border: none;
         border-radius: 8px;
@@ -246,12 +242,12 @@
         cursor: pointer;
         font-family: "Segoe UI", sans-serif;
         transition: background .15s, box-shadow .15s, transform .1s;
-        box-shadow: 0 2px 8px rgba(46,125,50,.3);
+        box-shadow: 0 2px 8px rgba(25, 43, 69, .3);
     }
 
         .sr-btn-generate:hover {
             background: var(--green-accent);
-            box-shadow: 0 4px 14px rgba(46,125,50,.35);
+            box-shadow: 0 4px 14px rgba(25, 43, 69, .35);
         }
 
         .sr-btn-generate:active {
@@ -281,7 +277,7 @@
     .sr-qp-btn {
         font-size: .74rem;
         padding: 4px 10px;
-        border: 1px solid #c8e6c9;
+        border: 1px solid #c8d4e6;
         border-radius: 20px;
         background: var(--green-light);
         color: var(--green-dark);
@@ -291,7 +287,7 @@
     }
 
         .sr-qp-btn:hover {
-            background: #c8e6c9;
+            background: #c8d4e6;
             border-color: var(--green-mid);
         }
 

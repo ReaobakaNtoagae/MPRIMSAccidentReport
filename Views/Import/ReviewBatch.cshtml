@@ -340,8 +340,7 @@ else
                     {
                         @if (row.ReviewStatus == "Pending")
                         {
-                            @* Pending is retained for older staged batches. New rows are
-                               approved automatically once their final issue is resolved. *@
+                            
                             <form asp-action="ApproveRow" asp-route-stagingSummaryId="@row.StagingSummaryId" method="post">
                                 @Html.AntiForgeryToken()
                                 <input type="hidden" name="batchId" value="@Model.ImportBatchId" />
@@ -538,8 +537,7 @@ else
 
 @section Scripts {
 <script>
-    // Turn an MVC input into a DevExtreme editor while retaining the original named
-    // element as the posted value. This lets the controller contracts stay unchanged.
+    
     function enhanceReviewEditor(input) {
         if (input.type === 'hidden' || input.dataset.dxEnhanced === 'true') return;
 
@@ -557,7 +555,7 @@ else
             valueChangeEvent: 'input change',
             onValueChanged: event => {
                 input.value = event.value ?? '';
-                // Search filtering already listens to this native event.
+                
                 input.dispatchEvent(new Event('input'));
             }
         };
@@ -589,10 +587,10 @@ else
 
     document.querySelectorAll('.review-page input').forEach(enhanceReviewEditor);
 
-    // Blocking findings open immediately; routine warnings stay collapsed until needed.
+    
     document.querySelectorAll('.review-findings[data-open="true"]').forEach(section => section.open = true);
 
-    // DevExtreme enhances the existing buttons without changing MVC form submission.
+
     document.querySelectorAll('.review-page button, .review-page a.btn').forEach(button => {
         const isDanger = button.classList.contains('btn-danger') || button.classList.contains('btn-outline-danger');
         const isPrimary = button.classList.contains('btn-primary') || button.classList.contains('btn-success');
@@ -606,11 +604,7 @@ else
         });
     });
 
-    // DevExtreme's submit behaviour validates editors that have a dxValidator.
-    // Do not intercept every form here: the batch-ready and registry-import forms
-    // contain only hidden values and must be allowed to submit immediately.
 
-    // Filtering happens in the browser; it never changes staging data.
     (() => {
         const rows = [...document.querySelectorAll('.import-row')];
         const search = document.getElementById('rowSearch');

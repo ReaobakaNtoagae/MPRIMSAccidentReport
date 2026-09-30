@@ -5,15 +5,6 @@ using static CrashReport.ViewModels.FiveYearReportRequest;
 
 namespace CrashReport.Services;
 
-/// <summary>
-/// Request-mapping, privilege-checking and preview-shaping logic for the Reports
-/// Hub, moved out of ReportsHubController so the new ReportsHubApiController can
-/// reuse it without duplicating the MVC controller's private methods. This mirrors
-/// ReportsHubController's existing private CanUse/Validate/To*/Map* methods exactly
-/// (same behaviour) — the MVC controller itself is left untouched and still has its
-/// own copies, per the migration-prep instructions not to modify existing MVC
-/// controllers.
-/// </summary>
 public interface IReportsHubMappingService
 {
     bool CanUse(ClaimsPrincipal user, ReportsHubType type);

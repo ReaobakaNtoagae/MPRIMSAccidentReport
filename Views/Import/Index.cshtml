@@ -10,25 +10,25 @@
 
     .imp-hero { margin-bottom:18px; }
     .imp-eyebrow { color:var(--g-600); font:600 .68rem 'DM Mono',monospace; letter-spacing:1.25px; text-transform:uppercase; margin-bottom:7px; }
-    .imp-title { font-size:1.65rem; line-height:1.2; margin:0 0 7px; color:#17251b; }
+    .imp-title { font-size:1.65rem; line-height:1.2; margin:0 0 7px; color:#171d25; }
     .imp-grid { display:grid; grid-template-columns:minmax(0,1fr) 280px; gap:18px; align-items:start; }
 
     .imp-card {
         background: #fff;
         border-radius: 12px;
         border: 1px solid var(--border);
-        box-shadow: 0 8px 28px rgba(22,50,29,.06);
+        box-shadow: 0 8px 28px rgba(12, 18, 28, .06);
         overflow: hidden;
         margin-bottom: 14px;
     }
 
     .imp-card-head {
         padding: 15px 20px;
-        border-bottom: 1px solid #e8efe9;
+        border-bottom: 1px solid #e8ebef;
         font-size: .72rem;
         text-transform: uppercase;
         letter-spacing: .8px;
-        color: #2e7d32;
+        color: #192b45;
         font-weight: 700;
     }
 
@@ -53,12 +53,12 @@
     }
 
     .imp-form-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
-    .imp-card .dx-texteditor { border-color:#d6e1d8; border-radius:7px; }
-    .imp-card .dx-texteditor.dx-state-focused { border-color:#69a772; box-shadow:0 0 0 2px rgba(67,160,71,.10); }
-    #fileUploader { border:1px dashed #a9cbae; border-radius:10px; background:#f8fcf8; padding:12px; }
+    .imp-card .dx-texteditor { border-color:#d6dae1; border-radius:7px; }
+    .imp-card .dx-texteditor.dx-state-focused { border-color:#699ba7; box-shadow:0 0 0 2px rgba(46, 71, 109, .10); }
+    #fileUploader { border:1px dashed #a9b7cb; border-radius:10px; background:#f9fafc; padding:12px; }
     #btnSubmit .dx-button { height:40px; border-radius:7px; }
     #btnDownloadTemplate .dx-button { height:38px; border-radius:7px; }
-    .imp-template-mark { width:44px; height:44px; margin:2px auto 14px; display:grid; place-items:center; border-radius:11px; background:#e8f5e9; color:#2e7d32; font:700 .75rem 'DM Mono',monospace; }
+    .imp-template-mark { width:44px; height:44px; margin:2px auto 14px; display:grid; place-items:center; border-radius:11px; background:#eaeef3; color:#192b45; font:700 .75rem 'DM Mono',monospace; }
     @@media(max-width:850px) { .imp-grid { grid-template-columns:1fr; } }
     @@media(max-width:560px) { .imp-form-row { grid-template-columns:1fr; gap:0; } .imp-title { font-size:1.4rem; } }
 </style>
@@ -145,14 +145,11 @@
     <script>
         $(function () {
 
-            // ── Error from previous attempt ───────────────────────────
+            
             var errMsg = $("#errMsg").data("msg");
             if (errMsg) DevExpress.ui.notify(errMsg, "error", 5000);
 
-            // ── Province select — sourced from formOptions.Province (the
-            // same seeded list the CR1 wizard uses), not hardcoded here.
-            // Defaults to "MP" once loaded, matching the hidden field's
-            // fallback value for the brief moment before the fetch resolves.
+            
             $.getJSON("/api/lookup/formoptions").done(function (formOptions) {
                 var provinceCodes = formOptions.Province || [];
 
@@ -166,16 +163,14 @@
                     }
                 });
 
-                // Keep the hidden field in sync with whatever the default
-                // selection ends up being once the dropdown actually renders.
+                
                 var inst = $("#provinceSelect").dxSelectBox("instance");
                 $("#provinceHidden").val(inst.option("value"));
             }).fail(function () {
                 DevExpress.ui.notify("Could not load the province list. Please refresh and try again.", "error", 4000);
             });
 
-            // DevExtreme editors update hidden form fields so the existing MVC action
-            // receives exactly the same names and values as before the visual refresh.
+            
             var months = Array.from({ length: 12 }, function (_, index) {
                 var month = index + 1;
                 return { value: month, text: new Date(2000, index, 1).toLocaleString("en-ZA", { month: "long" }) };
@@ -194,10 +189,7 @@
                 onValueChanged: function (e) { $("#notes").val(e.value); }
             });
 
-            // ── File uploader ─────────────────────────────────────────
-            // uploadMode:"useForm" means the widget does NOT upload
-            // automatically — it just holds the file for the form POST.
-            // The name "file" matches ImportController.Upload(IFormFile file).
+            
             var fileUploaderInst = $("#fileUploader").dxFileUploader({
                 name:             "file",
                 uploadMode:       "useForm",
@@ -206,7 +198,7 @@
                 selectButtonText: "Select Excel file",
                 labelText:        "or drop it here",
                 allowedFileExtensions: [".xlsx"],
-                maxFileSize:      10 * 1024 * 1024,   // 10 MB
+                maxFileSize:      10 * 1024 * 1024,  
                 invalidFileExtensionMessage: "Only .xlsx workbooks are supported.",
                 invalidMaxFileSizeMessage:   "File size must not exceed 10 MB.",
                 onValueChanged: function (e) {
@@ -215,7 +207,7 @@
                 }
             }).dxFileUploader("instance");
 
-            // ── Submit button ─────────────────────────────────────────
+            
             var submitBtnInst = $("#btnSubmit").dxButton({
                 text:          "Stage workbook for review",
                 type:          "default",
@@ -235,7 +227,7 @@
                 }
             }).dxButton("instance");
 
-            // ── Download template button ───────────────────────────────
+            
             $("#btnDownloadTemplate").dxButton({
                 text: "Download standard template",
                 icon: "download",
